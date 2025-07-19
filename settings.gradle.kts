@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("buildlogic")
     repositories {
         google {
             content {
@@ -20,5 +21,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Konnekt"
+
 include(":app")
- 
+include(":designsystem")
