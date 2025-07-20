@@ -23,4 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "Konnekt"
 
 include(":app")
-include(":designsystem")
+include(":core:designsystem")
