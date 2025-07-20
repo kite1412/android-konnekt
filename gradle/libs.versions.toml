@@ -56,3 +56,5 @@ jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrai
 # convention plugins
 konnekt-android-application = { id = "konnekt.android.application", version = "unspecified" }
 konnekt-android-application-compose = { id = "konnekt.android.application.compose", version = "unspecified" }
+konnekt-android-library = { id = "konnekt.android.library", version = "unspecified" }
+konnekt-android-library-compose = { id = "konnekt.android.library.compose", version = "unspecified" }

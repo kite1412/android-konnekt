@@ -22,5 +22,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Konnekt"
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS") // enable access to other modules using projects.*
 include(":app")
 include(":core:designsystem")
