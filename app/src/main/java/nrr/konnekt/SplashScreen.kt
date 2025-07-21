@@ -1,7 +1,9 @@
 package nrr.konnekt
 
 import androidx.compose.animation.Animatable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +14,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -44,6 +48,8 @@ internal fun SplashScreen(
         config.screenHeightDp.dp.toPx()
     }
     val rememberOnSplashFinished by rememberUpdatedState(onSplashFinished)
+    var contentVisible by remember { mutableStateOf(true) }
+    val exitDuration = 500
 
     LaunchedEffect(Unit) {
         launch {
@@ -51,7 +57,8 @@ internal fun SplashScreen(
                 targetValue = primaryColor,
                 animationSpec = tween(durationMillis = 1500)
             )
-            delay(500)
+            contentVisible = false
+            delay(exitDuration.toLong())
             rememberOnSplashFinished()
         }
         color.animateTo(
@@ -60,45 +67,50 @@ internal fun SplashScreen(
         )
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            // bottom gradient
-            .background(
-                brush = Brush.radialGradient(
-                    colors = listOf(color.value, Color.Transparent),
-                    center = Offset(
-                        x = width * (4f / 5f),
-                        y = height * (5.5f / 6f)
-                    )
-                ),
-                alpha = 0.5f
-            )
-            // top gradient
-            .background(
-                brush = Brush.radialGradient(
-                    colors = listOf(color.value, Color.Transparent),
-                    center = Offset(
-                        x = width * (1f / 5f),
-                        y = height * (1f / 6f)
-                    )
-                ),
-                alpha = 0.4f
-            )
+    AnimatedVisibility(
+        visible = contentVisible,
+        exit = fadeOut(tween(exitDuration))
     ) {
-        Icon(
-            painter = painterResource(id = nrr.konnekt.designsystem.R.drawable.konnekt),
-            contentDescription = "Icon Logo",
-            modifier = Modifier
-                .align(Alignment.Center)
-                .sizeIn(
-                    maxWidth = (267 * 2).dp,
-                    maxHeight = (47 * 2).dp
-                )
+        Box(
+            modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 64.dp),
-            tint = iconColor.value
-        )
+                .background(MaterialTheme.colorScheme.background)
+                // bottom gradient
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(color.value, Color.Transparent),
+                        center = Offset(
+                            x = width * (4f / 5f),
+                            y = height * (5.5f / 6f)
+                        )
+                    ),
+                    alpha = 0.5f
+                )
+                // top gradient
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(color.value, Color.Transparent),
+                        center = Offset(
+                            x = width * (1f / 5f),
+                            y = height * (1f / 6f)
+                        )
+                    ),
+                    alpha = 0.4f
+                )
+        ) {
+            Icon(
+                painter = painterResource(id = nrr.konnekt.designsystem.R.drawable.konnekt),
+                contentDescription = "Icon Logo",
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .sizeIn(
+                        maxWidth = (267 * 2).dp,
+                        maxHeight = (47 * 2).dp
+                    )
+                    .fillMaxSize()
+                    .padding(horizontal = 64.dp),
+                tint = iconColor.value
+            )
+        }
     }
 }

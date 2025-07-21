@@ -6,9 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -35,9 +35,9 @@ class MainActivity : ComponentActivity() {
                         .background(MaterialTheme.colorScheme.background),
                     transitionSpec = {
                         slideInVertically(
-                            animationSpec = tween(1000)
-                        ) { it } + fadeIn(animationSpec = tween(durationMillis = 700)) togetherWith
-                            fadeOut(animationSpec = tween(durationMillis = 300))
+                            animationSpec = tween(300)
+                        ) { it } + fadeIn(tween(durationMillis = 200)) togetherWith
+                            ExitTransition.None
                     }
                 ) {
                     if (!it) SplashScreen(
