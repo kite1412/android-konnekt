@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -15,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,14 +38,18 @@ fun ShadowedBox(
     space: Dp = 2.dp,
     content: @Composable () -> Unit
 ) {
+    val contentPadding = remember { space }
+
     Box(
         modifier = modifier
             .width(IntrinsicSize.Max)
             .height(IntrinsicSize.Max)
+            .padding(top = contentPadding.value.dp, end = contentPadding.value.dp)
     ) {
         Canvas(
             modifier = Modifier
                 .size(space)
+                .offset(y = -space)
                 .align(Alignment.TopStart)
         ) {
             val path = Path().apply {
@@ -61,6 +67,7 @@ fun ShadowedBox(
         Canvas(
             modifier = Modifier
                 .size(space)
+                .offset(x = space)
                 .align(Alignment.BottomEnd)
         ) {
             val path = Path().apply {
@@ -77,28 +84,28 @@ fun ShadowedBox(
         }
         Box(
             modifier = Modifier
-                .padding(end = space, top = space)
                 .background(shadowColor)
                 .fillMaxSize()
-        )
-        Box(
-            modifier = Modifier
-                .padding(start = space, bottom = space)
-                .sizeIn(
-                    minWidth = 50.dp,
-                    minHeight = 25.dp
-                )
-                .border(
-                    width = 2.dp,
-                    color = shadowColor
-                )
-                .background(backgroundColor)
-                .padding(
-                    horizontal = 16.dp,
-                    vertical = 4.dp
-                )
         ) {
-            content()
+            Box(
+                modifier = Modifier
+                    .offset(x = space, y = -space)
+                    .sizeIn(
+                        minWidth = 50.dp,
+                        minHeight = 25.dp
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = shadowColor
+                    )
+                    .background(backgroundColor)
+                    .padding(
+                        horizontal = 16.dp,
+                        vertical = 4.dp
+                    )
+            ) {
+                content()
+            }
         }
     }
 }
