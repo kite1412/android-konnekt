@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nrr.konnekt.designsystem"
+    namespace = "nrr.konnekt.core.designsystem"
 }
 
 dependencies {
