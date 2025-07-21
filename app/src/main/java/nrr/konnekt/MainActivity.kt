@@ -4,42 +4,56 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.LocalTextStyle
+import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
 import nrr.konnekt.designsystem.theme.KonnektTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val viewModel by viewModels<KonnektViewModel>()
         setContent {
             KonnektTheme {
-                SplashScreen(onSplashFinished = {})
+                AnimatedContent(
+                    targetState = viewModel.showSplashOnce,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                    transitionSpec = {
+                        slideInHorizontally(
+                            animationSpec = tween(700)
+                        ) { it } + fadeIn(animationSpec = tween(durationMillis = 300)) togetherWith slideOutHorizontally(
+                            animationSpec = tween(500)
+                        ) { -it } + fadeOut(animationSpec = tween(durationMillis = 300))
+                    }
+                ) {
+                    if (!it) SplashScreen(
+                        onSplashFinished = { viewModel.showSplashOnce = true }
+                    ) else {
+                        // TODO replace with nav tree
+                        Scaffold { innerPadding ->
+                            Box(modifier = Modifier.padding(innerPadding)) {
+                                Text("Hello")
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(
-    modifier: Modifier = Modifier,
-    textStyle: TextStyle = LocalTextStyle.current
-) {
-    Text(
-        text = "Hello Android!",
-        modifier = modifier,
-        style = textStyle
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    KonnektTheme {
-        Greeting()
     }
 }
