@@ -9,11 +9,10 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -35,11 +34,10 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background),
                     transitionSpec = {
-                        slideInHorizontally(
-                            animationSpec = tween(700)
-                        ) { it } + fadeIn(animationSpec = tween(durationMillis = 300)) togetherWith slideOutHorizontally(
-                            animationSpec = tween(500)
-                        ) { -it } + fadeOut(animationSpec = tween(durationMillis = 300))
+                        slideInVertically(
+                            animationSpec = tween(1000)
+                        ) { it } + fadeIn(animationSpec = tween(durationMillis = 700)) togetherWith
+                            fadeOut(animationSpec = tween(durationMillis = 300))
                     }
                 ) {
                     if (!it) SplashScreen(
@@ -47,8 +45,10 @@ class MainActivity : ComponentActivity() {
                     ) else {
                         // TODO replace with nav tree
                         Scaffold { innerPadding ->
-                            Box(modifier = Modifier.padding(innerPadding)) {
-                                Text("Hello")
+                            Column(modifier = Modifier.padding(innerPadding)) {
+                                repeat(50) {
+                                    Text("Hello")
+                                }
                             }
                         }
                     }
