@@ -99,7 +99,7 @@ internal fun SplashScreen(
                 )
         ) {
             Icon(
-                painter = painterResource(id = nrr.konnekt.designsystem.R.drawable.konnekt),
+                painter = painterResource(id = nrr.konnekt.core.designsystem.R.drawable.konnekt),
                 contentDescription = "Icon Logo",
                 modifier = Modifier
                     .align(Alignment.Center)
