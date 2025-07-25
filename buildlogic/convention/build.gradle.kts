@@ -39,5 +39,9 @@ gradlePlugin {
             id = "konnekt.android.library.compose"
             implementationClass = "AndroidLibraryComposeConventionPlugin"
         }
+        register("jvmLibrary") {
+            id = "konnekt.jvm.library"
+            implementationClass = "JvmLibraryConventionPlugin"
+        }
     }
 }

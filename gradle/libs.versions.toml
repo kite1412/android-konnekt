@@ -58,3 +58,4 @@ konnekt-android-application = { id = "konnekt.android.application", version = "u
 konnekt-android-application-compose = { id = "konnekt.android.application.compose", version = "unspecified" }
 konnekt-android-library = { id = "konnekt.android.library", version = "unspecified" }
 konnekt-android-library-compose = { id = "konnekt.android.library.compose", version = "unspecified" }
+konnekt-jvm-library = { id = "konnekt.jvm.library", version = "unspecified" }
