@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
+import nrr.konnekt.designsystem.component.ShadowedTextField
 import nrr.konnekt.designsystem.theme.KonnektTheme
 
 class MainActivity : ComponentActivity() {
@@ -46,9 +46,11 @@ class MainActivity : ComponentActivity() {
                         // TODO replace with nav tree
                         Scaffold { innerPadding ->
                             Column(modifier = Modifier.padding(innerPadding)) {
-                                repeat(50) {
-                                    Text("Hello")
-                                }
+                                ShadowedTextField(
+                                    "",
+                                    {},
+                                    label = "No Label"
+                                )
                             }
                         }
                     }

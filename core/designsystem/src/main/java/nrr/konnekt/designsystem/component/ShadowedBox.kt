@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -36,15 +37,22 @@ fun ShadowedBox(
     shadowColor: Color = MaterialTheme.colorScheme.primary,
     backgroundColor: Color = MaterialTheme.colorScheme.background,
     space: Dp = 2.dp,
+    contentPadding: PaddingValues = PaddingValues(
+        horizontal = 16.dp,
+        vertical = 8.dp
+    ),
     content: @Composable () -> Unit
 ) {
-    val contentPadding = remember { space }
+    val initialSpace = remember { space }
 
     Box(
         modifier = modifier
             .width(IntrinsicSize.Max)
             .height(IntrinsicSize.Max)
-            .padding(top = contentPadding.value.dp, end = contentPadding.value.dp)
+            .padding(
+                top = initialSpace.value.dp,
+                end = initialSpace.value.dp
+            )
     ) {
         Canvas(
             modifier = Modifier
@@ -99,10 +107,7 @@ fun ShadowedBox(
                         color = shadowColor
                     )
                     .background(backgroundColor)
-                    .padding(
-                        horizontal = 16.dp,
-                        vertical = 4.dp
-                    )
+                    .padding(contentPadding)
             ) {
                 content()
             }

@@ -31,7 +31,7 @@ const val NORMAL_LINE_HEIGHT_MULTIPLIER = 1.4f
 
 // Set of Material typography styles to start with
 val Typography = Typography(
-    bodyLarge = with(18) {
+    bodyLarge = with(20) {
         TextStyle(
             fontFamily = Nunito,
             fontWeight = FontWeight.Normal,
@@ -49,7 +49,7 @@ val Typography = Typography(
             letterSpacing = 0.5.sp
         )
     },
-    bodySmall = with(14) {
+    bodySmall = with(12) {
         TextStyle(
             fontFamily = Nunito,
             fontWeight = FontWeight.Normal,
