@@ -39,9 +39,17 @@ gradlePlugin {
             id = "konnekt.android.library.compose"
             implementationClass = "AndroidLibraryComposeConventionPlugin"
         }
+        register("androidFeature") {
+            id = "konnekt.android.feature"
+            implementationClass = "AndroidFeatureConventionPlugin"
+        }
         register("jvmLibrary") {
             id = "konnekt.jvm.library"
             implementationClass = "JvmLibraryConventionPlugin"
+        }
+        register("hilt") {
+            id = "konnekt.hilt"
+            implementationClass = "HiltConventionPlugin"
         }
     }
 }
