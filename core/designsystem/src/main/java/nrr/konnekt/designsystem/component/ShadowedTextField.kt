@@ -3,7 +3,6 @@ package nrr.konnekt.designsystem.component
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,16 +20,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.R
 import nrr.konnekt.designsystem.theme.Gray
 import nrr.konnekt.designsystem.theme.KonnektTheme
+import nrr.konnekt.designsystem.util.ShadowedTextFieldDefaults
+import nrr.konnekt.designsystem.util.ShadowedTextFieldStyle
 
 @Composable
 fun ShadowedTextField(
@@ -40,20 +38,13 @@ fun ShadowedTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "Enter text here",
     label: String? = null,
-    labelTextStyle: TextStyle = MaterialTheme.typography.bodySmall,
     actions: (@Composable () -> Unit)? = null,
-    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     singleLine: Boolean = true,
-    shadowColor: Color = MaterialTheme.colorScheme.primary,
-    backgroundColor: Color = MaterialTheme.colorScheme.background,
-    contentPadding: PaddingValues = PaddingValues(
-        horizontal = 16.dp,
-        vertical = 8.dp
-    ),
-    space: Dp = 8.dp,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    style: ShadowedTextFieldStyle = ShadowedTextFieldDefaults.defaultStyle()
 ) {
     val valueIsEmpty = value.isEmpty()
-    val adjustTextStyle = textStyle.copy(
+    val adjustTextStyle = style.textStyle.copy(
         color = LocalContentColor.current
     )
 
@@ -61,11 +52,12 @@ fun ShadowedTextField(
         modifier = modifier
             .sizeIn(
                 minWidth = 200.dp
-            ),
-        shadowColor = shadowColor,
-        backgroundColor = backgroundColor,
-        contentPadding = contentPadding,
-        space = space
+            )
+            .fillMaxWidth(),
+        shadowColor = style.shadowColor,
+        backgroundColor = style.backgroundColor,
+        contentPadding = style.contentPadding,
+        space = style.space
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -77,7 +69,7 @@ fun ShadowedTextField(
                 label?.let {
                     Text(
                         text = it,
-                        style = labelTextStyle
+                        style = style.labelTextStyle
                     )
                 }
                 BasicTextField(
@@ -96,7 +88,8 @@ fun ShadowedTextField(
                         }
                     },
                     cursorBrush = SolidColor(adjustTextStyle.color),
-                    singleLine = singleLine
+                    singleLine = singleLine,
+                    visualTransformation = visualTransformation
                 )
             }
             actions?.invoke()
@@ -118,7 +111,6 @@ private fun ShadowedTextFieldPreview() {
                     .padding(it)
                     .fillMaxWidth(),
                 label = "A Label",
-                textStyle = MaterialTheme.typography.bodyMedium,
                 actions = {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)

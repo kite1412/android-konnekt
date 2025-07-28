@@ -9,6 +9,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import nrr.konnekt.core.designsystem.R
 
+val RubikIso = FontFamily(
+    Font(resId = R.font.rubik_iso_regular)
+)
+
 private val Nunito = FontFamily(
     Font(
         resId = R.font.nunito_regular,
@@ -58,4 +62,13 @@ val Typography = Typography(
             letterSpacing = 0.5.sp
         )
     },
+    titleLarge = with(40) {
+        TextStyle(
+            fontFamily = Nunito,
+            fontWeight = FontWeight.Normal,
+            fontSize = this.sp,
+            lineHeight = (this * NORMAL_LINE_HEIGHT_MULTIPLIER).sp,
+            letterSpacing = 0.5.sp
+        )
+    }
 )

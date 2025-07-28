@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nrr.konnekt.designsystem.theme.DarkGray
+import nrr.konnekt.designsystem.util.KonnektIcon
 
 @Composable
 internal fun SplashScreen(
@@ -99,7 +100,7 @@ internal fun SplashScreen(
                 )
         ) {
             Icon(
-                painter = painterResource(id = nrr.konnekt.core.designsystem.R.drawable.konnekt),
+                painter = painterResource(id = KonnektIcon.logo),
                 contentDescription = "Icon Logo",
                 modifier = Modifier
                     .align(Alignment.Center)
