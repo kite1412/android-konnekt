@@ -26,4 +26,5 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS") // enable access to other mod
 include(":app")
 include(":core:designsystem")
 include(":core:model")
+include(":core:network:api")
 include(":feature:authentication")

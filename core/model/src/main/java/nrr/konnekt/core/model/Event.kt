@@ -4,6 +4,7 @@ import kotlin.time.Instant
 
 data class Event(
     val id: String,
+    val createdBy: String,
     val chatId: String,
     val title: String,
     val description: String?,
