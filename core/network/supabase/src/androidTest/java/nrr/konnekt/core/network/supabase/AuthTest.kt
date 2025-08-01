@@ -12,15 +12,9 @@ import java.util.Properties
 @RunWith(AndroidJUnit4::class)
 class AuthTest {
     private lateinit var auth: SupabaseAuthentication
+    private lateinit var properties: Properties
 
     private fun getProperty(key: String): String {
-        val properties = Properties()
-        val inputStream = InstrumentationRegistry
-            .getInstrumentation()
-            .context
-            .assets
-            .open("secret.properties")
-        properties.load(inputStream)
         return properties.getProperty(key)
     }
 
@@ -28,12 +22,21 @@ class AuthTest {
         assert(auth.loggedInUser.first() == null)
         val email = getProperty("SUPABASE_EMAIL")
         val password = getProperty("SUPABASE_PASSWORD")
-        auth.login(email, password)
+        val user = auth.login(email, password)
+        assert(user != null)
         assert(auth.loggedInUser.first() != null)
+        assert(auth.loggedInUser.first() == user)
     }
 
     @Before
     fun setup() {
+        properties = Properties()
+        val inputStream = InstrumentationRegistry
+            .getInstrumentation()
+            .context
+            .assets
+            .open("secret.properties")
+        properties.load(inputStream)
         auth = SupabaseAuthentication()
     }
 

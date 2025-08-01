@@ -3,6 +3,7 @@ package nrr.konnekt.core.network.supabase
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.api.Authentication
+import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import javax.inject.Inject
 
@@ -28,7 +30,29 @@ class SupabaseAuthentication @Inject constructor () : Authentication {
                 this.email = email
                 this.password = password
             }
-            _loggedInUser.value = client.auth.currentUserOrNull()?.toUser()
+            val signedInUser = client.auth.currentUserOrNull()?.toUser()
+            signedInUser?.let {
+                client.postgrest.from(USERS).apply {
+                    val user = select {
+                        filter {
+                            eq("id", it.id)
+                        }
+                    }.decodeSingleOrNull<User>()
+
+                    if (user == null) {
+                        val new = User(
+                            id = it.id,
+                            email = it.email,
+                            imagePath = null,
+                            username = it.username,
+                            bio = null,
+                            createdAt = it.createdAt
+                        )
+                        insert(new)
+                        _loggedInUser.value = new
+                    } else _loggedInUser.value = user
+                }
+            }
             return _loggedInUser.value
         } catch (e: Exception) {
             e.printStackTrace()

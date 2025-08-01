@@ -19,13 +19,13 @@
       <SelectionState runConfigName="useAppContext()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="useAppContext() (1)">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="loginTest()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="registerSuccess()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="logoutSuccess()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
