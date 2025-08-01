@@ -2,6 +2,7 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.konnekt.android.library)
+    alias(libs.plugins.konnekt.hilt)
     kotlin("plugin.serialization")
 }
 
@@ -29,6 +30,12 @@ android {
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.quote())
         buildConfigField("String", "SUPABASE_KEY", supabaseKey.quote())
     }
+
+    kotlin {
+        sourceSets.all {
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
+        }
+    }
 }
 
 dependencies {
@@ -39,4 +46,6 @@ dependencies {
     implementation(libs.supabase.db)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

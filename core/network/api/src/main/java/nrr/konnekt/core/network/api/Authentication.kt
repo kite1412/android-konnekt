@@ -12,7 +12,7 @@ interface Authentication {
     /**
      * A flow of the logged in user data.
      */
-    val loggedInUser: Flow<User>
+    val loggedInUser: Flow<User?>
 
     /**
      * Login with username and password.
