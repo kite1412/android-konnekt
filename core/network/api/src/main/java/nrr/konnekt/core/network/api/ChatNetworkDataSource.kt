@@ -1,14 +1,14 @@
-package nrr.konnekt.api
+package nrr.konnekt.core.network.api
 
 import kotlinx.coroutines.flow.Flow
-import nrr.konnekt.api.model.ChatDetail
-import nrr.konnekt.api.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.network.api.model.ChatDetail
+import nrr.konnekt.core.network.api.model.LatestChatMessage
 
 /**
  * Contract for network chat service.

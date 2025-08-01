@@ -1,4 +1,4 @@
-package nrr.konnekt.api.model
+package nrr.konnekt.core.network.api.model
 
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.Event

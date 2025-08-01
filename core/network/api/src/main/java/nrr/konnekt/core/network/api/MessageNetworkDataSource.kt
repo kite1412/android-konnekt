@@ -1,4 +1,4 @@
-package nrr.konnekt.api
+package nrr.konnekt.core.network.api
 
 import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.model.Message
