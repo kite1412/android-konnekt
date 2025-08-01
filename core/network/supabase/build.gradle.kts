@@ -1,0 +1,42 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.konnekt.android.library)
+    kotlin("plugin.serialization")
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        load(file.inputStream())
+    }
+}
+val supabaseUrl = localProperties.getProperty("SUPABASE_URL")
+    ?: throw GradleException("SUPABASE_URL not found in local.properties")
+val supabaseKey = localProperties.getProperty("SUPABASE_KEY")
+    ?: throw GradleException("SUPABASE_KEY not found in local.properties")
+
+private fun String.quote() = "\"$this\""
+
+android {
+    namespace = "nrr.konnekt.core.network.supabase"
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    defaultConfig {
+        buildConfigField("String", "SUPABASE_URL", supabaseUrl.quote())
+        buildConfigField("String", "SUPABASE_KEY", supabaseKey.quote())
+    }
+}
+
+dependencies {
+    api(projects.konnekt.core.network.api)
+
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.db)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+}
