@@ -9,13 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.model.User
-import nrr.konnekt.core.network.api.Authentication
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import javax.inject.Inject
 
-class SupabaseAuthentication @Inject constructor () : Authentication {
+class SupabaseAuthentication @Inject constructor() : Authentication {
     private val client: SupabaseClient = supabaseClient
     private val _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
     override val loggedInUser: Flow<User?>

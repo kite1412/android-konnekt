@@ -1,13 +1,13 @@
-package nrr.konnekt.core.network.api
+package nrr.konnekt.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
 
 /**
- * Contract for network message service.
+ * Contract for message repository.
  */
-interface MessageNetworkDataSource {
+interface MessageRepository {
     /**
      * Observe messages in a chat, should be ordered based on [Message.sentAt],
      * and listen for [Message.isHidden] and [Message.editedAt] **without** altering the message order.

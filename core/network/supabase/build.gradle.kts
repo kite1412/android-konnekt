@@ -39,7 +39,7 @@ android {
 }
 
 dependencies {
-    implementation(projects.konnekt.core.network.api)
+    implementation(projects.konnekt.core.domain)
 
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)

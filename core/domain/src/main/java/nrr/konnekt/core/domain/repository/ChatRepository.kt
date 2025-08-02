@@ -1,22 +1,21 @@
-package nrr.konnekt.core.network.api
+package nrr.konnekt.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.domain.model.ChatDetail
+import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
-import nrr.konnekt.core.model.Message
-import nrr.konnekt.core.network.api.model.ChatDetail
-import nrr.konnekt.core.network.api.model.LatestChatMessage
 
 /**
- * Contract for network chat service.
+ * Contract for chat repository.
  */
-interface ChatNetworkDataSource {
+interface ChatRepository {
     /**
      * Observe the latest message in each chat the logged in user subscribed to,
-     * and listen for [Message.isHidden] and [Message.editedAt].
+     * and listen for [nrr.konnekt.core.model.Message.isHidden] and [nrr.konnekt.core.model.Message.editedAt].
      *
      * @return A flow of the latest chat messages.
      */

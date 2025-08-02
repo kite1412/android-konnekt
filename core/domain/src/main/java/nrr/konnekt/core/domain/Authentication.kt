@@ -1,4 +1,4 @@
-package nrr.konnekt.core.network.api
+package nrr.konnekt.core.domain
 
 import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.model.User

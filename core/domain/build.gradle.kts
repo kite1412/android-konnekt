@@ -5,5 +5,6 @@ plugins {
 dependencies {
     api(projects.konnekt.core.model)
 
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.javax.inject)
 }

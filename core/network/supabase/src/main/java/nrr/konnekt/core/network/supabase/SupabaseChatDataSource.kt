@@ -1,16 +1,16 @@
 package nrr.konnekt.core.network.supabase
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.domain.model.ChatDetail
+import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
-import nrr.konnekt.core.network.api.ChatNetworkDataSource
-import nrr.konnekt.core.network.api.model.ChatDetail
-import nrr.konnekt.core.network.api.model.LatestChatMessage
 
-class SupabaseChatDataSource : ChatNetworkDataSource {
+class SupabaseChatDataSource : ChatRepository {
     override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> {
         TODO("Not yet implemented")
     }
