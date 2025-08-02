@@ -62,6 +62,24 @@ val Typography = Typography(
             letterSpacing = 0.5.sp
         )
     },
+    titleSmall = with(24) {
+        TextStyle(
+            fontFamily = Nunito,
+            fontWeight = FontWeight.Normal,
+            fontSize = this.sp,
+            lineHeight = (this * NORMAL_LINE_HEIGHT_MULTIPLIER).sp,
+            letterSpacing = 0.5.sp
+        )
+    },
+    titleMedium = with(32) {
+        TextStyle(
+            fontFamily = Nunito,
+            fontWeight = FontWeight.Normal,
+            fontSize = this.sp,
+            lineHeight = (this * NORMAL_LINE_HEIGHT_MULTIPLIER).sp,
+            letterSpacing = 0.5.sp
+        )
+    },
     titleLarge = with(40) {
         TextStyle(
             fontFamily = Nunito,

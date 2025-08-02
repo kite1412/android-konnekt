@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,23 +29,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import nrr.konnekt.designsystem.component.Button
 import nrr.konnekt.designsystem.component.SecureShadowedTextField
 import nrr.konnekt.designsystem.component.ShadowedTextField
 import nrr.konnekt.designsystem.theme.KonnektTheme
 import nrr.konnekt.designsystem.theme.RubikIso
+import nrr.konnekt.designsystem.util.KonnektIcon
 
 private val textFieldMaxWidth = 400.dp
 private val textFieldsSpace = 16.dp
 private val textFieldModifier = Modifier
     .sizeIn(maxWidth = textFieldMaxWidth)
 
+@Composable
+internal fun AuthenticationScreen(
+    viewModel: AuthenticationViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier
+) {
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AuthenticationScreen(
     isSignIn: Boolean,
     onIsSignInChange: (Boolean) -> Unit,
+    actionEnabled: Boolean,
     email: String,
     username: String,
     password: String,
@@ -54,82 +68,119 @@ private fun AuthenticationScreen(
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
+    verificationEmailSent: Boolean,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .sizeIn(maxWidth = textFieldMaxWidth)
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically)
-        ) {
-            AnimatedContent(
-                targetState = isSignIn,
-                transitionSpec = {
-                    fadeIn() togetherWith fadeOut()
-                }
+        AnimatedContent(verificationEmailSent) { state ->
+            if (!state) Column(
+                modifier = Modifier
+                    .sizeIn(maxWidth = textFieldMaxWidth)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically)
             ) {
-                Text(
-                    text = if (it) "Sign In" else "Sign Up",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontFamily = RubikIso
+                AnimatedContent(
+                    targetState = isSignIn,
+                    transitionSpec = {
+                        fadeIn() togetherWith fadeOut()
+                    }
+                ) {
+                    Text(
+                        text = if (it) "Sign In" else "Sign Up",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = RubikIso
+                        )
                     )
-                )
-            }
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(textFieldsSpace)
-            ) {
-                ShadowedTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
-                    modifier = textFieldModifier,
-                    placeholder = "Email"
-                )
-                AnimatedVisibility(
-                    visible = !isSignIn
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(textFieldsSpace)
                 ) {
                     ShadowedTextField(
-                        value = username,
-                        onValueChange = onUsernameChange,
+                        value = email,
+                        onValueChange = onEmailChange,
                         modifier = textFieldModifier,
-                        placeholder = "Username"
+                        placeholder = "Email"
                     )
-                }
-                SecureShadowedTextField(
-                    value = password,
-                    onValueChange = onPasswordChange,
-                    modifier = textFieldModifier,
-                    placeholder = "Password"
-                )
-                AnimatedVisibility(
-                    visible = !isSignIn
-                ) {
+                    AnimatedVisibility(
+                        visible = !isSignIn
+                    ) {
+                        ShadowedTextField(
+                            value = username,
+                            onValueChange = onUsernameChange,
+                            modifier = textFieldModifier,
+                            placeholder = "Username"
+                        )
+                    }
                     SecureShadowedTextField(
-                        value = confirmPassword,
-                        onValueChange = onConfirmPasswordChange,
+                        value = password,
+                        onValueChange = onPasswordChange,
                         modifier = textFieldModifier,
-                        placeholder = "Confirm Password"
+                        placeholder = "Password"
                     )
+                    AnimatedVisibility(
+                        visible = !isSignIn
+                    ) {
+                        SecureShadowedTextField(
+                            value = confirmPassword,
+                            onValueChange = onConfirmPasswordChange,
+                            modifier = textFieldModifier,
+                            placeholder = "Confirm Password"
+                        )
+                    }
                 }
-            }
-            Mode(
-                mode = if (isSignIn) "New Account" else "Login",
-                action = if (isSignIn) "Login" else "Register",
-                onModeClick = {
-                    onIsSignInChange(!isSignIn)
-                },
-                onActionClick = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.End)
-            )
+                Mode(
+                    mode = if (isSignIn) "New Account" else "Login",
+                    action = if (isSignIn) "Login" else "Register",
+                    actionEnabled = actionEnabled,
+                    onModeClick = {
+                        onIsSignInChange(!isSignIn)
+                    },
+                    onActionClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.End)
+                )
+            } else VerificationEmailSent()
         }
+    }
+}
+
+@Composable
+private fun VerificationEmailSent(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(
+            space = 8.dp,
+            alignment = Alignment.CenterVertically
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painter = painterResource(KonnektIcon.mailCheck),
+            contentDescription = "email verification sent",
+            modifier = Modifier
+                .padding(horizontal = 32.dp)
+                .sizeIn(
+                    maxHeight = 80.dp,
+                    maxWidth = 80.dp
+                )
+                .fillMaxSize(),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "Verification email has been sent to you",
+            style = MaterialTheme.typography.titleSmall.copy(
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            ),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -137,6 +188,7 @@ private fun AuthenticationScreen(
 private fun Mode(
     mode: String,
     action: String,
+    actionEnabled: Boolean,
     onModeClick: () -> Unit,
     onActionClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -154,7 +206,8 @@ private fun Mode(
             )
         }
         Button(
-            onClick = onActionClick
+            onClick = onActionClick,
+            enabled = actionEnabled
         ) {
             Text(
                 text = action
@@ -174,6 +227,7 @@ private fun AuthenticationScreenPreview() {
             AuthenticationScreen(
                 isSignIn = isSignIn,
                 onIsSignInChange = { b -> isSignIn = b },
+                actionEnabled = false,
                 email = "",
                 username = "",
                 password = password,
@@ -184,7 +238,8 @@ private fun AuthenticationScreenPreview() {
                 onConfirmPasswordChange = {},
                 modifier = Modifier
                     .padding(it)
-                    .padding(32.dp)
+                    .padding(32.dp),
+                verificationEmailSent = true
             )
         }
     }
