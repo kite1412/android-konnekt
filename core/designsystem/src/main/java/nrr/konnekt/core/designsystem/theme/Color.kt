@@ -1,4 +1,4 @@
-package nrr.konnekt.designsystem.theme
+package nrr.konnekt.core.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
 

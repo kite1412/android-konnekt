@@ -1,4 +1,4 @@
-package nrr.konnekt.designsystem.component
+package nrr.konnekt.core.designsystem.component
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -19,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import nrr.konnekt.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.KonnektTheme
 
 /**
  * @param bounceBack - bounce back when clicked

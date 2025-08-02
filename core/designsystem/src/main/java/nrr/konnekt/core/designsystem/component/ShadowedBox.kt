@@ -1,4 +1,4 @@
-package nrr.konnekt.designsystem.component
+package nrr.konnekt.core.designsystem.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import nrr.konnekt.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.KonnektTheme
 
 /**
  * @param space - space between shadow and content

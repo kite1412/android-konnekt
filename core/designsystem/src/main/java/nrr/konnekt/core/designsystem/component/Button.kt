@@ -1,11 +1,11 @@
-package nrr.konnekt.designsystem.component
+package nrr.konnekt.core.designsystem.component
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import nrr.konnekt.designsystem.KonnektDefaults
+import nrr.konnekt.core.designsystem.KonnektDefaults
 
 @Composable
 fun Button(

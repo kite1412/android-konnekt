@@ -1,4 +1,4 @@
-package nrr.konnekt.designsystem.component
+package nrr.konnekt.core.designsystem.component
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,10 +26,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.R
-import nrr.konnekt.designsystem.theme.Gray
-import nrr.konnekt.designsystem.theme.KonnektTheme
-import nrr.konnekt.designsystem.util.ShadowedTextFieldDefaults
-import nrr.konnekt.designsystem.util.ShadowedTextFieldStyle
+import nrr.konnekt.core.designsystem.theme.Gray
+import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.util.ShadowedTextFieldDefaults
+import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 
 @Composable
 fun ShadowedTextField(

@@ -35,12 +35,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import nrr.konnekt.designsystem.component.Button
-import nrr.konnekt.designsystem.component.SecureShadowedTextField
-import nrr.konnekt.designsystem.component.ShadowedTextField
-import nrr.konnekt.designsystem.theme.KonnektTheme
-import nrr.konnekt.designsystem.theme.RubikIso
-import nrr.konnekt.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.component.Button
+import nrr.konnekt.core.designsystem.component.SecureShadowedTextField
+import nrr.konnekt.core.designsystem.component.ShadowedTextField
+import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.RubikIso
+import nrr.konnekt.core.designsystem.util.KonnektIcon
 
 private val textFieldMaxWidth = 400.dp
 private val textFieldsSpace = 16.dp
@@ -52,6 +52,7 @@ internal fun AuthenticationScreen(
     viewModel: AuthenticationViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
+
 }
 
 @OptIn(ExperimentalLayoutApi::class)

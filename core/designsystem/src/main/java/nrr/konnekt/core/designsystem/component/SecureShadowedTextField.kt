@@ -1,4 +1,4 @@
-package nrr.konnekt.designsystem.component
+package nrr.konnekt.core.designsystem.component
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
@@ -14,9 +14,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import nrr.konnekt.designsystem.util.KonnektIcon
-import nrr.konnekt.designsystem.util.ShadowedTextFieldDefaults
-import nrr.konnekt.designsystem.util.ShadowedTextFieldStyle
+import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.util.ShadowedTextFieldDefaults
+import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 
 @Composable
 fun SecureShadowedTextField(

@@ -1,11 +1,11 @@
-package nrr.konnekt.designsystem
+package nrr.konnekt.core.designsystem
 
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import nrr.konnekt.designsystem.theme.DarkGray
-import nrr.konnekt.designsystem.theme.Gray
+import nrr.konnekt.core.designsystem.theme.DarkGray
+import nrr.konnekt.core.designsystem.theme.Gray
 
 object KonnektDefaults {
     @Composable

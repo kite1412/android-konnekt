@@ -1,4 +1,4 @@
-package nrr.konnekt.designsystem.util
+package nrr.konnekt.core.designsystem.util
 
 import nrr.konnekt.core.designsystem.R
 
