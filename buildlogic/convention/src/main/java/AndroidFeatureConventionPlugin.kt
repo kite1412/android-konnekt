@@ -13,8 +13,8 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             }
 
             dependencies {
-                // TODO later change with higher level module that includes all components
-                "implementation"(project(":core:designsystem"))
+                "implementation"(project(":core:ui"))
+                "implementation"(project(":core:domain"))
 
                 "implementation"(libs.findLibrary("androidx.hilt.navigation.compose").get())
                 "implementation"(libs.findLibrary("androidx.navigation.compose").get())

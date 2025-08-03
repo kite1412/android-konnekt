@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.konnekt.android.application.compose)
+    alias(libs.plugins.konnekt.hilt)
 }
 
 android {
@@ -11,7 +12,12 @@ android {
 }
 
 dependencies {
-    implementation(projects.core.designsystem)
+    implementation(projects.core.ui)
+    implementation(projects.core.domain)
+    implementation(projects.core.data)
+    implementation(projects.feature.authentication)
+
+    implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

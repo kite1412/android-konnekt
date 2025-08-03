@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,12 +24,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +44,7 @@ import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 
 private val textFieldMaxWidth = 400.dp
 private val textFieldsSpace = 16.dp
@@ -49,10 +53,51 @@ private val textFieldModifier = Modifier
 
 @Composable
 internal fun AuthenticationScreen(
-    viewModel: AuthenticationViewModel = hiltViewModel(),
-    modifier: Modifier = Modifier
+    contentPadding: PaddingValues,
+    onSignedIn: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: AuthenticationViewModel = hiltViewModel()
 ) {
+    val snackbarHostState = LocalSnackbarHostState.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
+    LaunchedEffect(viewModel.actionState) {
+        when (viewModel.actionState) {
+            is ActionState.Success -> {
+                if (viewModel.isSignIn) snackbarHostState.showSnackbar(
+                    message = "Logged in"
+                ) { onSignedIn() }
+            }
+            is ActionState.Error -> {
+                snackbarHostState.showSnackbar(
+                    message = (viewModel.actionState as ActionState.Error).message,
+                    withDismissAction = true
+                )
+            }
+            else -> Unit
+        }
+        if (viewModel.actionState is ActionState.Error) viewModel.actionState = null
+    }
+    AuthenticationScreen(
+        isSignIn = viewModel.isSignIn,
+        onIsSignInChange = { viewModel.isSignIn = it },
+        actionEnabled = viewModel.actionEnabled,
+        email = viewModel.email,
+        username = viewModel.username,
+        password = viewModel.password,
+        confirmPassword = viewModel.confirmPassword,
+        onEmailChange = { viewModel.email = it },
+        onUsernameChange = { viewModel.username = it },
+        onPasswordChange = { viewModel.password = it },
+        onConfirmPasswordChange = { viewModel.confirmPassword = it },
+        onActionClick = {
+            keyboardController?.hide()
+            if (viewModel.isSignIn) viewModel.login()
+            else viewModel.register()
+        },
+        verificationEmailSent = viewModel.verificationEmailSent,
+        modifier = modifier.padding(contentPadding)
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -69,6 +114,7 @@ private fun AuthenticationScreen(
     onUsernameChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onConfirmPasswordChange: (String) -> Unit,
+    onActionClick: () -> Unit,
     verificationEmailSent: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -142,7 +188,7 @@ private fun AuthenticationScreen(
                     onModeClick = {
                         onIsSignInChange(!isSignIn)
                     },
-                    onActionClick = {},
+                    onActionClick = onActionClick,
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.End)
@@ -175,7 +221,7 @@ private fun VerificationEmailSent(modifier: Modifier = Modifier) {
             tint = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "Verification email has been sent to you",
+            text = "Verification email has\n been sent",
             style = MaterialTheme.typography.titleSmall.copy(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -222,13 +268,14 @@ private fun Mode(
 private fun AuthenticationScreenPreview() {
     var isSignIn by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
+    var confirmationEmailSent by remember { mutableStateOf(false) }
 
     KonnektTheme {
         Scaffold {
             AuthenticationScreen(
                 isSignIn = isSignIn,
                 onIsSignInChange = { b -> isSignIn = b },
-                actionEnabled = false,
+                actionEnabled = password.isNotBlank(),
                 email = "",
                 username = "",
                 password = password,
@@ -237,10 +284,13 @@ private fun AuthenticationScreenPreview() {
                 onUsernameChange = {},
                 onPasswordChange = { p -> password = p },
                 onConfirmPasswordChange = {},
+                onActionClick = {
+                    confirmationEmailSent = true
+                },
+                verificationEmailSent = confirmationEmailSent,
                 modifier = Modifier
                     .padding(it)
-                    .padding(32.dp),
-                verificationEmailSent = true
+                    .padding(32.dp)
             )
         }
     }

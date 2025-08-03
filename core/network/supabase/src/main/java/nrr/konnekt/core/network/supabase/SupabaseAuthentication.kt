@@ -66,14 +66,22 @@ class SupabaseAuthentication @Inject constructor() : Authentication {
         password: String
     ): User? {
         try {
-            val user = client.auth.signUpWith(Email) {
-                this.email = email
-                this.password = password
-                this.data = buildJsonObject {
-                    put("username", username)
+            val existingUser = client.postgrest.from(USERS).select {
+                filter {
+                    eq("email", email)
                 }
+            }.decodeSingleOrNull<User>()
+            if (existingUser == null) {
+                val user = client.auth.signUpWith(Email) {
+                    this.email = email
+                    this.password = password
+                    this.data = buildJsonObject {
+                        put("username", username)
+                    }
+                }
+                return user?.toUser()
             }
-            return user?.toUser()
+            return null
         } catch (e: Exception) {
             e.printStackTrace()
             return null

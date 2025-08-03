@@ -7,7 +7,7 @@ import javax.inject.Inject
 class RegisterUseCase @Inject constructor(
     private val authentication: Authentication
 ) {
-    suspend fun invoke(
+    suspend operator fun invoke(
         email: String,
         username: String,
         password: String

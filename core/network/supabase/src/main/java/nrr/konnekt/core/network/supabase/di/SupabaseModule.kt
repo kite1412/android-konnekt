@@ -4,7 +4,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import nrr.konnekt.core.network.api.Authentication
+import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.network.supabase.SupabaseAuthentication
 
 @Module

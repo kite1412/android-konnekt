@@ -8,6 +8,7 @@ import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
+import nrr.konnekt.core.model.Message
 
 /**
  * Contract for chat repository.
@@ -15,7 +16,7 @@ import nrr.konnekt.core.model.Event
 interface ChatRepository {
     /**
      * Observe the latest message in each chat the logged in user subscribed to,
-     * and listen for [nrr.konnekt.core.model.Message.isHidden] and [nrr.konnekt.core.model.Message.editedAt].
+     * and listen for [Message.isHidden] and [Message.editedAt].
      *
      * @return A flow of the latest chat messages.
      */

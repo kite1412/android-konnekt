@@ -29,8 +29,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import nrr.konnekt.designsystem.theme.DarkGray
-import nrr.konnekt.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.theme.DarkGray
+import nrr.konnekt.core.designsystem.util.KonnektIcon
 
 @Composable
 internal fun SplashScreen(
