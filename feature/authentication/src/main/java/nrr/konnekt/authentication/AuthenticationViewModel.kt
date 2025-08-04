@@ -19,7 +19,7 @@ class AuthenticationViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
     private val registerUseCase: RegisterUseCase
 ) : ViewModel() {
-    internal var isSignIn by mutableStateOf(false)
+    internal var isSignIn by mutableStateOf(true)
     internal var verificationEmailSent by mutableStateOf(false)
     internal var email by mutableStateOf("")
     internal var username by mutableStateOf("")

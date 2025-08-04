@@ -96,6 +96,10 @@ internal fun AuthenticationScreen(
             else viewModel.register()
         },
         verificationEmailSent = viewModel.verificationEmailSent,
+        backToLogin = {
+            viewModel.isSignIn = true
+            viewModel.verificationEmailSent = false
+        },
         modifier = modifier.padding(contentPadding)
     )
 }
@@ -116,6 +120,7 @@ private fun AuthenticationScreen(
     onConfirmPasswordChange: (String) -> Unit,
     onActionClick: () -> Unit,
     verificationEmailSent: Boolean,
+    backToLogin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -193,41 +198,56 @@ private fun AuthenticationScreen(
                         .fillMaxWidth()
                         .align(Alignment.End)
                 )
-            } else VerificationEmailSent()
+            } else VerificationEmailSent(backToLogin)
         }
     }
 }
 
 @Composable
-private fun VerificationEmailSent(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(
-            space = 8.dp,
-            alignment = Alignment.CenterVertically
-        ),
-        horizontalAlignment = Alignment.CenterHorizontally
+private fun VerificationEmailSent(
+    onLoginClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
     ) {
-        Icon(
-            painter = painterResource(KonnektIcon.mailCheck),
-            contentDescription = "email verification sent",
-            modifier = Modifier
-                .padding(horizontal = 32.dp)
-                .sizeIn(
-                    maxHeight = 80.dp,
-                    maxWidth = 80.dp
-                )
-                .fillMaxSize(),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = "Verification email has\n been sent",
-            style = MaterialTheme.typography.titleSmall.copy(
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            ),
-            textAlign = TextAlign.Center
-        )
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                painter = painterResource(KonnektIcon.mailCheck),
+                contentDescription = "email verification sent",
+                modifier = Modifier
+                    .padding(horizontal = 32.dp)
+                    .sizeIn(
+                        maxHeight = 80.dp,
+                        maxWidth = 80.dp
+                    )
+                    .fillMaxSize(),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "Verification email has\n been sent",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                ),
+                textAlign = TextAlign.Center
+            )
+        }
+        Button(
+            onClick = onLoginClick,
+            modifier = Modifier.align(Alignment.BottomEnd)
+        ) {
+            Text("Login")
+            Icon(
+                painter = painterResource(KonnektIcon.arrowRight),
+                contentDescription = "login",
+                modifier = Modifier.padding(start = 4   .dp)
+            )
+        }
     }
 }
 
@@ -288,6 +308,7 @@ private fun AuthenticationScreenPreview() {
                     confirmationEmailSent = true
                 },
                 verificationEmailSent = confirmationEmailSent,
+                backToLogin = { confirmationEmailSent = false },
                 modifier = Modifier
                     .padding(it)
                     .padding(32.dp)
