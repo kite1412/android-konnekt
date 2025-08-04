@@ -1,6 +1,7 @@
 package nrr.konnekt.core.network.supabase
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.repository.ChatRepository
@@ -9,8 +10,11 @@ import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
+import javax.inject.Inject
 
-class SupabaseChatDataSource : ChatRepository {
+internal class SupabaseChatRepository @Inject constructor(
+    authentication: Authentication
+) : ChatRepository, SupabaseRepository(authentication) {
     override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> {
         TODO("Not yet implemented")
     }
@@ -38,9 +42,13 @@ class SupabaseChatDataSource : ChatRepository {
     override suspend fun createChat(
         type: ChatType,
         chatSetting: ChatSetting?,
-        participantsId: List<String>?
-    ): Chat? {
-        TODO("Not yet implemented")
+        participantIds: List<String>?
+    ): Chat? = performAuthenticatedAction { u ->
+        if (type == ChatType.PERSONAL && participantIds?.size != 1) null
+
+        chats {
+            null
+        }
     }
 
     override suspend fun createEvent(

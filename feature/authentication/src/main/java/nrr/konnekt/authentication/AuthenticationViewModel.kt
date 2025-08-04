@@ -9,8 +9,10 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.domain.Authentication.AuthError
 import nrr.konnekt.core.domain.usecase.LoginUseCase
 import nrr.konnekt.core.domain.usecase.RegisterUseCase
+import nrr.konnekt.core.domain.util.Result
 
 @HiltViewModel
 class AuthenticationViewModel @Inject constructor(
@@ -46,8 +48,12 @@ class AuthenticationViewModel @Inject constructor(
                     email = email,
                     password = password
                 )
-                actionState = if (u == null) ActionState.Error("Email or password is incorrect")
-                    else ActionState.Success
+                actionState = if (u is Result.Error) ActionState.Error(
+                    when (u.error) {
+                        AuthError.EmailNotConfirmed -> "Email Not Confirmed"
+                        else -> "Invalid email or password"
+                    }
+                ) else ActionState.Success
             }
         }
     }
@@ -61,7 +67,7 @@ class AuthenticationViewModel @Inject constructor(
                     username = username,
                     password = password
                 )
-                if (u == null) actionState = ActionState.Error("Email is already taken")
+                if (u is Result.Error) actionState = ActionState.Error("Email is already taken")
                 else {
                     verificationEmailSent = true
                     actionState = ActionState.Success

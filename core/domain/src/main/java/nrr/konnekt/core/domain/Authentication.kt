@@ -1,7 +1,12 @@
 package nrr.konnekt.core.domain
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.domain.Authentication.AuthError
+import nrr.konnekt.core.domain.util.Error
+import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.User
+
+typealias AuthResult<T> = Result<T, AuthError>
 
 /**
  * Contract for authentication service and act as
@@ -21,7 +26,7 @@ interface Authentication {
      * @param password The password to login with.
      * @return The logged in user.
      */
-    suspend fun login(email: String, password: String): User?
+    suspend fun login(email: String, password: String): AuthResult<User>
 
     /**
      * Register with email and password.
@@ -31,12 +36,19 @@ interface Authentication {
      * @param password The password to register with.
      * @return The registered user.
      */
-    suspend fun register(email: String, username: String, password: String): User?
+    suspend fun register(email: String, username: String, password: String): AuthResult<User>
 
     /**
      * Logout the current user.
      *
      * @return Whether the logout was successful.
      */
-    suspend fun logout(): Boolean
+    suspend fun logout(): AuthResult<Boolean>
+
+    sealed interface AuthError : Error {
+        object InvalidCredentials : AuthError
+        object UserAlreadyExists : AuthError
+        object EmailNotConfirmed : AuthError
+        object Unknown : AuthError
+    }
 }

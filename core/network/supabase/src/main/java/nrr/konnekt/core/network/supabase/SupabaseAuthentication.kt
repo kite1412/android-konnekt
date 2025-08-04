@@ -2,6 +2,8 @@ package nrr.konnekt.core.network.supabase
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthErrorCode
+import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
@@ -9,13 +11,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nrr.konnekt.core.domain.AuthResult
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.Authentication.AuthError
+import nrr.konnekt.core.domain.util.Error
+import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import javax.inject.Inject
 
-class SupabaseAuthentication @Inject constructor() : Authentication {
+internal class SupabaseAuthentication @Inject constructor() : Authentication {
     private val client: SupabaseClient = supabaseClient
     private val _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
     override val loggedInUser: Flow<User?>
@@ -24,7 +30,7 @@ class SupabaseAuthentication @Inject constructor() : Authentication {
     override suspend fun login(
         email: String,
         password: String
-    ): User? {
+    ): AuthResult<User> {
         try {
             client.auth.signInWith(Email) {
                 this.email = email
@@ -53,10 +59,20 @@ class SupabaseAuthentication @Inject constructor() : Authentication {
                     } else _loggedInUser.value = user
                 }
             }
-            return _loggedInUser.value
+            return _loggedInUser.value?.let {
+                Success(it)
+            } ?: Error(AuthError.Unknown)
+        } catch (e: AuthRestException) {
+            e.printStackTrace()
+            return Error(
+                when (e.errorCode) {
+                    AuthErrorCode.EmailNotConfirmed -> AuthError.EmailNotConfirmed
+                    else -> AuthError.InvalidCredentials
+                }
+            )
         } catch (e: Exception) {
             e.printStackTrace()
-            return null
+            return Error(AuthError.Unknown)
         }
     }
 
@@ -64,7 +80,7 @@ class SupabaseAuthentication @Inject constructor() : Authentication {
         email: String,
         username: String,
         password: String
-    ): User? {
+    ): AuthResult<User> {
         try {
             val existingUser = client.postgrest.from(USERS).select {
                 filter {
@@ -79,26 +95,28 @@ class SupabaseAuthentication @Inject constructor() : Authentication {
                         put("username", username)
                     }
                 }
-                return user?.toUser()
+                return user?.toUser()?.let {
+                    Success(it)
+                } ?: Error(AuthError.Unknown)
             }
-            return null
+            return Error(AuthError.UserAlreadyExists)
         } catch (e: Exception) {
             e.printStackTrace()
-            return null
+            return Error(AuthError.UserAlreadyExists)
         }
     }
 
-    override suspend fun logout(): Boolean {
+    override suspend fun logout(): AuthResult<Boolean> {
         try {
             client.auth.signOut()
             client.auth.currentUserOrNull()?.run {
-                return false
+                return Error(AuthError.Unknown)
             }
             _loggedInUser.value = null
-            return true
+            return Success(true)
         } catch (e: Exception) {
             e.printStackTrace()
-            return false
+            return Error(AuthError.Unknown)
         }
     }
 }

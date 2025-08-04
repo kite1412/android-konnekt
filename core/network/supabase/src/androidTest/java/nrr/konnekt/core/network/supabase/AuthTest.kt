@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import nrr.konnekt.core.domain.util.Result
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,10 +23,9 @@ class AuthTest {
         assert(auth.loggedInUser.first() == null)
         val email = getProperty("SUPABASE_EMAIL")
         val password = getProperty("SUPABASE_PASSWORD")
-        val user = auth.login(email, password)
-        assert(user != null)
+        val res = auth.login(email, password)
+        assert(res is Result.Success && auth.loggedInUser.first() == res.data)
         assert(auth.loggedInUser.first() != null)
-        assert(auth.loggedInUser.first() == user)
     }
 
     @Before
@@ -51,13 +51,13 @@ class AuthTest {
         val email = getProperty("SUPABASE_NEW_EMAIL")
         val username = getProperty("SUPABASE_NEW_USERNAME")
         val password = getProperty("SUPABASE_PASSWORD")
-        assert(auth.register(email, username, password) != null)
+        assert(auth.register(email, username, password) is Result.Success)
     }
 
     @Test
     fun logoutSuccess() = runTest {
         login()
-        assert(auth.logout())
+        assert(auth.logout() is Result.Success)
         assert(auth.loggedInUser.first() == null)
     }
 }

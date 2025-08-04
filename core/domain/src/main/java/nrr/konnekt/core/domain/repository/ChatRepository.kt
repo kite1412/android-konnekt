@@ -67,10 +67,10 @@ interface ChatRepository {
      *
      * @param type The type of the chat to create.
      * @param chatSetting The setting of the chat to create.
-     * @param participantsId The IDs of the participants to join to the chat.
+     * @param participantIds The IDs of the participants to join to the chat, excluding the creator.
      * @return The created chat.
      */
-    suspend fun createChat(type: ChatType, chatSetting: ChatSetting?, participantsId: List<String>?): Chat?
+    suspend fun createChat(type: ChatType, chatSetting: ChatSetting?, participantIds: List<String>?): Chat?
 
     /**
      * Create an event in a chat.
