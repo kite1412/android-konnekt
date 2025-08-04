@@ -10,5 +10,5 @@ data class ChatSetting(
     val iconPath: String?,
     val description: String?,
     @SerialName("permission_setting")
-    val permissionSetting: ChatPermissionSetting
+    val permissionSettings: ChatPermissionSettings
 )

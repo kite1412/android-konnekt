@@ -10,6 +10,6 @@ sealed interface Result<out T, out E: Error> {
 
 fun <T> Success(data: T) = Result.Success(data)
 
-fun <E: Error> Error(exception: E) = Result.Error(exception)
+fun <E: Error> Error(error: E) = Result.Error(error)
 
 fun Loading() = Result.Loading

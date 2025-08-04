@@ -4,13 +4,13 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ChatPermissionSetting(
+data class ChatPermissionSettings(
     @SerialName("edit_chat_info")
-    val editChatInfo: Boolean,
+    val editChatInfo: Boolean = false,
     @SerialName("send_messages")
-    val sendMessages: Boolean,
+    val sendMessages: Boolean = true,
     @SerialName("create_events")
-    val createEvents: Boolean,
+    val createEvents: Boolean = false,
     @SerialName("manage_members")
-    val manageMembers: Boolean
+    val manageMembers: Boolean = false
 )

@@ -1,3 +1,5 @@
 package nrr.konnekt.core.domain.util
 
-interface Error
+interface Error {
+    object Unauthorized : Error
+}

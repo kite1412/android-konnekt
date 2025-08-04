@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.supabase.db)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
+    implementation(libs.kotlinx.serialization.json)
 
     androidTestImplementation(libs.kotlinx.coroutines.test)
 }
