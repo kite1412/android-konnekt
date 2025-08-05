@@ -1,6 +1,10 @@
 package nrr.konnekt.core.network.supabase
 
+import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.ChatDetail
@@ -18,11 +22,15 @@ import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.network.supabase.dto.SupabaseChat
 import nrr.konnekt.core.network.supabase.dto.SupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.SupabaseChatSetting
+import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
+import nrr.konnekt.core.network.supabase.dto.response.joinedChatColumns
 import nrr.konnekt.core.network.supabase.dto.toChat
 import nrr.konnekt.core.network.supabase.dto.toChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toChatSetting
+import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatSetting
 import javax.inject.Inject
@@ -31,8 +39,109 @@ import kotlin.time.Instant
 internal class SupabaseChatRepository @Inject constructor(
     authentication: Authentication
 ) : ChatRepository, SupabaseRepository(authentication) {
-    override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> {
-        TODO("Not yet implemented")
+    /*
+        TODO:
+         - listen real time messages changes
+         - resolve personal chat's icon
+         - resolve messages' attachments
+     */
+    override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> = callbackFlow {
+        performAuthenticatedAction { u ->
+            val joinedChats = chatParticipants {
+                select(
+                    columns = joinedChatColumns()
+                ) {
+                    filter {
+                        eq("user_id", u.id)
+                        filter(
+                            column = "left_at",
+                            operator = FilterOperator.IS,
+                            value = null
+                        )
+                    }
+                }.decodeList<JoinedChat>()
+            }
+            val chats = joinedChats?.let {
+                val chats = chats {
+                    select {
+                        filter {
+                            SupabaseChat::id isIn it.map { c -> c.chatId }
+                        }
+                    }
+                        .decodeList<SupabaseChat>()
+                        .map(SupabaseChat::toChat)
+                }
+                val settings = chats?.let { chats ->
+                    val settings = chatSettings {
+                        select {
+                            filter {
+                                SupabaseChatSetting::chatId isIn chats.map { c -> c.id }
+                            }
+                        }.decodeList<SupabaseChatSetting>()
+                    }
+                    val permissionSettings = settings?.let { settings ->
+                        chatPermissionSettings {
+                            select {
+                                filter {
+                                    SupabaseChatPermissionSettings::chatId isIn settings.map { s -> s.chatId }
+                                }
+                            }
+                                .decodeList<SupabaseChatPermissionSettings>()
+                        }
+                    }
+
+                    settings?.map { s ->
+                        s to permissionSettings?.firstOrNull { ps -> ps.chatId == s.chatId }
+                    }
+                }
+                chats?.map { c ->
+                    c.copy(
+                        setting = settings
+                            ?.firstOrNull { (s, _) ->
+                                s.chatId == c.id
+                            }
+                            ?.let { (s, ps) ->
+                                s.toChatSetting(
+                                    permissionSettings = ps?.toChatPermissionSettings()
+                                )
+                            }
+                    )
+                }
+            }
+            val messages = chats?.let { chats ->
+                messages {
+                    select {
+                        filter {
+                            SupabaseMessage::chatId isIn chats.map { c -> c.id }
+                        }
+                        order(
+                            column = "sent_at",
+                            order = Order.DESCENDING
+                        )
+                    }.decodeList<SupabaseMessage>()
+                }
+            }
+
+            if (chats != null && messages != null) trySend(
+                chats
+                    .map { c ->
+                        LatestChatMessage(
+                            chat = c,
+                            message = messages
+                                .firstOrNull { m -> m.chatId == c.id }
+                                ?.toMessage()
+                        )
+                    }
+                    .sortedWith(
+                        compareByDescending<LatestChatMessage> { it.chat.createdAt }
+                            .thenByDescending { it.message?.sentAt }
+                    )
+            )
+        }
+
+        awaitClose {
+
+        }
     }
 
     override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> {
@@ -99,7 +208,7 @@ internal class SupabaseChatRepository @Inject constructor(
                                 select()
                             }.decodeSingleOrNull<SupabaseChatSetting>()
                         }
-                        val permissionSettings = chatSetting?.let {
+                        val permissionSettings = if (type == ChatType.GROUP) chatSetting?.let {
                             chatPermissionSettings {
                                 insert(
                                     cs.permissionSettings.toSupabaseChatPermissionSettings(chat.id)
@@ -107,13 +216,10 @@ internal class SupabaseChatRepository @Inject constructor(
                                     select()
                                 }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
                             }
-                        }
-                        permissionSettings?.let {
-                            chatSetting.toChatSetting(
-                                permissionSettings = it.toChatPermissionSettings(),
-                                iconPath = null
-                            )
-                        }
+                        } else null
+                        chatSetting?.toChatSetting(
+                            permissionSettings?.toChatPermissionSettings()
+                        )
                     } else null
 
                     Success(chat.toChat(setting))

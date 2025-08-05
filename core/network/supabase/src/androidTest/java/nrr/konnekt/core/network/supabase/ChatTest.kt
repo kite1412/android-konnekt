@@ -1,6 +1,7 @@
 package nrr.konnekt.core.network.supabase
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import nrr.konnekt.core.domain.dto.CreateChatSetting
@@ -58,5 +59,13 @@ internal class ChatTest : AuthSetup() {
             type = ChatType.GROUP
         )
         assert(res is Result.Error)
+    }
+
+    @Test
+    fun observeLatestChatMessagesSuccess() = runTest {
+        val res = repo.observeLatestChatMessages().firstOrNull()
+        println("latest messages: ")
+        res?.forEach(::println)
+        assert(res != null)
     }
 }

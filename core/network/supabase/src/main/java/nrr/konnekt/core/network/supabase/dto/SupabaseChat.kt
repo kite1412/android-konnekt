@@ -17,7 +17,7 @@ internal data class SupabaseChat(
     val createdAt: Instant
 )
 
-internal fun SupabaseChat.toChat(setting: ChatSetting?) =
+internal fun SupabaseChat.toChat(setting: ChatSetting? = null) =
     Chat(
         id = id,
         type = ChatType.valueOf(type.uppercase()),

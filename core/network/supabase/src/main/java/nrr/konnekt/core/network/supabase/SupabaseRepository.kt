@@ -10,6 +10,7 @@ import nrr.konnekt.core.network.supabase.util.Tables.CHATS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
+import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 
 internal abstract class SupabaseRepository(
@@ -39,4 +40,7 @@ internal abstract class SupabaseRepository(
 
     suspend fun <R> chatPermissionSettings(operation: suspend PostgrestQueryBuilder.() -> R?) =
         performOperation(CHAT_PERMISSION_SETTINGS, operation)
+
+    suspend fun <R> messages(operation: suspend PostgrestQueryBuilder.() -> R?) =
+        performOperation(MESSAGES, operation)
 }

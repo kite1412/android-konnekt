@@ -5,5 +5,5 @@ import nrr.konnekt.core.model.Message
 
 data class LatestChatMessage(
     val chat: Chat,
-    val message: Message
+    val message: Message? = null
 )

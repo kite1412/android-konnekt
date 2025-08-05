@@ -26,7 +26,7 @@ internal fun CreateChatSetting.toSupabaseChatSetting(
 )
 
 internal fun SupabaseChatSetting.toChatSetting(
-    permissionSettings: ChatPermissionSettings,
+    permissionSettings: ChatPermissionSettings? = null,
     iconPath: String? = null
 ) = ChatSetting(
     name = name,
