@@ -2,6 +2,7 @@ package nrr.konnekt.core.network.supabase
 
 import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.repository.ChatRepository
@@ -11,15 +12,17 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
-import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
 import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.network.supabase.dto.SupabaseChat
+import nrr.konnekt.core.network.supabase.dto.SupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.SupabaseChatSetting
-import nrr.konnekt.core.network.supabase.dto.request.CreateChat
-import nrr.konnekt.core.network.supabase.dto.request.CreateChatParticipant
+import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
+import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
 import nrr.konnekt.core.network.supabase.dto.toChat
+import nrr.konnekt.core.network.supabase.dto.toChatPermissionSettings
+import nrr.konnekt.core.network.supabase.dto.toChatSetting
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatSetting
 import javax.inject.Inject
@@ -52,9 +55,10 @@ internal class SupabaseChatRepository @Inject constructor(
         TODO("Not yet implemented")
     }
 
+    // TODO implement chat's icon upload
     override suspend fun createChat(
         type: ChatType,
-        chatSetting: ChatSetting?,
+        chatSetting: CreateChatSetting?,
         participantIds: List<String>?
     ): ChatResult<Chat> = performAuthenticatedAction { u ->
         if (type == ChatType.PERSONAL && participantIds?.size != 1)
@@ -68,20 +72,20 @@ internal class SupabaseChatRepository @Inject constructor(
 
         try {
             chats {
-                val newChat = insert(CreateChat(type.toString())) {
+                val newChat = insert(SupabaseCreateChat(type.toString())) {
                     select()
                 }.decodeSingleOrNull<SupabaseChat>()
 
                 newChat?.let { chat ->
                     chatParticipants {
-                        val admin = CreateChatParticipant(
+                        val admin = SupabaseCreateChatParticipant(
                             chatId = chat.id,
                             userId = u.id,
                             role = if (type != ChatType.PERSONAL) ParticipantRole.ADMIN.toString()
-                                else ParticipantRole.MEMBER.toString()
+                            else ParticipantRole.MEMBER.toString()
                         )
                         val participants = participantIds?.map { uid ->
-                            CreateChatParticipant(
+                            SupabaseCreateChatParticipant(
                                 chatId = chat.id,
                                 userId = uid,
                                 role = ParticipantRole.MEMBER.toString()
@@ -90,18 +94,26 @@ internal class SupabaseChatRepository @Inject constructor(
                         insert(listOf(admin) + (participants ?: emptyList()))
                     }
                     val setting = if (type != ChatType.PERSONAL) chatSetting?.let { cs ->
-                        chatSettings {
+                        val chatSetting = chatSettings {
                             insert(cs.toSupabaseChatSetting(chat.id)) {
                                 select()
                             }.decodeSingleOrNull<SupabaseChatSetting>()
-                        }?.let {
+                        }
+                        val permissionSettings = chatSetting?.let {
                             chatPermissionSettings {
                                 insert(
                                     cs.permissionSettings.toSupabaseChatPermissionSettings(chat.id)
-                                )
+                                ) {
+                                    select()
+                                }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
                             }
                         }
-                        cs
+                        permissionSettings?.let {
+                            chatSetting.toChatSetting(
+                                permissionSettings = it.toChatPermissionSettings(),
+                                iconPath = null
+                            )
+                        }
                     } else null
 
                     Success(chat.toChat(setting))
@@ -130,7 +142,7 @@ internal class SupabaseChatRepository @Inject constructor(
         eventId: String,
         title: String?,
         description: String?,
-        startsAt: Instant?
+        startsAt: Instant
     ): ChatResult<Event> {
         TODO("Not yet implemented")
     }

@@ -27,3 +27,11 @@ internal fun ChatPermissionSettings.toSupabaseChatPermissionSettings(
     createEvents = createEvents,
     manageMembers = manageMembers
 )
+
+internal fun SupabaseChatPermissionSettings.toChatPermissionSettings() =
+    ChatPermissionSettings(
+        editChatInfo = editChatInfo,
+        sendMessages = sendMessages,
+        createEvents = createEvents,
+        manageMembers = manageMembers
+    )

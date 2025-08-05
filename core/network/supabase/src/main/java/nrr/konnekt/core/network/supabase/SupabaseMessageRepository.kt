@@ -5,14 +5,15 @@ import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
 
-class SupabaseMessageDataSource : MessageRepository {
+class SupabaseMessageRepository : MessageRepository {
     override fun observeMessages(chatId: String): Flow<List<Message>> {
         TODO("Not yet implemented")
     }
 
     override suspend fun sendMessage(
         chatId: String,
-        content: String
+        content: String,
+        attachments: List<ByteArray>?
     ): Message? {
         TODO("Not yet implemented")
     }

@@ -3,9 +3,9 @@ package nrr.konnekt.core.network.supabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.ChatPermissionSettings
-import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import org.junit.Before
 import org.junit.Test
@@ -44,10 +44,8 @@ internal class ChatTest : AuthSetup() {
     fun createGroupChatSuccess() = runTest {
         val res = repo.createChat(
             type = ChatType.GROUP,
-            chatSetting = ChatSetting(
+            chatSetting = CreateChatSetting(
                 name = "test",
-                iconPath = null,
-                description = null,
                 permissionSettings = ChatPermissionSettings()
             )
         )

@@ -1,6 +1,7 @@
 package nrr.konnekt.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
@@ -8,7 +9,6 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
-import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
 import nrr.konnekt.core.model.Message
@@ -81,7 +81,7 @@ interface ChatRepository {
      */
     suspend fun createChat(
         type: ChatType,
-        chatSetting: ChatSetting? = null,
+        chatSetting: CreateChatSetting? = null,
         participantIds: List<String>? = null
     ): ChatResult<Chat>
 
@@ -97,7 +97,7 @@ interface ChatRepository {
     suspend fun createEvent(
         chatId: String,
         title: String,
-        description: String?,
+        description: String? = null ,
         startsAt: Instant
     ): ChatResult<Event>
 
@@ -121,8 +121,8 @@ interface ChatRepository {
     suspend fun editEvent(
         eventId: String,
         title: String?,
-        description: String?,
-        startsAt: Instant?
+        description: String? = null,
+        startsAt: Instant
     ): ChatResult<Event>
 
     sealed interface ChatError : Error {

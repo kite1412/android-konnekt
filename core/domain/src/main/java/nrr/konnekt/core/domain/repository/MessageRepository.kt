@@ -22,9 +22,14 @@ interface MessageRepository {
      *
      * @param chatId The ID of the chat to send the message to.
      * @param content The content of the message.
+     * @param attachments The attachments of the message.
      * @return The sent message.
      */
-    suspend fun sendMessage(chatId: String, content: String): Message?
+    suspend fun sendMessage(
+        chatId: String,
+        content: String,
+        attachments: List<ByteArray>? = null
+    ): Message?
 
     /**
      * Edit a message.
