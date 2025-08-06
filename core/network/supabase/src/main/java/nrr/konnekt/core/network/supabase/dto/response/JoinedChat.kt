@@ -3,8 +3,10 @@ package nrr.konnekt.core.network.supabase.dto.response
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonIgnoreUnknownKeys
 
 @Serializable
+@JsonIgnoreUnknownKeys
 internal data class JoinedChat(
     @SerialName("user_id")
     val userId: String,

@@ -20,6 +20,13 @@ interface Authentication {
     val loggedInUser: Flow<User?>
 
     /**
+     * Get the logged in user.
+     *
+     * @return The logged in user.
+     */
+    fun getLoggedInUserOrNull(): User?
+
+    /**
      * Login with username and password.
      *
      * @param email The email to login with.

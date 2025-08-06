@@ -27,6 +27,8 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
     override val loggedInUser: Flow<User?>
         get() = _loggedInUser.asStateFlow()
 
+    override fun getLoggedInUserOrNull(): User? = _loggedInUser.value
+
     override suspend fun login(
         email: String,
         password: String

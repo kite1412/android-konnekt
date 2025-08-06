@@ -64,6 +64,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
 supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
 supabase-db = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
+supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime-kt" }
 
 # used in buildlogic
 android-gp = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }

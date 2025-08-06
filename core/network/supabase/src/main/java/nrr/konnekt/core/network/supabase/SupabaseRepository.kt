@@ -16,31 +16,40 @@ import nrr.konnekt.core.network.supabase.util.Tables.USERS
 internal abstract class SupabaseRepository(
     private val authentication: Authentication
 ) {
-    suspend fun <R> performAuthenticatedAction(action: suspend (User) -> R) =
+    suspend fun <R> performSuspendingAuthenticatedAction(action: suspend (User) -> R) =
         authentication.loggedInUser.first()?.run {
             action(this)
         } ?: throw UnauthenticatedException()
 
-    suspend fun <R> performOperation(
+    fun <R> performAuthenticatedAction(action: (User) -> R) =
+        authentication.getLoggedInUserOrNull()?.let(action)
+            ?: throw UnauthenticatedException()
+
+    suspend fun <R> performSuspendingOperation(
         tableName: String,
-        operation: suspend PostgrestQueryBuilder.() -> R?
+        operation: suspend PostgrestQueryBuilder.() -> R
     ) = operation(supabaseClient.postgrest[tableName])
 
-    suspend fun <R> users(operation: suspend PostgrestQueryBuilder.() -> R?) =
-        performOperation(USERS, operation)
+    fun <R> performOperation(
+        tableName: String,
+        operation: PostgrestQueryBuilder.() -> R
+    ) = operation(supabaseClient.postgrest[tableName])
 
-    suspend fun <R> chats(operation: suspend PostgrestQueryBuilder.() -> R?) =
-        performOperation(CHATS, operation)
+    suspend fun <R> users(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(USERS, operation)
 
-    suspend fun <R> chatParticipants(operation: suspend PostgrestQueryBuilder.() -> R?) =
-        performOperation(CHAT_PARTICIPANTS, operation)
+    suspend fun <R> chats(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(CHATS, operation)
 
-    suspend fun <R> chatSettings(operation: suspend PostgrestQueryBuilder.() -> R?) =
-        performOperation(CHAT_SETTINGS, operation)
+    suspend fun <R> chatParticipants(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(CHAT_PARTICIPANTS, operation)
 
-    suspend fun <R> chatPermissionSettings(operation: suspend PostgrestQueryBuilder.() -> R?) =
-        performOperation(CHAT_PERMISSION_SETTINGS, operation)
+    suspend fun <R> chatSettings(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(CHAT_SETTINGS, operation)
 
-    suspend fun <R> messages(operation: suspend PostgrestQueryBuilder.() -> R?) =
-        performOperation(MESSAGES, operation)
+    suspend fun <R> chatPermissionSettings(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(CHAT_PERMISSION_SETTINGS, operation)
+
+    suspend fun <R> messages(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(MESSAGES, operation)
 }

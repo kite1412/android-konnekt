@@ -1,7 +1,8 @@
 package nrr.konnekt.core.network.supabase
 
+import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import nrr.konnekt.core.domain.dto.CreateChatSetting
@@ -14,6 +15,8 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 internal class ChatTest : AuthSetup() {
+    private val logTag = "ChatTest"
+
     private lateinit var repo: SupabaseChatRepository
 
     @Before
@@ -63,9 +66,16 @@ internal class ChatTest : AuthSetup() {
 
     @Test
     fun observeLatestChatMessagesSuccess() = runTest {
-        val res = repo.observeLatestChatMessages().firstOrNull()
-        println("latest messages: ")
-        res?.forEach(::println)
-        assert(res != null)
+        val res = repo.observeLatestChatMessages().first()
+        Log.d(
+            logTag,
+            "latest messages:\n${
+                res.joinToString(separator = ", ") {
+                    it.message?.content ?: "null"
+                }
+            }"
+        )
+        // potentially fail should the chats empty
+        assert(res.isNotEmpty())
     }
 }
