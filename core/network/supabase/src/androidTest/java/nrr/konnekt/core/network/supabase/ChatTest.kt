@@ -71,7 +71,8 @@ internal class ChatTest : AuthSetup() {
             logTag,
             "latest messages:\n${
                 res.joinToString(separator = ", ") {
-                    it.message?.content ?: "null"
+                    "${it.messageDetail?.message?.content}, " +
+                            "sender: ${it.messageDetail?.sender?.username}"
                 }
             }"
         )

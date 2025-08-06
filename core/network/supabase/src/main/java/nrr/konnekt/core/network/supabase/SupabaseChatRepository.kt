@@ -14,6 +14,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.MessageDetail
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
@@ -23,7 +24,9 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
+import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.ParticipantRole
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.SupabaseChat
 import nrr.konnekt.core.network.supabase.dto.SupabaseChatParticipant
 import nrr.konnekt.core.network.supabase.dto.SupabaseChatPermissionSettings
@@ -159,23 +162,57 @@ internal class SupabaseChatRepository @Inject constructor(
                         }
                 }
             }
+            val senders = messages.flatMapLatest { m ->
+                flowOf(
+                    users {
+                        select {
+                            filter {
+                                User::id isIn m.map { it.senderId }
+                            }
+                        }.decodeList<User>()
+                    }
+                )
+            }
+            val messageStatuses = combine(
+                flow = senders,
+                flow2 = messages
+            ) { senders, messages ->
+                messageStatuses {
+                    select {
+                        filter {
+                            MessageStatus::messageId isIn messages.map { m -> m.id }
+                            MessageStatus::userId isIn senders.map { s -> s.id }
+                        }
+                    }.decodeList<MessageStatus>()
+                }
+            }
 
             combine(
                 flow = chats,
-                flow2 = messages
-            ) { chats, messages ->
+                flow2 = messages,
+                flow3 = senders,
+                flow4 = messageStatuses
+            ) { chats, messages, senders, messageStatuses ->
                 chats
                     .map { c ->
                         LatestChatMessage(
                             chat = c,
-                            message = messages
+                            messageDetail = messages
                                 .firstOrNull { m -> m.chatId == c.id }
-                                ?.toMessage()
+                                ?.toMessage()?.let {
+                                    MessageDetail(
+                                        sender = senders
+                                            .first { u -> u.id == it.senderId },
+                                        message = it,
+                                        messageStatuses = messageStatuses
+                                            .filter { ms -> ms.messageId == it.id }
+                                    )
+                                }
                         )
                     }
                     .sortedWith(
                         compareByDescending<LatestChatMessage> { it.chat.createdAt }
-                            .thenByDescending { it.message?.sentAt }
+                            .thenByDescending { it.messageDetail?.message?.sentAt }
                     )
             }
         }
