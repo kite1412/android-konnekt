@@ -1,6 +1,15 @@
 package nrr.konnekt.core.network.supabase
 
+import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.presenceDataFlow
 import io.github.jan.supabase.realtime.track
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.UserPresenceManager.UserPresenceManagerError
@@ -15,10 +24,23 @@ import javax.inject.Inject
 internal class SupabaseUserPresenceManager @Inject constructor(
     authentication: Authentication
 ) : UserPresenceManager, SupabaseService(authentication) {
+    private val _activeUsers: MutableStateFlow<List<UserStatus>> = MutableStateFlow(emptyList())
+    val activeUsers = _activeUsers.asStateFlow()
+
     override suspend fun markUserActive(user: User): UserPresenceResult {
         val userStatus = user.updateUserStatus()
-        presenceChannel.subscribe(true)
-        presenceChannel.track(userStatus)
+        if (presenceChannel.status.value != RealtimeChannel.Status.SUBSCRIBED) {
+            CoroutineScope(Dispatchers.Default).launch {
+                presenceChannel
+                    .presenceDataFlow<UserStatus>()
+                    .onEach {
+                        _activeUsers.value = it
+                    }
+                    .launchIn(this)
+            }
+            presenceChannel.subscribe(true)
+            presenceChannel.track(userStatus)
+        }
         return Success(userStatus)
     }
 

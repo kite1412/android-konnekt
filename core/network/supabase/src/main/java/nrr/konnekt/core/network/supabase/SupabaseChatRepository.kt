@@ -36,6 +36,7 @@ import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
 import nrr.konnekt.core.network.supabase.dto.toChat
+import nrr.konnekt.core.network.supabase.dto.toChatParticipant
 import nrr.konnekt.core.network.supabase.dto.toChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toChatSetting
 import nrr.konnekt.core.network.supabase.dto.toMessage
@@ -47,7 +48,8 @@ import javax.inject.Inject
 import kotlin.time.Instant
 
 internal class SupabaseChatRepository @Inject constructor(
-    authentication: Authentication
+    authentication: Authentication,
+    private val userPresenceManager: SupabaseUserPresenceManager
 ) : ChatRepository, SupabaseService(authentication) {
     /*
         TODO:
@@ -217,8 +219,25 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> =
-        flowOf()
+        userPresenceManager.activeUsers
+            .flatMapLatest { userStatuses ->
+                flowOf(
+                    chatParticipants {
+                        select {
+                            filter {
+                                SupabaseChatParticipant::chatId eq chatId
+                            }
+                        }.decodeList<SupabaseChatParticipant>()
+                    }
+                        .filter { p ->
+                            userStatuses
+                                .firstOrNull { us -> us.userId == p.userId } != null
+                        }
+                        .map(SupabaseChatParticipant::toChatParticipant)
+                )
+            }
 
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
         TODO("Not yet implemented")

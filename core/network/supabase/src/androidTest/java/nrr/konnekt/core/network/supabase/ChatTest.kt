@@ -2,13 +2,17 @@ package nrr.konnekt.core.network.supabase
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.User
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,12 +22,18 @@ internal class ChatTest : AuthSetup() {
     private val logTag = "ChatTest"
 
     private lateinit var repo: SupabaseChatRepository
+    private lateinit var userPresenceManager: SupabaseUserPresenceManager
+    private lateinit var user: User
 
     @Before
-    override fun init() = runBlocking {
+    override fun init(): Unit = runBlocking {
         super.init()
-        initUser()
-        repo = SupabaseChatRepository(auth)
+        user = initUser()
+        userPresenceManager = SupabaseUserPresenceManager(auth)
+        repo = SupabaseChatRepository(
+            authentication = auth,
+            userPresenceManager = userPresenceManager
+        )
     }
 
     @Test
@@ -39,7 +49,7 @@ internal class ChatTest : AuthSetup() {
     fun createPersonalChatError() = runTest {
         val res = repo.createChat(
             type = ChatType.PERSONAL,
-            participantIds = listOf(getProperty("SUPABASE_USER_ID"), "mock-id")
+            participantIds = listOf(getProperty("SUPABASE_CHAT_ID"), "mock-id")
         )
         assert(res is Result.Error)
     }
@@ -78,5 +88,19 @@ internal class ChatTest : AuthSetup() {
         )
         // potentially fail should the chats empty
         assert(res.isNotEmpty())
+    }
+
+    @Test
+    fun observeActiveParticipantsSuccess() = runBlocking {
+        userPresenceManager.updateLastActiveAt(user)
+        userPresenceManager.markUserActive(user)
+        val job = repo
+            .observeActiveParticipants(getProperty("SUPABASE_CHAT_ID"))
+            .onEach {
+                Log.d(logTag, "active participants: $it")
+            }.launchIn(this)
+
+        delay(5000)
+        job.cancel()
     }
 }
