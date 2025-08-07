@@ -48,7 +48,7 @@ import kotlin.time.Instant
 
 internal class SupabaseChatRepository @Inject constructor(
     authentication: Authentication
-) : ChatRepository, SupabaseRepository(authentication) {
+) : ChatRepository, SupabaseService(authentication) {
     /*
         TODO:
          - resolve personal chat's icon
@@ -217,9 +217,8 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         }
 
-    override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> {
-        TODO("Not yet implemented")
-    }
+    override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> =
+        flowOf()
 
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
         TODO("Not yet implemented")

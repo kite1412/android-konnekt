@@ -8,4 +8,5 @@ internal object Tables {
     const val CHAT_PERMISSION_SETTINGS = "chat_permission_settings"
     const val MESSAGES = "messages"
     const val MESSAGE_STATUSES = "message_statuses"
+    const val USER_STATUSES = "user_statuses"
 }

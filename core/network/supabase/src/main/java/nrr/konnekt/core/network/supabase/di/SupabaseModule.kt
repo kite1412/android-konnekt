@@ -5,9 +5,11 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.network.supabase.SupabaseAuthentication
 import nrr.konnekt.core.network.supabase.SupabaseChatRepository
+import nrr.konnekt.core.network.supabase.SupabaseUserPresenceManager
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -21,4 +23,9 @@ internal interface SupabaseModule {
     fun bindChatRepository(
         supabaseChatRepository: SupabaseChatRepository
     ): ChatRepository
+
+    @Binds
+    fun bindUserPresenceManager(
+        supabaseUserPresenceManager: SupabaseUserPresenceManager
+    ): UserPresenceManager
 }

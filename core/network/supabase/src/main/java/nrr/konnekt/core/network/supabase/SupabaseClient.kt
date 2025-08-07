@@ -1,9 +1,11 @@
 package nrr.konnekt.core.network.supabase
 
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.realtime.channel
 import io.ktor.http.headers
 
 internal val supabaseClient = createSupabaseClient(
@@ -18,3 +20,12 @@ internal val supabaseClient = createSupabaseClient(
         append("Accept-Timezone", "UTC")
     }
 }
+
+internal val presenceChannel = supabaseClient
+    .channel("user-presence") {
+        supabaseClient.auth.currentUserOrNull()?.let {
+            presence {
+                key = it.id
+            }
+        }
+    }

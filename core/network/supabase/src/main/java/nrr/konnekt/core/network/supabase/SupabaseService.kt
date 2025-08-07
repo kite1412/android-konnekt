@@ -13,8 +13,9 @@ import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
+import nrr.konnekt.core.network.supabase.util.Tables.USER_STATUSES
 
-internal abstract class SupabaseRepository(
+internal abstract class SupabaseService(
     private val authentication: Authentication
 ) {
     protected suspend fun <R> performSuspendingAuthenticatedAction(action: suspend (User) -> R) =
@@ -56,4 +57,7 @@ internal abstract class SupabaseRepository(
 
     protected suspend fun <R> messageStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(MESSAGE_STATUSES, operation)
+
+    protected suspend fun <R> userStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(USER_STATUSES, operation)
 }
