@@ -15,7 +15,7 @@ internal class KonnektViewModel @Inject constructor(
 ) : ViewModel() {
     var showSplashOnce by mutableStateOf(false)
     val isSignedIn = authentication
-        .getLoggedInUserOrNull
+        .loggedInUser
         .map {
             it != null
         }
