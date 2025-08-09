@@ -6,6 +6,7 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.storage.Storage
 import io.ktor.http.headers
 
 internal val supabaseClient = createSupabaseClient(
@@ -15,6 +16,7 @@ internal val supabaseClient = createSupabaseClient(
     install(Auth)
     install(Postgrest)
     install(Realtime)
+    install(Storage)
 
     headers {
         append("Accept-Timezone", "UTC")
