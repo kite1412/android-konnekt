@@ -11,7 +11,8 @@ private val DarkColorScheme = darkColorScheme(
     secondary = PurpleGrey80,
     tertiary = Pink80,
     background = Navy,
-    onPrimary = Color.Black
+    onPrimary = Color.Black,
+    outline = Lime
 )
 
 @Composable

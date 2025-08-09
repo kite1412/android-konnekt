@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +43,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.util.info
@@ -50,16 +55,24 @@ import nrr.konnekt.core.ui.util.rememberResolvedImage
 
 fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
-    onClick: (LatestChatMessage) -> Unit
+    onClick: (LatestChatMessage) -> Unit,
+    dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
     items(
         count = latestChatMessages.size,
         key = { it }
     ) {
-        ChatCard(
-            latestChatMessage = latestChatMessages[it],
-            onClick = onClick
-        )
+        with(latestChatMessages[it]) {
+            ChatCard(
+                latestChatMessage = this,
+                onClick = onClick,
+                dropdownItems = dropdownItems?.let { c ->
+                    { dismiss ->
+                        c(this, dismiss, this@with)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -67,8 +80,10 @@ fun LazyListScope.chats(
 private fun ChatCard(
     latestChatMessage: LatestChatMessage,
     onClick: (LatestChatMessage) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null
 ) {
+    var expandDropdown by remember { mutableStateOf(false) }
     val icon by rememberResolvedImage(latestChatMessage.chat.setting?.iconPath)
 
     CompositionLocalProvider(
@@ -170,15 +185,34 @@ private fun ChatCard(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        Icon(
-                            painter = painterResource(KonnektIcon.ellipsisVertical),
-                            contentDescription = "more",
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable() {
-
-                                }
-                        )
+                        Box {
+                            Icon(
+                                painter = painterResource(KonnektIcon.ellipsisVertical),
+                                contentDescription = "more",
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = null
+                                    ) {
+                                        if (dropdownItems != null)
+                                            expandDropdown = !expandDropdown
+                                    }
+                            )
+                            dropdownItems?.let {
+                                DropdownMenu(
+                                    expanded = expandDropdown,
+                                    onDismissRequest = {
+                                        expandDropdown = false
+                                    },
+                                    content = {
+                                        it {
+                                            expandDropdown = false
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -202,7 +236,25 @@ private fun ChatCardsPreview(
             ) {
                 chats(
                     latestChatMessages = chats,
-                    onClick = {}
+                    onClick = {},
+                    dropdownItems = { dismiss, chat ->
+                        DropdownItem(
+                            text = "Clear Chat",
+                            onClick = {
+                                dismiss()
+                            },
+                            contentColor = Red,
+                            iconId = KonnektIcon.mailCheck
+                        )
+                        DropdownItem(
+                            text = "Delete Chat",
+                            onClick = {
+                                dismiss()
+                            },
+                            contentColor = Red,
+                            iconId = KonnektIcon.eye
+                        )
+                    }
                 )
             }
         }
