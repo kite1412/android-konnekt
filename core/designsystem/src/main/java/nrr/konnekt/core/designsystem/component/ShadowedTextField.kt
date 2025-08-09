@@ -75,6 +75,7 @@ fun ShadowedTextField(
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
                     textStyle = adjustTextStyle,
                     decorationBox = {
                         Box {

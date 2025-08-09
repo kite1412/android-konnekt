@@ -99,6 +99,7 @@ internal fun AuthenticationScreen(
         backToLogin = {
             viewModel.isSignIn = true
             viewModel.verificationEmailSent = false
+            viewModel.actionState = null
         },
         modifier = modifier.padding(contentPadding)
     )
