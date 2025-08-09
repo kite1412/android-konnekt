@@ -4,8 +4,15 @@ plugins {
 
 android {
     namespace = "nrr.konnekt.core.ui"
+
+    kotlin {
+        sourceSets.all {
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
+        }
+    }
 }
 
 dependencies {
     api(projects.core.designsystem)
+    api(projects.core.domain)
 }

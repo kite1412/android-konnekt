@@ -8,4 +8,5 @@ object KonnektIcon {
     val eyeClosed = R.drawable.eye_closed
     val mailCheck = R.drawable.mail_check
     val arrowRight = R.drawable.arrow_right
+    val ellipsisVertical = R.drawable.ellipsis_vertical
 }

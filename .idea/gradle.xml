@@ -35,7 +35,7 @@
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/authentication" />
-            <option value="$PROJECT_DIR$/feature/chatlist" />
+            <option value="$PROJECT_DIR$/feature/chats" />
           </set>
         </option>
       </GradleProjectSettings>

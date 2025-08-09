@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +33,10 @@ fun ShadowedButton(
     shadowColor: Color = MaterialTheme.colorScheme.primary,
     backgroundColor: Color = MaterialTheme.colorScheme.background,
     space: Dp = 2.dp,
+    contentPadding: PaddingValues = PaddingValues(
+        horizontal = 16.dp,
+        vertical = 8.dp
+    ),
     enabled: Boolean = true,
     bounceBack: Boolean = false,
     content: @Composable () -> Unit
@@ -57,6 +62,7 @@ fun ShadowedButton(
         shadowColor = shadowColor,
         backgroundColor = backgroundColor,
         space = space * spaceFactor.value,
+        contentPadding = contentPadding,
         content = content
     )
 }
