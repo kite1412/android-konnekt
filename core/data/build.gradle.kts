@@ -9,6 +9,5 @@ android {
 
 dependencies {
     implementation(projects.konnekt.core.domain)
-
     implementation(projects.konnekt.core.network.supabase)
 }

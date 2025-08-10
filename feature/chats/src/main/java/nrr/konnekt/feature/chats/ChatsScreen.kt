@@ -200,7 +200,8 @@ private fun Header(
             Box(
                 modifier = Modifier
                     .size(50.dp)
-                    .clip(CircleShape)
+                    .clip(CircleShape),
+                contentAlignment = Alignment.Center
             ) {
                 user.imagePath?.let {
                     val avatar by rememberResolvedImage(it)
@@ -222,7 +223,7 @@ private fun Header(
                     ) {
                         Text(
                             text = this@with.toString(),
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 }

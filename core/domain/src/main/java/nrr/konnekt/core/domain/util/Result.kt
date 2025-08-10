@@ -5,11 +5,8 @@ sealed interface Result<out T, out E: Error> {
     data class Error<out E: nrr.konnekt.core.domain.util.Error>(
         val error: E
     ) : Result<Nothing, E>
-    object Loading : Result<Nothing, Nothing>
 }
 
 fun <T> Success(data: T) = Result.Success(data)
 
 fun <E: Error> Error(error: E) = Result.Error(error)
-
-fun Loading() = Result.Loading

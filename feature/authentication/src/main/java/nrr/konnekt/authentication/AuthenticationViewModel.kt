@@ -7,12 +7,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import jakarta.inject.Inject
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication.AuthError
 import nrr.konnekt.core.domain.usecase.LoginUseCase
 import nrr.konnekt.core.domain.usecase.RegisterUseCase
 import nrr.konnekt.core.domain.util.Result
+import javax.inject.Inject
 
 @HiltViewModel
 class AuthenticationViewModel @Inject constructor(

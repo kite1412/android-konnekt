@@ -18,6 +18,11 @@ class ChatsViewModel @Inject constructor(
     observeChatMessagesUseCase: ObserveChatMessagesUseCase
 ) : ViewModel() {
     internal val chats = observeChatMessagesUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
     internal val currentUser = authentication.loggedInUser
         .stateIn(
             scope = viewModelScope,

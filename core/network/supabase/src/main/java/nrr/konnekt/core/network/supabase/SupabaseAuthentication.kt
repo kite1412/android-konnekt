@@ -1,14 +1,19 @@
 package nrr.konnekt.core.network.supabase
 
+import android.util.Log
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.AuthResult
@@ -17,6 +22,7 @@ import nrr.konnekt.core.domain.Authentication.AuthError
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import javax.inject.Inject
@@ -26,6 +32,16 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
     private val _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
     override val loggedInUser: Flow<User?>
         get() = _loggedInUser.asStateFlow()
+
+    init {
+        client.auth.sessionStatus
+            .onEach {
+                val user = client.auth.currentUserOrNull()?.toUser()
+                Log.d(LOG_TAG, "Current user: $user")
+                _loggedInUser.value = user
+            }
+            .launchIn(CoroutineScope(Dispatchers.Default))
+    }
 
     override fun getLoggedInUserOrNull(): User? = _loggedInUser.value
 

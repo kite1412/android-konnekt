@@ -147,7 +147,9 @@ private fun ChatCard(
                         ) {
                             Text(
                                 text = chat.setting?.name ?: chat.id,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = buildAnnotatedString {

@@ -9,6 +9,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.compose.rememberNavController
 import nrr.konnekt.KonnektViewModel
 import nrr.konnekt.SplashScreen
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
@@ -32,12 +34,13 @@ internal fun KonnektApp(
     modifier: Modifier = Modifier,
     viewModel: KonnektViewModel = hiltViewModel()
 ) {
-    val isSignedIn by viewModel.isSignedIn.collectAsStateWithLifecycle(false)
+    val isSignedIn by viewModel.isSignedIn.collectAsStateWithLifecycle()
     val snackbarHostState = remember {
         SnackbarHostStateWrapper(
             coroutineScope = viewModel.viewModelScope
         )
     }
+    val navController = rememberNavController()
 
     KonnektTheme {
         CompositionLocalProvider(
@@ -56,16 +59,22 @@ internal fun KonnektApp(
                 }
             ) { showContent ->
                 if (!showContent) SplashScreen(
-                    onSplashFinished = { viewModel.showSplashOnce = true }
+                    onSplashFinished = {
+                        viewModel.showSplashOnce = true
+                    }
                 ) else {
                     Scaffold(modifier = modifier) { p ->
                         Box(modifier = Modifier.fillMaxSize()) {
                             KonnektNavHost(
-                                isSignedIn = isSignedIn
+                                isSignedIn = isSignedIn,
+                                scaffoldPadding = p,
+                                navController = navController
                             )
                             SnackbarHost(
                                 hostState = snackbarHostState.snackbarHostState,
-                                modifier = Modifier.align(Alignment.TopCenter),
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(p),
                                 snackbar = { KonnektSnackbar(it) }
                             )
                         }
