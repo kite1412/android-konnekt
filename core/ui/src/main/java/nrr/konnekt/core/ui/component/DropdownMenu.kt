@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -20,6 +21,7 @@ fun DropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    offset: DpOffset = DpOffset(0.dp, 8.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = RoundedCornerShape(8.dp)
@@ -39,7 +41,8 @@ fun DropdownMenu(
                 color = MaterialTheme.colorScheme.background
             )
             .padding(contentPadding),
-        shape = shape
+        shape = shape,
+        offset = offset
     ) {
         CompositionLocalProvider(
             LocalContentColor provides outlineColor // match with outline color

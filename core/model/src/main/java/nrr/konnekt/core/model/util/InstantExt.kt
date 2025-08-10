@@ -25,7 +25,8 @@ fun Instant.info() =
         )
     }
 
-fun LocalTime.toStringIgnoreSecond() = "$hour:$minute"
+fun LocalTime.toStringIgnoreSecond() =
+    "%02d:%02d".format(hour, minute)
 
 fun LocalDateTime.toStringFormatted(): String =
     toJavaLocalDateTime().format(DateTimeFormatter.ofPattern("dd MMM yy"))

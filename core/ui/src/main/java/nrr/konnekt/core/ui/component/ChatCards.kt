@@ -98,8 +98,6 @@ private fun ChatCard(
                 horizontal = 10.dp,
                 vertical = 16.dp
             ),
-            shadowColor = MaterialTheme.colorScheme.onPrimary,
-            backgroundColor = MaterialTheme.colorScheme.primary,
             space = 6.dp,
             bounceBack = true
         ) {

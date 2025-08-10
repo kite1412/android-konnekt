@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -30,16 +31,16 @@ import nrr.konnekt.core.designsystem.theme.KonnektTheme
 fun ShadowedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    shadowColor: Color = MaterialTheme.colorScheme.primary,
-    backgroundColor: Color = MaterialTheme.colorScheme.background,
-    space: Dp = 2.dp,
+    shadowColor: Color = MaterialTheme.colorScheme.onPrimary,
+    backgroundColor: Color = MaterialTheme.colorScheme.primary,
+    space: Dp = 4.dp,
     contentPadding: PaddingValues = PaddingValues(
         horizontal = 16.dp,
         vertical = 8.dp
     ),
     enabled: Boolean = true,
-    bounceBack: Boolean = false,
-    content: @Composable () -> Unit
+    bounceBack: Boolean = true,
+    content: @Composable BoxScope.() -> Unit
 ) {
     val spaceFactor = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()

@@ -15,7 +15,7 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import nrr.konnekt.core.designsystem.util.KonnektIcon
-import nrr.konnekt.core.designsystem.util.ShadowedTextFieldDefaults
+import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 
@@ -29,7 +29,7 @@ fun SecureShadowedTextField(
     label: String? = null,
     actions: (@Composable () -> Unit)? = null,
     singleLine: Boolean = true,
-    style: ShadowedTextFieldStyle = ShadowedTextFieldDefaults.defaultStyle()
+    style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle()
 ) {
     var hide by rememberSaveable { mutableStateOf(true) }
 

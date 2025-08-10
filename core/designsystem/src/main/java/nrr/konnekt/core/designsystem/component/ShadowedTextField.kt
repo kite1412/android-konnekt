@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,11 +30,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.R
-import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
-import nrr.konnekt.core.designsystem.util.ShadowedTextFieldDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
+import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 
 @Composable
@@ -47,12 +47,9 @@ fun ShadowedTextField(
     actions: (@Composable () -> Unit)? = null,
     singleLine: Boolean = true,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    style: ShadowedTextFieldStyle = ShadowedTextFieldDefaults.defaultStyle()
+    style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle()
 ) {
     val valueIsEmpty = value.isEmpty()
-    val adjustTextStyle = style.textStyle.copy(
-        color = LocalContentColor.current
-    )
     val errorColor = Red
     val shadowColor by animateColorAsState(
         targetValue = if (errorIndicators?.map { it.error }?.contains(true) == true)
@@ -104,19 +101,22 @@ fun ShadowedTextField(
                             value = value,
                             onValueChange = onValueChange,
                             modifier = Modifier.fillMaxWidth(),
-                            textStyle = adjustTextStyle,
+                            textStyle = style.textStyle,
                             decorationBox = {
-                                Box {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
                                     if (valueIsEmpty) Text(
                                         text = placeholder,
-                                        style = adjustTextStyle.copy(
-                                            color = Gray
+                                        style = style.textStyle.copy(
+                                            color = style.placeholderColor
                                         )
                                     )
                                     it()
                                 }
                             },
-                            cursorBrush = SolidColor(adjustTextStyle.color),
+                            cursorBrush = SolidColor(style.textStyle.color),
                             singleLine = singleLine,
                             visualTransformation = visualTransformation
                         )
