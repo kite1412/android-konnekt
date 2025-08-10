@@ -1,5 +1,6 @@
 package nrr.konnekt.ui
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -11,6 +12,7 @@ import nrr.konnekt.authentication.navigation.authenticationScreen
 @Composable
 internal fun KonnektNavHost(
     modifier: Modifier = Modifier,
+    scaffoldPadding: PaddingValues? = null,
     navController: NavHostController = rememberNavController(),
     isSignedIn: Boolean = true
 ) {
@@ -20,7 +22,7 @@ internal fun KonnektNavHost(
         modifier = modifier
     ) {
         authenticationScreen(
-            contentPadding = rootContentPadding,
+            contentPadding = rootContentPadding(scaffoldPadding),
             onSignedIn = {}
         )
     }

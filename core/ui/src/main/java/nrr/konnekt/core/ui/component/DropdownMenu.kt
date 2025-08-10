@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -22,6 +24,7 @@ fun DropdownMenu(
 ) {
     val shape = RoundedCornerShape(8.dp)
     val contentPadding = 12.dp
+    val outlineColor = MaterialTheme.colorScheme.outline
 
     DropdownMenu(
         expanded = expanded,
@@ -29,7 +32,7 @@ fun DropdownMenu(
         modifier = modifier
             .border(
                 width = 2.dp,
-                color = MaterialTheme.colorScheme.outline,
+                color = outlineColor,
                 shape = shape
             )
             .background(
@@ -38,11 +41,15 @@ fun DropdownMenu(
             .padding(contentPadding),
         shape = shape
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(
-                contentPadding * 1.5f
-            ),
-            content = content
-        )
+        CompositionLocalProvider(
+            LocalContentColor provides outlineColor // match with outline color
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(
+                    contentPadding * 1.5f
+                ),
+                content = content
+            )
+        }
     }
 }

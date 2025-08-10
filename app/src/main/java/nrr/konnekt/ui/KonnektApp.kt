@@ -9,7 +9,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -60,10 +59,10 @@ internal fun KonnektApp(
                     onSplashFinished = { viewModel.showSplashOnce = true }
                 ) else {
                     Scaffold(modifier = modifier) { p ->
-                        Box(
-                            modifier = Modifier.padding(p)
-                        ) {
-                            KonnektNavHost(isSignedIn = isSignedIn)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            KonnektNavHost(
+                                isSignedIn = isSignedIn
+                            )
                             SnackbarHost(
                                 hostState = snackbarHostState.snackbarHostState,
                                 modifier = Modifier.align(Alignment.TopCenter),

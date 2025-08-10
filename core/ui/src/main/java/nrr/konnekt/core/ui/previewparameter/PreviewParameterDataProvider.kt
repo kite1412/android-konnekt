@@ -1,5 +1,6 @@
 package nrr.konnekt.core.ui.previewparameter
 
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.MessageDetail
 import nrr.konnekt.core.model.Attachment
@@ -15,7 +16,19 @@ import nrr.konnekt.core.model.util.now
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-internal object PreviewParameterData {
+data class PreviewParameterData(
+    val latestChatMessages: List<LatestChatMessage>,
+    val user: User
+)
+
+class PreviewParameterDataProvider
+    : PreviewParameterProvider<PreviewParameterData> {
+
+    override val values: Sequence<PreviewParameterData>
+        get() = sequenceOf(
+            PreviewParameterData(latestChatMessages, user)
+        )
+
     val latestChatMessages = listOf(
         LatestChatMessage(
             chat = Chat(
@@ -269,5 +282,13 @@ internal object PreviewParameterData {
                 )
             )
         )
+    )
+
+    val user = User(
+        id = "u1",
+        email = "kite@example.com",
+        username = "kite",
+        bio = "Empty bio",
+        createdAt = Instant.parse("2024-07-01T09:00:00Z")
     )
 }

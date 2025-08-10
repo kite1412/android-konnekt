@@ -3,6 +3,8 @@ package nrr.konnekt.authentication
 import android.util.Patterns
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -32,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +50,8 @@ import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
+import nrr.konnekt.core.ui.util.Side
+import nrr.konnekt.core.ui.util.topRadialGradient
 
 private val textFieldMaxWidth = 400.dp
 private val textFieldsSpace = 16.dp
@@ -62,6 +67,17 @@ internal fun AuthenticationScreen(
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val animationSpec = tween<Color>(durationMillis = 1000)
+    val topGradientColor by animateColorAsState(
+        targetValue = if (viewModel.isSignIn) MaterialTheme.colorScheme.primary
+            else Color.Transparent,
+        animationSpec = animationSpec
+    )
+    val topRightGradientColor by animateColorAsState(
+        targetValue = if (viewModel.isSignIn) Color.Transparent
+            else MaterialTheme.colorScheme.primary,
+        animationSpec = animationSpec
+    )
 
     LaunchedEffect(viewModel.actionState) {
         when (viewModel.actionState) {
@@ -103,7 +119,13 @@ internal fun AuthenticationScreen(
             viewModel.verificationEmailSent = false
             viewModel.actionState = null
         },
-        modifier = modifier.padding(contentPadding)
+        modifier = modifier
+            .topRadialGradient(
+                color = topRightGradientColor,
+                side = Side.RIGHT
+            )
+            .topRadialGradient(topGradientColor)
+            .padding(contentPadding)
     )
 }
 

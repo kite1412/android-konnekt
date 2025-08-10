@@ -9,4 +9,9 @@ object KonnektIcon {
     val mailCheck = R.drawable.mail_check
     val arrowRight = R.drawable.arrow_right
     val ellipsisVertical = R.drawable.ellipsis_vertical
+    val add = R.drawable.add
+    val logOut = R.drawable.log_out
+    val circleOff = R.drawable.circle_off
+    val messageCircleX = R.drawable.message_circle_x
+    val archive = R.drawable.archive
 }

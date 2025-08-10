@@ -46,10 +46,12 @@ import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.util.info
 import nrr.konnekt.core.model.util.toStringFormatted
 import nrr.konnekt.core.model.util.toStringIgnoreSecond
-import nrr.konnekt.core.ui.previewparameter.LatestChatMessagesPreviewParameterProvider
+import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
+import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedImage
 
@@ -200,7 +202,7 @@ private fun ChatCard(
                                     }
                             )
                             dropdownItems?.let {
-                                DropdownMenu(
+                                if (chat.type != ChatType.CHAT_ROOM) DropdownMenu(
                                     expanded = expandDropdown,
                                     onDismissRequest = {
                                         expandDropdown = false
@@ -223,8 +225,8 @@ private fun ChatCard(
 @Preview
 @Composable
 private fun ChatCardsPreview(
-    @PreviewParameter(LatestChatMessagesPreviewParameterProvider::class)
-    chats: List<LatestChatMessage>
+    @PreviewParameter(PreviewParameterDataProvider::class)
+    data: PreviewParameterData
 ) {
     KonnektTheme {
         Scaffold {
@@ -235,7 +237,7 @@ private fun ChatCardsPreview(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 chats(
-                    latestChatMessages = chats,
+                    latestChatMessages = data.latestChatMessages,
                     onClick = {},
                     dropdownItems = { dismiss, chat ->
                         DropdownItem(

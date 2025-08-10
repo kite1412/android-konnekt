@@ -20,9 +20,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -31,6 +28,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.topRadialGradient
 
 @Composable
 internal fun SplashScreen(
@@ -76,28 +75,8 @@ internal fun SplashScreen(
             modifier = modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                // bottom gradient
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(color.value, Color.Transparent),
-                        center = Offset(
-                            x = width * (4f / 5f),
-                            y = height * (5.5f / 6f)
-                        )
-                    ),
-                    alpha = 0.5f
-                )
-                // top gradient
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(color.value, Color.Transparent),
-                        center = Offset(
-                            x = width * (1f / 5f),
-                            y = height * (1f / 6f)
-                        )
-                    ),
-                    alpha = 0.4f
-                )
+                .bottomRadialGradient(color.value)
+                .topRadialGradient(color.value)
         ) {
             Icon(
                 painter = painterResource(id = KonnektIcon.logo),
