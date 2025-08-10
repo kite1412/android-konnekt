@@ -30,7 +30,7 @@ class AuthenticationViewModel @Inject constructor(
         (
             (isSignIn && email.isNotBlank() && password.isNotBlank())
                 || (email.isNotBlank()
-                        && username.isNotBlank()
+                        && (username.isNotBlank() && username.length >= 5)
                         && password.isNotBlank()
                         && password == confirmPassword
                         && confirmPassword.isNotBlank()

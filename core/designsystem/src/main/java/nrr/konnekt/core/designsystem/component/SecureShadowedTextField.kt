@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
+import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 
 @Composable
 fun SecureShadowedTextField(
@@ -24,6 +25,7 @@ fun SecureShadowedTextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Enter text here",
+    errorIndicators: List<TextFieldErrorIndicator>? = null,
     label: String? = null,
     actions: (@Composable () -> Unit)? = null,
     singleLine: Boolean = true,
@@ -36,6 +38,7 @@ fun SecureShadowedTextField(
         onValueChange = onValueChange,
         modifier = modifier,
         placeholder = placeholder,
+        errorIndicators = errorIndicators,
         label = label,
         actions = {
             actions?.invoke()
@@ -49,8 +52,7 @@ fun SecureShadowedTextField(
                     contentDescription = if (hide) "Show Password" else "Hide Password",
                     modifier = Modifier.clickable {
                         hide = !hide
-                    },
-                    tint = style.shadowColor
+                    }
                 )
             }
         },

@@ -1,5 +1,6 @@
 package nrr.konnekt.authentication
 
+import android.util.Patterns
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -44,6 +45,7 @@ import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 
 private val textFieldMaxWidth = 400.dp
@@ -158,7 +160,15 @@ private fun AuthenticationScreen(
                         value = email,
                         onValueChange = onEmailChange,
                         modifier = textFieldModifier,
-                        placeholder = "Email"
+                        placeholder = "Email",
+                        errorIndicators = listOf(
+                            TextFieldErrorIndicator(
+                                error = email.isNotBlank() && !Patterns.EMAIL_ADDRESS.matcher(
+                                    email
+                                ).matches(),
+                                message = "Invalid Email"
+                            )
+                        )
                     )
                     AnimatedVisibility(
                         visible = !isSignIn
@@ -167,14 +177,26 @@ private fun AuthenticationScreen(
                             value = username,
                             onValueChange = onUsernameChange,
                             modifier = textFieldModifier,
-                            placeholder = "Username"
+                            placeholder = "Username",
+                            errorIndicators = listOf(
+                                TextFieldErrorIndicator(
+                                    error = username.isNotBlank() && username.length < 5,
+                                    message = "Username must be at least 5 characters"
+                                )
+                            )
                         )
                     }
                     SecureShadowedTextField(
                         value = password,
                         onValueChange = onPasswordChange,
                         modifier = textFieldModifier,
-                        placeholder = "Password"
+                        placeholder = "Password",
+                        errorIndicators = if (!isSignIn) listOf(
+                            TextFieldErrorIndicator(
+                                error = password.isNotBlank() && password.length < 6,
+                                message = "Password must be at least 6 characters"
+                            )
+                        ) else null
                     )
                     AnimatedVisibility(
                         visible = !isSignIn
@@ -183,7 +205,13 @@ private fun AuthenticationScreen(
                             value = confirmPassword,
                             onValueChange = onConfirmPasswordChange,
                             modifier = textFieldModifier,
-                            placeholder = "Confirm Password"
+                            placeholder = "Confirm Password",
+                            errorIndicators = listOf(
+                                TextFieldErrorIndicator(
+                                    error = confirmPassword.isNotBlank() && password != confirmPassword,
+                                    message = "Passwords do not match"
+                                )
+                            )
                         )
                     }
                 }
