@@ -1,6 +1,5 @@
 package nrr.konnekt.core.network.supabase
 
-import android.util.Log
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -44,11 +43,11 @@ import nrr.konnekt.core.network.supabase.dto.toChatSetting
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatSetting
-import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
+import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import javax.inject.Inject
 import kotlin.time.Instant
 
@@ -143,52 +142,72 @@ internal class SupabaseChatRepository @Inject constructor(
                     )
                 }
             }
+            val otherUsers = joinedChats.flatMapLatest { c ->
+                c.filter { it.type == ChatType.PERSONAL }
+                    .let { filtered ->
+                        chatParticipants {
+                            select {
+                                filter {
+                                    SupabaseChatParticipant::chatId isIn
+                                        filtered.map { f -> f.id }
+                                    SupabaseChatParticipant::userId neq u.id
+                                }
+                            }.decodeList<SupabaseChatParticipant>()
+                        }.let { p ->
+                            if (p.isNotEmpty()) performOperation(USERS) {
+                                selectAsFlow(
+                                    primaryKey = User::id,
+                                    filter = FilterOperation(
+                                        column = "id",
+                                        operator = FilterOperator.IN,
+                                        value = p.map { i -> i.userId }.toInValues()
+                                    )
+                                )
+                                    .map { users ->
+                                        users.map { u ->
+                                            p.first { it.userId == u.id }.chatId to
+                                                u
+                                        }
+                                    }
+                            } else flowOf(emptyList())
+                        }
+                    }
+            }
             val chats = combine(
                 flow = joinedChats,
-                flow2 = settings
-            ) { chats, settings ->
+                flow2 = settings,
+                flow3 = otherUsers
+            ) { chats, settings, otherUsers ->
                 chats.map { c ->
                     c.copy(
                         setting = if (c.type != ChatType.PERSONAL) settings
                             .firstOrNull { s -> s.first == c.id }
                             ?.second
-                        else performSuspendingOperation(CHAT_PARTICIPANTS) {
-                            select {
-                                filter {
-                                    SupabaseChatParticipant::userId neq u.id
-                                }
+                        else otherUsers
+                            .firstOrNull { it.first == c.id }
+                            ?.second
+                            ?.let {
+                                ChatSetting(
+                                    name = it.username,
+                                    iconPath = it.imagePath
+                                )
                             }
-                                .decodeSingleOrNull<SupabaseChatParticipant>()
-                                ?.let {
-                                    users {
-                                        select {
-                                            filter {
-                                                User::id eq it.userId
-                                            }
-                                        }
-                                            .decodeSingleOrNull<User>()
-                                            ?.let { u ->
-                                                ChatSetting(
-                                                    name = u.username,
-                                                    iconPath = u.imagePath
-                                                )
-                                            }
-                                    }
-                                }
-                        }
                     )
                 }
             }
             val messages = chats.flatMapLatest { c ->
                 performOperation(MESSAGES) {
                     selectAsFlow(
-                        primaryKey = SupabaseMessage::chatId,
+                        primaryKey = SupabaseMessage::id,
                         filter = FilterOperation(
                             column = "chat_id",
                             operator = FilterOperator.IN,
                             value = c.map { c -> c.id }.toInValues()
                         )
                     )
+                        .map {
+                            it.sortedByDescending { m -> m.sentAt }
+                        }
                 }
             }
             val senders = messages.flatMapLatest { m ->
@@ -248,7 +267,7 @@ internal class SupabaseChatRepository @Inject constructor(
                         }
                             .thenByDescending { it.chat.createdAt }
                     )
-                    .onEach { Log.d(LOG_TAG, it.toString()) }
+//                    .onEach { Log.d(LOG_TAG, it.toString()) }
             }
         }
 
