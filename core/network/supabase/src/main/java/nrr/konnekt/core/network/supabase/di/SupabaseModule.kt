@@ -34,7 +34,7 @@ internal interface SupabaseModule {
 
     @Binds
     @DelegateResolver
-    fun bindImageResolver(
+    fun bindSupabaseImageResolver(
         supabaseImageResolver: SupabaseImageResolver
     ): ImagePathResolver
 }

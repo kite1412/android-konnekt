@@ -36,7 +36,16 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
     init {
         client.auth.sessionStatus
             .onEach {
-                val user = client.auth.currentUserOrNull()?.toUser()
+                val user = client.auth
+                    .currentUserOrNull()
+                    ?.toUser()
+                    ?.let {
+                        client.postgrest.from(USERS).select {
+                            filter {
+                                User::id eq it.id
+                            }
+                        }.decodeSingleOrNull<User>()
+                    }
                 Log.d(LOG_TAG, "Current user: $user")
                 _loggedInUser.value = user
             }

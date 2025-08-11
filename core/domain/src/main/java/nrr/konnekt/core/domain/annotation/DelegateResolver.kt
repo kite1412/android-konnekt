@@ -6,6 +6,7 @@ import javax.inject.Qualifier
 @Retention(AnnotationRetention.BINARY)
 @Target(
     AnnotationTarget.FUNCTION,
-    AnnotationTarget.FIELD
+    AnnotationTarget.FIELD,
+    AnnotationTarget.VALUE_PARAMETER
 )
 annotation class DelegateResolver

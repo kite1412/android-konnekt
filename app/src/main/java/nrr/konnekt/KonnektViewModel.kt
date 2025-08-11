@@ -10,11 +10,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.ImagePathResolver
 import javax.inject.Inject
 
 @HiltViewModel
 internal class KonnektViewModel @Inject constructor(
-    authentication: Authentication
+    authentication: Authentication,
+    internal val imageResolver: ImagePathResolver
 ) : ViewModel() {
     var showSplashOnce by mutableStateOf(false)
     val isSignedIn = authentication.loggedInUser

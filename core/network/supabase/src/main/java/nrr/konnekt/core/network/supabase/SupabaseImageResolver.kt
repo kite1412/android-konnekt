@@ -21,7 +21,13 @@ internal class SupabaseImageResolver @Inject constructor()
             return null
         }
         val info = getImageInfo(path)
-        return supabaseClient.storage[info.bucket].downloadAuthenticated(info.path)
+        return supabaseClient
+            .storage[info.bucket]
+            .downloadAuthenticated(info.path)
+            .let {
+                Log.d(LOG_TAG, "success to resolve image path: $path")
+                it
+            }
     }
 
     data class ImageInfo(
