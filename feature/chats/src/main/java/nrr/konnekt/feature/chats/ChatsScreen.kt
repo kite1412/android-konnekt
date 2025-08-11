@@ -120,6 +120,7 @@ private fun ChatsScreen(
             onSearchValueChange = onSearchValueChange
         )
         Chats(
+            user = user,
             chats = chats,
             onChatClick = onChatClick,
             bottomContentPadding = contentPadding.calculateBottomPadding(),
@@ -280,6 +281,7 @@ private fun Toolbar(
 
 @Composable
 private fun Chats(
+    user: User,
     chats: List<LatestChatMessage>,
     onChatClick: (Chat) -> Unit,
     bottomContentPadding: Dp,
@@ -299,6 +301,22 @@ private fun Chats(
         chats(
             latestChatMessages = chats,
             onClick = { onChatClick(it.chat) },
+            sentByCurrentUser = {
+                user.id == it.messageDetail?.sender?.id
+            },
+            unreadByCurrentUser = {
+                it.messageDetail != null
+                    && user.id != it.messageDetail?.sender?.id
+                    && with(
+                    it.messageDetail
+                        ?.messageStatuses
+                        ?.firstOrNull { s ->
+                            s.userId == user.id
+                        }
+                    ) {
+                        (this == null || readAt == null)
+                    }
+            },
             dropdownItems = { dismiss, latestChatMessage ->
                 with(latestChatMessage.chat) {
                     when (type) {

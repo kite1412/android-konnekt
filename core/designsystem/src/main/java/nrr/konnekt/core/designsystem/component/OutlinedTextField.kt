@@ -22,6 +22,8 @@ fun OutlinedTextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "Enter text here",
+    singleLine: Boolean = false,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     style: OutlinedTextFieldStyle = TextFieldDefaults.defaultOutlinedStyle(),
 ) {
     BasicTextField(
@@ -50,6 +52,8 @@ fun OutlinedTextField(
                 it()
             }
         },
+        singleLine = singleLine,
+        maxLines = maxLines,
         cursorBrush = SolidColor(style.textStyle.color)
     )
 }

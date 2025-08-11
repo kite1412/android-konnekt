@@ -1,5 +1,11 @@
 package nrr.konnekt.core.ui.component
 
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,6 +48,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.component.ShadowedButton
+import nrr.konnekt.core.designsystem.theme.Cyan
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
@@ -58,6 +65,8 @@ import nrr.konnekt.core.ui.util.rememberResolvedImage
 fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
     onClick: (LatestChatMessage) -> Unit,
+    sentByCurrentUser: (LatestChatMessage) -> Boolean,
+    unreadByCurrentUser: (LatestChatMessage) -> Boolean,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
     items(
@@ -68,6 +77,8 @@ fun LazyListScope.chats(
             ChatCard(
                 latestChatMessage = this,
                 onClick = onClick,
+                sentByCurrentUser = sentByCurrentUser(this),
+                unreadByCurrentUser = unreadByCurrentUser(this),
                 dropdownItems = dropdownItems?.let { c ->
                     { dismiss ->
                         c(this, dismiss, this@with)
@@ -82,11 +93,25 @@ fun LazyListScope.chats(
 private fun ChatCard(
     latestChatMessage: LatestChatMessage,
     onClick: (LatestChatMessage) -> Unit,
+    sentByCurrentUser: Boolean,
+    unreadByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null
 ) {
     var expandDropdown by remember { mutableStateOf(false) }
     val icon by rememberResolvedImage(latestChatMessage.chat.setting?.iconPath)
+    val infiniteTransition = rememberInfiniteTransition()
+    val animatedBg by infiniteTransition.animateColor(
+        initialValue = MaterialTheme.colorScheme.primary,
+        targetValue = Cyan,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1000,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
 
     CompositionLocalProvider(
         LocalContentColor provides MaterialTheme.colorScheme.onPrimary
@@ -99,6 +124,7 @@ private fun ChatCard(
                 vertical = 16.dp
             ),
             space = 6.dp,
+            backgroundColor = if (unreadByCurrentUser) animatedBg else MaterialTheme.colorScheme.primary,
             bounceBack = true
         ) {
             Row(
@@ -154,7 +180,13 @@ private fun ChatCard(
                             Text(
                                 text = buildAnnotatedString {
                                     messageDetail?.let {
-                                        append("${it.sender.username}: ")
+                                        if (sentByCurrentUser) withStyle(
+                                            style = SpanStyle(
+                                                fontStyle = FontStyle.Italic
+                                            )
+                                        ) {
+                                            append("You: ")
+                                        } else append("${it.sender.username}: ")
                                         withStyle(
                                             style = SpanStyle(
                                                 color = Color.White
@@ -239,6 +271,8 @@ private fun ChatCardsPreview(
                 chats(
                     latestChatMessages = data.latestChatMessages,
                     onClick = {},
+                    sentByCurrentUser = { false },
+                    unreadByCurrentUser = { false },
                     dropdownItems = { dismiss, chat ->
                         DropdownItem(
                             text = "Clear Chat",
