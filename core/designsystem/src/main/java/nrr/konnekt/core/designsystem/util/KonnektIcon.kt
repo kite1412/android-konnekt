@@ -17,4 +17,5 @@ object KonnektIcon {
     val user = R.drawable.user
     val users = R.drawable.users
     val messageDashed = R.drawable.message_dashed
+    val messageCircleOff = R.drawable.message_circle_off
 }

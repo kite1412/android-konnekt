@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.LayoutDirection
@@ -104,43 +105,70 @@ private fun ChatsScreen(
     onFilterChange: (ChatFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
-            .fillMaxSize()
             .topRadialGradient()
             .bottomRadialGradient()
             .padding(
                 top = contentPadding.calculateTopPadding()
-            ),
-        verticalArrangement = Arrangement.spacedBy(32.dp)
+            )
     ) {
-        Header(
-            user = user,
-            onCreateChatClick = {},
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            Header(
+                user = user,
+                onCreateChatClick = {},
+                modifier = Modifier
+                    .padding(
+                        start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                        end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                    )
+                    .padding(horizontal = 8.dp)
+            )
+            Toolbar(
+                searchValue = searchValue,
+                onSearchValueChange = onSearchValueChange,
+                selectedFilter = chatFilter,
+                onFilterChange = onFilterChange,
+                contentPadding = contentPadding
+            )
+            if (chats.isNotEmpty()) Chats(
+                user = user,
+                chats = chats,
+                onChatClick = onChatClick,
+                contentPadding = contentPadding,
+                onArchiveChat = onArchiveChat,
+                onClearChat = onClearChat,
+                onLeaveChat = onLeaveChat,
+                onBlockChat = onBlockChat
+            )
+        }
+        if (chats.isEmpty()) Column(
             modifier = Modifier
+                .align(Alignment.Center)
                 .padding(
                     start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
                     end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                painter = painterResource(KonnektIcon.messageCircleOff),
+                contentDescription = "no chats",
+                modifier = Modifier.size(100.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "You don't have any chats yet",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center
                 )
-                .padding(horizontal = 8.dp)
-        )
-        Toolbar(
-            searchValue = searchValue,
-            onSearchValueChange = onSearchValueChange,
-            selectedFilter = chatFilter,
-            onFilterChange = onFilterChange,
-            contentPadding = contentPadding
-        )
-        Chats(
-            user = user,
-            chats = chats,
-            onChatClick = onChatClick,
-            contentPadding = contentPadding,
-            onArchiveChat = onArchiveChat,
-            onClearChat = onClearChat,
-            onLeaveChat = onLeaveChat,
-            onBlockChat = onBlockChat
-        )
+            )
+        }
     }
 }
 
