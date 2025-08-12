@@ -63,15 +63,18 @@ internal fun KonnektApp(
                 if (!showContent) SplashScreen(
                     onSplashFinished = {
                         viewModel.showSplashOnce = true
-                    }
+                    },
+                    startAnimation = isSignedIn != null
                 ) else {
                     Scaffold(modifier = modifier) { p ->
                         Box(modifier = Modifier.fillMaxSize()) {
-                            KonnektNavHost(
-                                isSignedIn = isSignedIn,
-                                scaffoldPadding = p,
-                                navController = navController
-                            )
+                            isSignedIn?.let {
+                                KonnektNavHost(
+                                    isSignedIn = it,
+                                    scaffoldPadding = p,
+                                    navController = navController
+                                )
+                            }
                             SnackbarHost(
                                 hostState = snackbarHostState.snackbarHostState,
                                 modifier = Modifier

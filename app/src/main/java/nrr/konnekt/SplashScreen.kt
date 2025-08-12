@@ -32,7 +32,8 @@ import nrr.konnekt.core.ui.util.topRadialGradient
 @Composable
 internal fun SplashScreen(
     onSplashFinished: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    startAnimation: Boolean = true
 ) {
     val color = remember { Animatable(DarkGray) }
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -41,20 +42,22 @@ internal fun SplashScreen(
     var contentVisible by remember { mutableStateOf(true) }
     val exitDuration = 500
 
-    LaunchedEffect(Unit) {
-        launch {
-            iconColor.animateTo(
+    LaunchedEffect(startAnimation) {
+        if (startAnimation) {
+            launch {
+                iconColor.animateTo(
+                    targetValue = primaryColor,
+                    animationSpec = tween(durationMillis = 1500)
+                )
+                contentVisible = false
+                delay(exitDuration.toLong())
+                rememberOnSplashFinished()
+            }
+            color.animateTo(
                 targetValue = primaryColor,
-                animationSpec = tween(durationMillis = 1500)
+                animationSpec = tween(durationMillis = 1000)
             )
-            contentVisible = false
-            delay(exitDuration.toLong())
-            rememberOnSplashFinished()
         }
-        color.animateTo(
-            targetValue = primaryColor,
-            animationSpec = tween(durationMillis = 1000)
-        )
     }
 
     AnimatedVisibility(
