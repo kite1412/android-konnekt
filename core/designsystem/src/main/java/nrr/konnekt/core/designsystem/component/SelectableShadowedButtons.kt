@@ -4,11 +4,14 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,33 +28,41 @@ import nrr.konnekt.core.designsystem.util.ShadowedButtonStyle
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SelectableShadowedButtons(
-    options: List<String>,
-    selectedOption: String,
-    onOptionSelected: (String) -> Unit,
+fun <T> SelectableShadowedButtons(
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
     buttonStyle: ShadowedButtonStyle = ButtonDefaults.defaultShadowedStyle()
 ) {
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    CompositionLocalProvider(
+        LocalContentColor provides buttonStyle.shadowColor
     ) {
-        options.takeIf { it.isNotEmpty() }?.forEach {
-            SelectableShadowedButton(
-                text = it,
-                selected = it == selectedOption,
-                onClick = { o -> onOptionSelected(o) },
-                style = buttonStyle
-            )
+        LazyRow(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = contentPadding
+        ) {
+            options.takeIf { it.isNotEmpty() }?.let {
+                items(it.size) { i ->
+                    SelectableShadowedButton(
+                        option = it[i],
+                        selected = it[i] == selectedOption,
+                        onClick = { o -> onOptionSelected(o) },
+                        style = buttonStyle
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SelectableShadowedButton(
-    text: String,
+private fun <T> SelectableShadowedButton(
+    option: T,
     selected: Boolean,
-    onClick: (String) -> Unit,
+    onClick: (T) -> Unit,
     modifier: Modifier = Modifier,
     style: ShadowedButtonStyle = ButtonDefaults.defaultShadowedStyle()
 ) {
@@ -66,16 +77,16 @@ private fun SelectableShadowedButton(
                 indication = null,
                 interactionSource = null
             ) {
-                onClick(text)
+                onClick(option)
             },
         style = style.copy(
             space = style.space * spaceFactor.value
         )
     ) {
         Text(
-            text = text,
+            text = option.toString(),
             style = MaterialTheme.typography.bodyMedium.copy(
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Bold
             ),
             maxLines = 1
         )

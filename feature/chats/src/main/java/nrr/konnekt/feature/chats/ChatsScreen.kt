@@ -32,12 +32,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nrr.konnekt.core.designsystem.component.OutlinedTextField
+import nrr.konnekt.core.designsystem.component.SelectableShadowedButtons
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.RubikIso
@@ -56,6 +56,7 @@ import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedImage
 import nrr.konnekt.core.ui.util.topRadialGradient
+import nrr.konnekt.feature.chats.util.ChatFilter
 import nrr.konnekt.feature.chats.util.GroupDropdownItems
 import nrr.konnekt.feature.chats.util.PersonDropdownItems
 
@@ -80,6 +81,8 @@ internal fun ChatsScreen(
             onClearChat = {},
             onLeaveChat = {},
             onBlockChat = {},
+            chatFilter = viewModel.chatFilter,
+            onFilterChange = { f -> viewModel.chatFilter = f },
             modifier = modifier
         )
     }
@@ -97,6 +100,8 @@ private fun ChatsScreen(
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
     onBlockChat: (Chat) -> Unit,
+    chatFilter: ChatFilter,
+    onFilterChange: (ChatFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -105,8 +110,6 @@ private fun ChatsScreen(
             .topRadialGradient()
             .bottomRadialGradient()
             .padding(
-                start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
-                end = contentPadding.calculateRightPadding(LayoutDirection.Ltr),
                 top = contentPadding.calculateTopPadding()
             ),
         verticalArrangement = Arrangement.spacedBy(32.dp)
@@ -114,17 +117,25 @@ private fun ChatsScreen(
         Header(
             user = user,
             onCreateChatClick = {},
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier
+                .padding(
+                    start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                )
+                .padding(horizontal = 8.dp)
         )
         Toolbar(
             searchValue = searchValue,
-            onSearchValueChange = onSearchValueChange
+            onSearchValueChange = onSearchValueChange,
+            selectedFilter = chatFilter,
+            onFilterChange = onFilterChange,
+            contentPadding = contentPadding
         )
         Chats(
             user = user,
             chats = chats,
             onChatClick = onChatClick,
-            bottomContentPadding = contentPadding.calculateBottomPadding(),
+            contentPadding = contentPadding,
             onArchiveChat = onArchiveChat,
             onClearChat = onClearChat,
             onLeaveChat = onLeaveChat,
@@ -238,6 +249,9 @@ private fun Header(
 private fun Toolbar(
     searchValue: String,
     onSearchValueChange: (String) -> Unit,
+    selectedFilter: ChatFilter,
+    onFilterChange: (ChatFilter) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -247,7 +261,11 @@ private fun Toolbar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Max),
+                .height(IntrinsicSize.Max)
+                .padding(
+                    start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -279,6 +297,15 @@ private fun Toolbar(
                 )
             }
         }
+        SelectableShadowedButtons(
+            options = ChatFilter.entries,
+            selectedOption = selectedFilter,
+            onOptionSelected = onFilterChange,
+            contentPadding = PaddingValues(
+                start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+            )
+        )
     }
 }
 
@@ -287,7 +314,7 @@ private fun Chats(
     user: User,
     chats: List<LatestChatMessage>,
     onChatClick: (Chat) -> Unit,
-    bottomContentPadding: Dp,
+    contentPadding: PaddingValues,
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
@@ -297,7 +324,9 @@ private fun Chats(
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
-            bottom = bottomContentPadding
+            bottom = contentPadding.calculateBottomPadding(),
+            start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+            end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
         ),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -365,6 +394,8 @@ private fun ChatsScreenPreview(
                 onClearChat = {},
                 onLeaveChat = {},
                 onBlockChat = {},
+                chatFilter = ChatFilter.ALL,
+                onFilterChange = {},
                 modifier = Modifier.padding(it)
             )
         }
