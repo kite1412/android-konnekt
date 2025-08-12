@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.R
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
+import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
@@ -79,10 +80,12 @@ fun ShadowedTextField(
                         minWidth = 200.dp
                     )
                     .fillMaxWidth(),
-                shadowColor = shadowColor,
-                backgroundColor = style.backgroundColor,
-                contentPadding = style.contentPadding,
-                space = style.space
+                style = ShadowedBoxDefaults.defaultStyle(
+                    shadowColor = shadowColor,
+                    backgroundColor = style.backgroundColor,
+                    contentPadding = style.contentPadding,
+                    space = style.space
+                )
             ) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),

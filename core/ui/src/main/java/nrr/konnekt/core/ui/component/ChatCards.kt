@@ -51,6 +51,7 @@ import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.Cyan
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
+import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.ChatType
@@ -119,12 +120,14 @@ private fun ChatCard(
         ShadowedButton(
             onClick = { onClick(latestChatMessage) },
             modifier = modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(
-                horizontal = 10.dp,
-                vertical = 16.dp
+            style = ButtonDefaults.defaultShadowedStyle(
+                contentPadding = PaddingValues(
+                    horizontal = 10.dp,
+                    vertical = 16.dp
+                ),
+                space = 6.dp,
+                backgroundColor = if (unreadByCurrentUser) animatedBg else MaterialTheme.colorScheme.primary,
             ),
-            space = 6.dp,
-            backgroundColor = if (unreadByCurrentUser) animatedBg else MaterialTheme.colorScheme.primary,
             bounceBack = true
         ) {
             Row(

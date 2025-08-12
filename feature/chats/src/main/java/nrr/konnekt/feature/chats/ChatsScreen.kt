@@ -41,6 +41,7 @@ import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.RubikIso
+import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
@@ -264,8 +265,10 @@ private fun Toolbar(
             ShadowedButton(
                 onClick = {},
                 modifier = Modifier.fillMaxHeight(),
-                contentPadding = PaddingValues(12.dp),
-                space = shadowSpace
+                style = ButtonDefaults.defaultShadowedStyle(
+                    contentPadding = PaddingValues(12.dp),
+                    space = shadowSpace
+                )
             ) {
                 Icon(
                     painter = painterResource(KonnektIcon.archive),
