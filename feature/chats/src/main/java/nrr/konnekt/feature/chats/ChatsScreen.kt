@@ -1,5 +1,7 @@
 package nrr.konnekt.feature.chats
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,10 +27,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -127,22 +134,19 @@ private fun ChatsScreen(
                     )
                     .padding(horizontal = 8.dp)
             )
-            Toolbar(
-                searchValue = searchValue,
-                onSearchValueChange = onSearchValueChange,
-                selectedFilter = chatFilter,
-                onFilterChange = onFilterChange,
-                contentPadding = contentPadding
-            )
-            if (chats.isNotEmpty()) Chats(
+            Chats(
                 user = user,
                 chats = chats,
+                searchValue = searchValue,
+                chatFilter = chatFilter,
                 onChatClick = onChatClick,
-                contentPadding = contentPadding,
                 onArchiveChat = onArchiveChat,
                 onClearChat = onClearChat,
                 onLeaveChat = onLeaveChat,
-                onBlockChat = onBlockChat
+                onBlockChat = onBlockChat,
+                onSearchValueChange = onSearchValueChange,
+                onFilterChange = onFilterChange,
+                contentPadding = contentPadding
             )
         }
         if (chats.isEmpty()) Column(
@@ -274,133 +278,174 @@ private fun Header(
 }
 
 @Composable
-private fun Toolbar(
+private fun SearchAndArchive(
     searchValue: String,
     onSearchValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val shadowSpace = 4.dp
+
+        OutlinedTextField(
+            value = searchValue,
+            onValueChange = onSearchValueChange,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .padding(vertical = shadowSpace / 2),
+            placeholder = "Search chat...",
+            singleLine = true
+        )
+        ShadowedButton(
+            onClick = {},
+            modifier = Modifier.fillMaxHeight(),
+            style = ButtonDefaults.defaultShadowedStyle(
+                contentPadding = PaddingValues(12.dp),
+                space = shadowSpace
+            )
+        ) {
+            Icon(
+                painter = painterResource(KonnektIcon.archive),
+                contentDescription = "archived chats",
+                modifier = Modifier
+                    .size(32.dp),
+                tint = MaterialTheme.colorScheme.onPrimary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TypeFilter(
     selectedFilter: ChatFilter,
     onFilterChange: (ChatFilter) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Max)
-                .padding(
-                    start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
-                    end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
-                ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val shadowSpace = 4.dp
-
-            OutlinedTextField(
-                value = searchValue,
-                onValueChange = onSearchValueChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .padding(vertical = shadowSpace / 2),
-                placeholder = "Search chat...",
-                singleLine = true
-            )
-            ShadowedButton(
-                onClick = {},
-                modifier = Modifier.fillMaxHeight(),
-                style = ButtonDefaults.defaultShadowedStyle(
-                    contentPadding = PaddingValues(12.dp),
-                    space = shadowSpace
-                )
-            ) {
-                Icon(
-                    painter = painterResource(KonnektIcon.archive),
-                    contentDescription = "archived chats",
-                    modifier = Modifier
-                        .size(32.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
-        }
-        SelectableShadowedButtons(
-            options = ChatFilter.entries,
-            selectedOption = selectedFilter,
-            onOptionSelected = onFilterChange,
-            contentPadding = PaddingValues(
-                start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
-                end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
-            )
-        )
-    }
+    SelectableShadowedButtons(
+        options = ChatFilter.entries,
+        selectedOption = selectedFilter,
+        onOptionSelected = onFilterChange,
+        modifier = modifier,
+        contentPadding = contentPadding
+    )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Chats(
     user: User,
     chats: List<LatestChatMessage>,
+    searchValue: String,
+    chatFilter: ChatFilter,
+    onFilterChange: (ChatFilter) -> Unit,
+    onSearchValueChange: (String) -> Unit,
     onChatClick: (Chat) -> Unit,
-    contentPadding: PaddingValues,
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
     onBlockChat: (Chat) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier,
-        contentPadding = PaddingValues(
-            bottom = contentPadding.calculateBottomPadding(),
-            start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
-            end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
-        ),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        chats(
-            latestChatMessages = chats,
-            onClick = { onChatClick(it.chat) },
-            sentByCurrentUser = {
-                user.id == it.messageDetail?.sender?.id
-            },
-            unreadByCurrentUser = {
-                it.messageDetail != null
-                    && user.id != it.messageDetail?.sender?.id
-                    && with(
-                    it.messageDetail
-                        ?.messageStatuses
-                        ?.firstOrNull { s ->
-                            s.userId == user.id
-                        }
-                    ) {
-                        (this == null || readAt == null)
-                    }
-            },
-            dropdownItems = { dismiss, latestChatMessage ->
-                with(latestChatMessage.chat) {
-                    when (type) {
-                        ChatType.PERSONAL -> PersonDropdownItems(
-                            archived = false,
-                            blocked = false,
-                            dismiss = dismiss,
-                            onArchive = { onArchiveChat(this) },
-                            onClearChat = { onClearChat(this) },
-                            onBlockChange = { onBlockChat(this) }
-                        )
-                        ChatType.GROUP -> GroupDropdownItems(
-                            dismiss = dismiss,
-                            archived = false,
-                            onArchive = { onArchiveChat(this) },
-                            onClearChat = { onClearChat(this) },
-                            onLeaveChat = { onLeaveChat(this) }
-                        )
-                        else -> null
-                    }
-                }
+    var showSearchBar by rememberSaveable { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < 0  && showSearchBar)
+                    showSearchBar = false
+                else if (available.y > 0 && !showSearchBar)
+                    showSearchBar = true
+
+                return Offset.Zero
             }
-        )
+        }
+    }
+
+    Column(
+        modifier = modifier.nestedScroll(nestedScrollConnection),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        AnimatedVisibility(showSearchBar) {
+            SearchAndArchive(
+                searchValue = searchValue,
+                onSearchValueChange = onSearchValueChange,
+                modifier = Modifier
+                    .padding(
+                        start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                        end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                    )
+            )
+        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            TypeFilter(
+                selectedFilter = chatFilter,
+                onFilterChange = onFilterChange,
+                contentPadding = PaddingValues(
+                    start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                )
+            )
+            if (chats.isNotEmpty()) LazyColumn(
+                contentPadding = PaddingValues(
+                    bottom = contentPadding.calculateBottomPadding(),
+                    start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
+                    end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                chats(
+                    latestChatMessages = chats,
+                    onClick = { onChatClick(it.chat) },
+                    sentByCurrentUser = {
+                        user.id == it.messageDetail?.sender?.id
+                    },
+                    unreadByCurrentUser = {
+                        it.messageDetail != null
+                                && user.id != it.messageDetail?.sender?.id
+                                && with(
+                            it.messageDetail
+                                ?.messageStatuses
+                                ?.firstOrNull { s ->
+                                    s.userId == user.id
+                                }
+                        ) {
+                            (this == null || readAt == null)
+                        }
+                    },
+                    dropdownItems = { dismiss, latestChatMessage ->
+                        with(latestChatMessage.chat) {
+                            when (type) {
+                                ChatType.PERSONAL -> PersonDropdownItems(
+                                    archived = false,
+                                    blocked = false,
+                                    dismiss = dismiss,
+                                    onArchive = { onArchiveChat(this) },
+                                    onClearChat = { onClearChat(this) },
+                                    onBlockChange = { onBlockChat(this) }
+                                )
+                                ChatType.GROUP -> GroupDropdownItems(
+                                    dismiss = dismiss,
+                                    archived = false,
+                                    onArchive = { onArchiveChat(this) },
+                                    onClearChat = { onClearChat(this) },
+                                    onLeaveChat = { onLeaveChat(this) }
+                                )
+                                else -> null
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 
