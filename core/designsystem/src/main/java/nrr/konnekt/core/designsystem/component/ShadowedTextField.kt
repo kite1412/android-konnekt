@@ -1,5 +1,6 @@
 package nrr.konnekt.core.designsystem.component
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +58,7 @@ fun ShadowedTextField(
                 errorColor
             else style.shadowColor
     )
+    var latestErrorMessage by remember { mutableStateOf("") }
 
     CompositionLocalProvider(
         LocalContentColor provides shadowColor
@@ -65,9 +67,15 @@ fun ShadowedTextField(
             modifier = modifier,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            errorIndicators?.firstOrNull { it.error }?.let {
+            AnimatedVisibility(
+                visible = errorIndicators != null && errorIndicators.any { it.error }
+            ) {
+                val message = errorIndicators?.firstOrNull { it.error }?.message
+                message?.let {
+                    latestErrorMessage = it
+                }
                 Text(
-                    text = it.message,
+                    text = message ?: latestErrorMessage,
                     modifier = Modifier.padding(start = style.space),
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = errorColor
