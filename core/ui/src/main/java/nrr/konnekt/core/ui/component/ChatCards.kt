@@ -72,7 +72,7 @@ fun LazyListScope.chats(
 ) {
     items(
         count = latestChatMessages.size,
-        key = { it }
+        key = { i -> latestChatMessages[i].chat.id }
     ) {
         with(latestChatMessages[it]) {
             ChatCard(

@@ -306,7 +306,8 @@ private fun Toolbar(
                     .weight(1f)
                     .fillMaxHeight()
                     .padding(vertical = shadowSpace / 2),
-                placeholder = "Search chat..."
+                placeholder = "Search chat...",
+                singleLine = true
             )
             ShadowedButton(
                 onClick = {},

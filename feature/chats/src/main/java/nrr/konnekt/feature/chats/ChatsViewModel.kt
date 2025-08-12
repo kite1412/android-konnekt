@@ -22,6 +22,7 @@ class ChatsViewModel @Inject constructor(
     observeChatMessagesUseCase: ObserveChatMessagesUseCase
 ) : ViewModel() {
     internal var chatFilter by mutableStateOf(ChatFilter.ALL)
+    internal var searchValue by mutableStateOf("")
     private val _chats = observeChatMessagesUseCase()
         .stateIn(
             scope = viewModelScope,
@@ -30,13 +31,21 @@ class ChatsViewModel @Inject constructor(
         )
     internal val chats = combine(
         flow = _chats,
-        flow2 = snapshotFlow { chatFilter }
-    ) { chats, filter ->
+        flow2 = snapshotFlow { chatFilter },
+        flow3 = snapshotFlow { searchValue }
+    ) { chats, filter, searchValue ->
+        val filterBySearch = if (searchValue.isNotBlank()) chats.filter {
+            it.chat.setting
+                ?.name?.contains(
+                    other = searchValue,
+                    ignoreCase = true
+                ) == true
+        } else chats
         when (filter) {
-            ChatFilter.ALL -> chats
-            ChatFilter.PERSON -> chats.filter { it.chat.type == ChatType.PERSONAL }
-            ChatFilter.GROUP -> chats.filter { it.chat.type == ChatType.GROUP }
-            ChatFilter.CHAT_ROOM -> chats.filter { it.chat.type == ChatType.CHAT_ROOM }
+            ChatFilter.ALL -> filterBySearch
+            ChatFilter.PERSON -> filterBySearch.filter { it.chat.type == ChatType.PERSONAL }
+            ChatFilter.GROUP -> filterBySearch.filter { it.chat.type == ChatType.GROUP }
+            ChatFilter.CHAT_ROOM -> filterBySearch.filter { it.chat.type == ChatType.CHAT_ROOM }
         }
     }
     internal val currentUser = authentication.loggedInUser
@@ -45,5 +54,4 @@ class ChatsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
         )
-    internal var searchValue by mutableStateOf("")
 }
