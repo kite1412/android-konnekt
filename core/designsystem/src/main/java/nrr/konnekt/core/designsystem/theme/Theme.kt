@@ -12,7 +12,8 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = Pink80,
     background = Navy,
     onPrimary = Color.Black,
-    outline = Lime
+    outline = Lime,
+    error = Red
 )
 
 @Composable

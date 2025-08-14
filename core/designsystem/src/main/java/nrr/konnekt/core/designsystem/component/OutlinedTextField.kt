@@ -3,7 +3,6 @@ package nrr.konnekt.core.designsystem.component
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
@@ -40,7 +39,6 @@ fun OutlinedTextField(
         textStyle = style.textStyle,
         decorationBox = {
             Box(
-                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.CenterStart
             ) {
                 if (value.isEmpty()) Text(

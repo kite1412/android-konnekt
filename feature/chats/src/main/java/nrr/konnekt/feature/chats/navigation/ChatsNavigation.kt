@@ -16,11 +16,13 @@ fun NavController.navigateToChats(navOptions: NavOptions? = null) =
     navigate(ChatsRoute, navOptions)
 
 fun NavGraphBuilder.chatsScreen(
+    navigateToCreateGroupChat: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
     composable<ChatsRoute> {
         ChatsScreen(
+            navigateToCreateGroupChat = navigateToCreateGroupChat,
             contentPadding = contentPadding,
             modifier = modifier
         )

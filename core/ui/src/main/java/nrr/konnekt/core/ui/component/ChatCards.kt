@@ -6,8 +6,6 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,10 +13,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.Cyan
@@ -60,8 +57,6 @@ import nrr.konnekt.core.model.util.toStringFormatted
 import nrr.konnekt.core.model.util.toStringIgnoreSecond
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
-import nrr.konnekt.core.ui.util.getLetterColor
-import nrr.konnekt.core.ui.util.rememberResolvedImage
 
 fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
@@ -97,10 +92,10 @@ private fun ChatCard(
     sentByCurrentUser: Boolean,
     unreadByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
+    iconDiameter: Dp = 40.dp,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null
 ) {
     var expandDropdown by remember { mutableStateOf(false) }
-    val icon by rememberResolvedImage(latestChatMessage.chat.setting?.iconPath)
     val infiniteTransition = rememberInfiniteTransition()
     val animatedBg by infiniteTransition.animateColor(
         initialValue = MaterialTheme.colorScheme.primary,
@@ -141,36 +136,11 @@ private fun ChatCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                        ) {
-                            icon?.let {
-                                Image(
-                                    bitmap = it,
-                                    contentDescription = "chat icon",
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } ?: with(chat.setting?.name?.firstOrNull()) char@{
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(getLetterColor()),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    this@char?.let {
-                                        Text(
-                                            text = it.toString(),
-                                            style = MaterialTheme.typography.bodyLarge.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color.White
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        ChatIcon(
+                            name = chat.setting?.name ?: chat.id,
+                            iconPath = chat.setting?.iconPath,
+                            diameter = iconDiameter
+                        )
                         Column(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {

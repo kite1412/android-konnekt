@@ -1,6 +1,12 @@
 package nrr.konnekt.feature.chats
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,15 +21,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,17 +50,25 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.component.SelectableShadowedButtons
 import nrr.konnekt.core.designsystem.component.ShadowedButton
+import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
@@ -55,6 +76,7 @@ import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.ui.component.ChatIcon
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
@@ -70,6 +92,7 @@ import nrr.konnekt.feature.chats.util.PersonDropdownItems
 
 @Composable
 internal fun ChatsScreen(
+    navigateToCreateGroupChat: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
@@ -82,8 +105,11 @@ internal fun ChatsScreen(
             user = it,
             chats = chats,
             searchValue = viewModel.searchValue,
+            createChatType = viewModel.createChatType,
+            usersByIdentifier = emptyList(),
             contentPadding = contentPadding,
             onSearchValueChange = { s -> viewModel.searchValue = s },
+            onCreateChatClick = { t -> viewModel.createChatType = t },
             onChatClick = {},
             onArchiveChat = {},
             onClearChat = {},
@@ -91,6 +117,9 @@ internal fun ChatsScreen(
             onBlockChat = {},
             chatFilter = viewModel.chatFilter,
             onFilterChange = { f -> viewModel.chatFilter = f },
+            dismissPopup = { viewModel.createChatType = null },
+            onUserSearch = {},
+            navigateToCreateGroupChat = navigateToCreateGroupChat,
             modifier = modifier
         )
     }
@@ -101,8 +130,11 @@ private fun ChatsScreen(
     user: User,
     chats: List<LatestChatMessage>,
     searchValue: String,
+    createChatType: ChatType?,
+    usersByIdentifier: List<User>?,
     contentPadding: PaddingValues,
     onSearchValueChange: (String) -> Unit,
+    onCreateChatClick: (ChatType) -> Unit,
     onChatClick: (Chat) -> Unit,
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
@@ -110,6 +142,9 @@ private fun ChatsScreen(
     onBlockChat: (Chat) -> Unit,
     chatFilter: ChatFilter,
     onFilterChange: (ChatFilter) -> Unit,
+    dismissPopup: () -> Unit,
+    onUserSearch: (String) -> Unit,
+    navigateToCreateGroupChat: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -126,7 +161,10 @@ private fun ChatsScreen(
         ) {
             Header(
                 user = user,
-                onCreateChatClick = {},
+                onCreateChatClick = {
+                    if (it == ChatType.GROUP) navigateToCreateGroupChat()
+                    else onCreateChatClick(it)
+                },
                 modifier = Modifier
                     .padding(
                         start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
@@ -173,6 +211,12 @@ private fun ChatsScreen(
                 )
             )
         }
+        if (createChatType != null) CreateChatPopup(
+            type = createChatType,
+            onSearch = onUserSearch,
+            dismiss = dismissPopup,
+            usersByIdentifier = usersByIdentifier
+        )
     }
 }
 
@@ -449,20 +493,202 @@ private fun Chats(
     }
 }
 
+@Composable
+private fun CreateChatPopup(
+    type: ChatType,
+    onSearch: (username: String) -> Unit,
+    dismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    usersByIdentifier: List<User>? = null
+) {
+    var userIdentifier by rememberSaveable { mutableStateOf("") }
+
+    Dialog(
+        onDismissRequest = dismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+            usePlatformDefaultWidth = false
+        ),
+    ) {
+        Column(
+            modifier = modifier
+                .sizeIn(
+                    maxWidth = 400.dp
+                )
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.background)
+                .clickable(false) {}
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when (type) {
+                        ChatType.PERSONAL -> "Add person"
+                        ChatType.CHAT_ROOM -> "Create a chat room"
+                        else -> ""
+                    },
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+                IconButton(
+                    onClick = dismiss,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.x),
+                        contentDescription = "cancel",
+                        tint = Red
+                    )
+                }
+            }
+            if (type == ChatType.PERSONAL) SearchUser(
+                identifier = userIdentifier,
+                onIdentifierChange = {},
+                onSearch = onSearch,
+                users = usersByIdentifier
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchUser(
+    identifier: String,
+    onIdentifierChange: (String) -> Unit,
+    onSearch: (username: String) -> Unit,
+    users: List<User>?,
+    modifier: Modifier = Modifier
+) {
+    LaunchedEffect(identifier) {
+        if (identifier.isNotBlank()) {
+            delay(1000)
+            onSearch(identifier)
+        }
+    }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        OutlinedTextField(
+            value = identifier,
+            onValueChange = onIdentifierChange,
+            placeholder = "Search by username"
+        )
+        if (users != null) {
+            if (users.isNotEmpty()) Box {
+                val state = rememberLazyListState()
+
+                LazyColumn(
+                    modifier = Modifier
+                        .heightIn(max = 300.dp),
+                    state = state,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        count = users.size,
+                        key = { users[it].id }
+                    ) {
+                        User(users[it])
+                    }
+                }
+                this@Column.AnimatedVisibility(
+                    visible = state.canScrollForward,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                ) {
+                    val infiniteTransition = rememberInfiniteTransition()
+                    val offsetY by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 16f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(300, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
+
+                    Icon(
+                        painter = painterResource(KonnektIcon.chevronsDown),
+                        contentDescription = "scroll forward",
+                        modifier = Modifier.offset { IntOffset(0, offsetY.toInt()) },
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else Text(
+                text = "No users found",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = DarkGray,
+                    fontStyle = FontStyle.Italic
+                )
+            )
+        } // else loading
+    }
+}
+
+@Composable
+private fun User(
+    user: User,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ChatIcon(
+                name = user.username,
+                iconPath = user.imagePath
+            )
+            Column {
+                Text(user.username)
+                Text(
+                    text = user.email,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontStyle = FontStyle.Italic,
+                        color = DarkGray
+                    )
+                )
+            }
+        }
+    }
+}
+
 @Preview
 @Composable
 private fun ChatsScreenPreview(
     @PreviewParameter(PreviewParameterDataProvider::class)
     data: PreviewParameterData,
 ) {
+    var createChatType by remember { mutableStateOf<ChatType?>(ChatType.PERSONAL) }
+
     KonnektTheme {
         Scaffold {
             ChatsScreen(
                 chats = data.latestChatMessages,
                 user = data.user,
                 searchValue = "",
+                createChatType = createChatType,
+                usersByIdentifier = mutableListOf<User>().apply {
+                    repeat(10) { i ->
+                        add(data.user.copy(id = "$i"))
+                    }
+                }.toList(),
                 contentPadding = PaddingValues(16.dp),
                 onSearchValueChange = {},
+                onCreateChatClick = { t ->
+                    createChatType = t
+                },
                 onChatClick = {},
                 onArchiveChat = {},
                 onClearChat = {},
@@ -470,7 +696,10 @@ private fun ChatsScreenPreview(
                 onBlockChat = {},
                 chatFilter = ChatFilter.ALL,
                 onFilterChange = {},
-                modifier = Modifier.padding(it)
+                dismissPopup = { createChatType = null },
+                onUserSearch = {},
+                navigateToCreateGroupChat = {},
+                modifier = Modifier.padding(it),
             )
         }
     }

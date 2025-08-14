@@ -42,7 +42,7 @@ internal fun KonnektNavHost(
         modifier = modifier
     ) {
         chatsScreen(
-//            navigateToCreateGroupChat = {},
+            navigateToCreateGroupChat = {},
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         authenticationScreen(

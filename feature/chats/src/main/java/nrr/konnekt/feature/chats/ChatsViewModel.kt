@@ -54,4 +54,5 @@ class ChatsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
         )
+    internal var createChatType by mutableStateOf<ChatType?>(null)
 }
