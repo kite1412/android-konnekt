@@ -8,6 +8,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navOptions
 import nrr.konnekt.authentication.navigation.AuthenticationRoute
 import nrr.konnekt.authentication.navigation.authenticationScreen
 import nrr.konnekt.feature.chats.navigation.chatsScreen
@@ -27,14 +28,23 @@ internal fun KonnektNavHost(
                     .currentBackStackEntry
                     ?.destination
                     ?.hasRoute<AuthenticationRoute>() == true
-            ) navController.navigateToChats()
+            ) navController.navigateToChats(
+                navOptions = navOptions {
+                    popUpTo(AuthenticationRoute) {
+                        inclusive = true
+                    }
+                }
+            )
     }
     NavHost(
         navController = navController,
         startDestination = AuthenticationRoute,
         modifier = modifier
     ) {
-        chatsScreen(rootContentPadding(scaffoldPadding))
+        chatsScreen(
+//            navigateToCreateGroupChat = {},
+            contentPadding = rootContentPadding(scaffoldPadding)
+        )
         authenticationScreen(
             contentPadding = rootContentPadding(scaffoldPadding),
             onSignedIn = {  }
