@@ -667,7 +667,8 @@ private fun CreateChatRoom(
 
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.End
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         OutlinedTextField(
             value = name,
@@ -676,7 +677,7 @@ private fun CreateChatRoom(
         )
         ShadowedButton(
             onClick = { onCreate(name) },
-            enabled = name.isNotBlank() && name.length > 3,
+            enabled = name.isNotBlank() && name.length > 3
         ) {
             Text(text = "Create")
         }
@@ -727,7 +728,7 @@ private fun ChatsScreenPreview(
     @PreviewParameter(PreviewParameterDataProvider::class)
     data: PreviewParameterData,
 ) {
-    var createChatType by remember { mutableStateOf<ChatType?>(ChatType.PERSONAL) }
+    var createChatType by remember { mutableStateOf<ChatType?>(ChatType.CHAT_ROOM) }
 
     KonnektTheme {
         Scaffold {

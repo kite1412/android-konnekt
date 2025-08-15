@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedButtonStyle
+import nrr.konnekt.core.designsystem.util.toShadowedBoxStyle
 
 /**
  * @param bounceBack - bounce back when clicked
@@ -52,7 +53,10 @@ fun ShadowedButton(
                     }
                 }
             },
-        style = style.copy(space = style.space * spaceFactor.value),
+        style = style.toShadowedBoxStyle(
+            enabled = enabled,
+            space = style.space * spaceFactor.value
+        ),
         content = content
     )
 }
