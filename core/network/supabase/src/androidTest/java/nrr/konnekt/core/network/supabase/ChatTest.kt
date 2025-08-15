@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
@@ -18,7 +19,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-internal class ChatTest : AuthSetup() {
+internal class ChatTest : TestSetup() {
     private val logTag = "ChatTest"
 
     private lateinit var repo: SupabaseChatRepository
@@ -59,8 +60,13 @@ internal class ChatTest : AuthSetup() {
         val res = repo.createChat(
             type = ChatType.GROUP,
             chatSetting = CreateChatSetting(
-                name = "test",
-                permissionSettings = ChatPermissionSettings()
+                name = "new group with icon",
+                permissionSettings = ChatPermissionSettings(),
+                icon = FileUpload(
+                    fileName = "any.png",
+                    fileType = "png",
+                    content = loadFile("konnekt-icon.png")
+                )
             )
         )
         assert(res !is Result.Error)

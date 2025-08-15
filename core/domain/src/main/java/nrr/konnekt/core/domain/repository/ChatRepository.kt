@@ -136,6 +136,7 @@ interface ChatRepository {
         object ChatNotFound : ChatError
         object ParticipantLimitViolation: ChatError
         object ChatSettingNotFound : ChatError
+        object FileUploadError : ChatError
         object Unknown : ChatError
     }
 }

@@ -2,10 +2,8 @@ package nrr.konnekt.core.network.supabase.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ParticipantRole
-import nrr.konnekt.core.model.User
 import kotlin.time.Instant
 
 @Serializable

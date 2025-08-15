@@ -11,7 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-internal class UserPresenceTest : AuthSetup() {
+internal class UserPresenceTest : TestSetup() {
     private val logTag = "UserPresenceTest"
     private lateinit var manager: SupabaseUserPresenceManager
     private lateinit var currentUser: User

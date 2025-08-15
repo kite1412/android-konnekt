@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.ChatDetail
@@ -43,11 +45,14 @@ import nrr.konnekt.core.network.supabase.dto.toChatSetting
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatSetting
+import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
+import nrr.konnekt.core.network.supabase.util.createPath
+import nrr.konnekt.core.network.supabase.util.perform
 import javax.inject.Inject
 import kotlin.time.Instant
 
@@ -340,7 +345,6 @@ internal class SupabaseChatRepository @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    // TODO implement chat's icon upload
     override suspend fun createChat(
         type: ChatType,
         chatSetting: CreateChatSetting?,
@@ -362,6 +366,41 @@ internal class SupabaseChatRepository @Inject constructor(
                 }.decodeSingleOrNull<SupabaseChat>()
 
                 newChat?.let { chat ->
+                    var chatIconPath: String? = null
+                    chatSetting?.icon?.let { fileUpload ->
+                        with(Bucket.ICON) {
+                            require(
+                                type == ChatType.GROUP
+                                    && allowedExtensions.contains(fileUpload.fileType)
+                                    && fileUpload.content.isNotEmpty()
+                            ) {
+                                "Invalid file upload"
+                            }
+                            val path = createPath(
+                                fileName = "${chat.id}.${fileUpload.fileType}",
+                                rootFolder = type.toString()
+                            )
+                            try {
+                                perform {
+                                    upload(
+                                        path = path.pathInBucket,
+                                        data = fileUpload.content
+                                    ) {
+                                        this.userMetadata = buildJsonObject {
+                                            put("user_id", u.id)
+                                            put("email", u.email)
+                                        }
+                                    }
+                                    chatIconPath = path.fullPath
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                return@chats Error(
+                                    ChatError.FileUploadError
+                                )
+                            }
+                        }
+                    }
                     chatParticipants {
                         val admin = SupabaseCreateChatParticipant(
                             chatId = chat.id,
@@ -380,7 +419,12 @@ internal class SupabaseChatRepository @Inject constructor(
                     }
                     val setting = if (type != ChatType.PERSONAL) chatSetting?.let { cs ->
                         val chatSetting = chatSettings {
-                            insert(cs.toSupabaseChatSetting(chat.id)) {
+                            insert(
+                                value = cs.toSupabaseChatSetting(
+                                    chatId = chat.id,
+                                    iconPath = chatIconPath
+                                )
+                            ) {
                                 select()
                             }.decodeSingleOrNull<SupabaseChatSetting>()
                         }

@@ -10,7 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-internal class ImageResolverTest : AuthSetup() {
+internal class ImageResolverTest : TestSetup() {
     private lateinit var resolver: SupabaseImageResolver
 
     @Before

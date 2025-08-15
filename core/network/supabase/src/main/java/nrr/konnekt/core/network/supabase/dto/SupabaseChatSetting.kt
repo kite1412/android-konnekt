@@ -17,17 +17,17 @@ internal data class SupabaseChatSetting(
 )
 
 internal fun CreateChatSetting.toSupabaseChatSetting(
-    chatId: String
+    chatId: String,
+    iconPath: String? = null
 ) = SupabaseChatSetting(
     chatId = chatId,
     name = name,
     description = description,
-    iconPath = null
+    iconPath = iconPath
 )
 
 internal fun SupabaseChatSetting.toChatSetting(
-    permissionSettings: ChatPermissionSettings? = null,
-    iconPath: String? = null
+    permissionSettings: ChatPermissionSettings? = null
 ) = ChatSetting(
     name = name,
     description = description,

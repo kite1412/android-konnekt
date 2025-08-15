@@ -8,7 +8,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-internal class AuthTest : AuthSetup() {
+internal class AuthTest : TestSetup() {
     private suspend fun login() {
         assert(auth.loggedInUser.first() == null)
         val email = getProperty("SUPABASE_EMAIL")

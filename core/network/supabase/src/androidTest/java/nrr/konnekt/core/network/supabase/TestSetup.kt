@@ -6,12 +6,21 @@ import nrr.konnekt.core.model.User
 import org.junit.Before
 import java.util.Properties
 
-internal abstract class AuthSetup {
+internal abstract class TestSetup {
     protected lateinit var properties: Properties
     protected lateinit var auth: SupabaseAuthentication
 
     protected fun getProperty(key: String): String {
         return properties.getProperty(key)
+    }
+
+    protected fun loadFile(fileName: String): ByteArray {
+        return InstrumentationRegistry
+            .getInstrumentation()
+            .context
+            .assets
+            .open(fileName)
+            .readBytes()
     }
 
     @Before
