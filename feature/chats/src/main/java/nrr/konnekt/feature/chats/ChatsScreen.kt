@@ -72,6 +72,7 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -673,7 +674,17 @@ private fun CreateChatRoom(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            placeholder = "Chat room name"
+            placeholder = "Chat room name",
+            errorIndicators = listOf(
+                TextFieldErrorIndicator(
+                    error = name.isBlank(),
+                    message = "Chat room name cannot be empty"
+                ),
+                TextFieldErrorIndicator(
+                    error = name.length <= 3,
+                    message = "Chat room name must be at least 4 characters long"
+                )
+            )
         )
         ShadowedButton(
             onClick = { onCreate(name) },

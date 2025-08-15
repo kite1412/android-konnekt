@@ -32,7 +32,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.R
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
-import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
@@ -52,7 +51,7 @@ fun ShadowedTextField(
     style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle()
 ) {
     val valueIsEmpty = value.isEmpty()
-    val errorColor = Red
+    val errorColor = MaterialTheme.colorScheme.error
     val shadowColor by animateColorAsState(
         targetValue = if (errorIndicators?.map { it.error }?.contains(true) == true)
                 errorColor
