@@ -10,16 +10,21 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.usecase.FindUsersByUsername
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
+import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chats.util.ChatFilter
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatsViewModel @Inject constructor(
     authentication: Authentication,
-    observeChatMessagesUseCase: ObserveChatMessagesUseCase
+    observeChatMessagesUseCase: ObserveChatMessagesUseCase,
+    private val findUsersByUsername: FindUsersByUsername
 ) : ViewModel() {
     internal var chatFilter by mutableStateOf(ChatFilter.ALL)
     internal var searchValue by mutableStateOf("")
@@ -55,4 +60,15 @@ class ChatsViewModel @Inject constructor(
             initialValue = null
         )
     internal var createChatType by mutableStateOf<ChatType?>(null)
+    internal var usersByIdentifier by mutableStateOf<List<User>?>(null)
+
+    internal fun findUsers(username: String) {
+        viewModelScope.launch {
+            usersByIdentifier = null
+            with(findUsersByUsername(username)) {
+                usersByIdentifier = if (this is Result.Success) data
+                else emptyList()
+            }
+        }
+    }
 }

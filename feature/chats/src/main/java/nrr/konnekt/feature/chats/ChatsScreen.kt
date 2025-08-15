@@ -106,7 +106,7 @@ internal fun ChatsScreen(
             chats = chats,
             searchValue = viewModel.searchValue,
             createChatType = viewModel.createChatType,
-            usersByIdentifier = emptyList(),
+            usersByIdentifier = viewModel.usersByIdentifier,
             contentPadding = contentPadding,
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
@@ -117,8 +117,12 @@ internal fun ChatsScreen(
             onBlockChat = {},
             chatFilter = viewModel.chatFilter,
             onFilterChange = { f -> viewModel.chatFilter = f },
-            dismissPopup = { viewModel.createChatType = null },
-            onUserSearch = {},
+            dismissPopup = {
+                viewModel.createChatType = null
+                viewModel.usersByIdentifier = null
+            },
+            onUserClick = {},
+            onUserSearch = viewModel::findUsers,
             navigateToCreateGroupChat = navigateToCreateGroupChat,
             modifier = modifier
         )
@@ -144,6 +148,7 @@ private fun ChatsScreen(
     onFilterChange: (ChatFilter) -> Unit,
     dismissPopup: () -> Unit,
     onUserSearch: (String) -> Unit,
+    onUserClick: (User) -> Unit,
     navigateToCreateGroupChat: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -215,6 +220,7 @@ private fun ChatsScreen(
             type = createChatType,
             onSearch = onUserSearch,
             dismiss = dismissPopup,
+            onUserClick = onUserClick,
             usersByIdentifier = usersByIdentifier
         )
     }
@@ -498,6 +504,7 @@ private fun CreateChatPopup(
     type: ChatType,
     onSearch: (username: String) -> Unit,
     dismiss: () -> Unit,
+    onUserClick: (User) -> Unit,
     modifier: Modifier = Modifier,
     usersByIdentifier: List<User>? = null
 ) {
@@ -552,7 +559,8 @@ private fun CreateChatPopup(
             }
             if (type == ChatType.PERSONAL) SearchUser(
                 identifier = userIdentifier,
-                onIdentifierChange = {},
+                onIdentifierChange = { i -> userIdentifier = i },
+                onUserClick = onUserClick,
                 onSearch = onSearch,
                 users = usersByIdentifier
             )
@@ -565,11 +573,12 @@ private fun SearchUser(
     identifier: String,
     onIdentifierChange: (String) -> Unit,
     onSearch: (username: String) -> Unit,
+    onUserClick: (User) -> Unit,
     users: List<User>?,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(identifier) {
-        if (identifier.isNotBlank()) {
+        if (identifier.isNotBlank() && identifier.length > 2) {
             delay(1000)
             onSearch(identifier)
         }
@@ -589,7 +598,7 @@ private fun SearchUser(
 
                 LazyColumn(
                     modifier = Modifier
-                        .heightIn(max = 300.dp),
+                        .heightIn(max = 250.dp),
                     state = state,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -597,7 +606,10 @@ private fun SearchUser(
                         count = users.size,
                         key = { users[it].id }
                     ) {
-                        User(users[it])
+                        User(
+                            user = users[it],
+                            onClick = onUserClick
+                        )
                     }
                 }
                 this@Column.AnimatedVisibility(
@@ -635,10 +647,16 @@ private fun SearchUser(
 @Composable
 private fun User(
     user: User,
+    onClick: (User) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick(user)
+            }
+            .padding(8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -697,6 +715,7 @@ private fun ChatsScreenPreview(
                 chatFilter = ChatFilter.ALL,
                 onFilterChange = {},
                 dismissPopup = { createChatType = null },
+                onUserClick = {},
                 onUserSearch = {},
                 navigateToCreateGroupChat = {},
                 modifier = Modifier.padding(it),

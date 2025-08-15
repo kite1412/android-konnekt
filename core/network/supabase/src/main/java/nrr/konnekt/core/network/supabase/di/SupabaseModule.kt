@@ -9,10 +9,12 @@ import nrr.konnekt.core.domain.ImagePathResolver
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.annotation.DelegateResolver
 import nrr.konnekt.core.domain.repository.ChatRepository
+import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.network.supabase.SupabaseAuthentication
 import nrr.konnekt.core.network.supabase.SupabaseChatRepository
 import nrr.konnekt.core.network.supabase.SupabaseImageResolver
 import nrr.konnekt.core.network.supabase.SupabaseUserPresenceManager
+import nrr.konnekt.core.network.supabase.SupabaseUserRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -26,6 +28,11 @@ internal interface SupabaseModule {
     fun bindChatRepository(
         supabaseChatRepository: SupabaseChatRepository
     ): ChatRepository
+
+    @Binds
+    fun bindUserRepository(
+        supabaseUserRepository: SupabaseUserRepository
+    ): UserRepository
 
     @Binds
     fun bindUserPresenceManager(
