@@ -43,6 +43,7 @@ internal fun KonnektNavHost(
     ) {
         chatsScreen(
             navigateToCreateGroupChat = {},
+            navigateToConversation = {},
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         authenticationScreen(

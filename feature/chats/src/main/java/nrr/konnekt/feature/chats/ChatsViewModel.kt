@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.chats
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,22 +10,27 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.usecase.FindUsersByUsername
+import nrr.konnekt.core.domain.repository.UserRepository
+import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
 import nrr.konnekt.core.domain.util.Result
+import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chats.util.ChatFilter
+import nrr.konnekt.feature.chats.util.createTempPersonalChat
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatsViewModel @Inject constructor(
     authentication: Authentication,
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
-    private val findUsersByUsername: FindUsersByUsername
+    private val userRepository: UserRepository,
+    private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase
 ) : ViewModel() {
     internal var chatFilter by mutableStateOf(ChatFilter.ALL)
     internal var searchValue by mutableStateOf("")
@@ -48,7 +54,7 @@ class ChatsViewModel @Inject constructor(
         } else chats
         when (filter) {
             ChatFilter.ALL -> filterBySearch
-            ChatFilter.PERSON -> filterBySearch.filter { it.chat.type == ChatType.PERSONAL }
+            ChatFilter.PERSONAL -> filterBySearch.filter { it.chat.type == ChatType.PERSONAL }
             ChatFilter.GROUP -> filterBySearch.filter { it.chat.type == ChatType.GROUP }
             ChatFilter.CHAT_ROOM -> filterBySearch.filter { it.chat.type == ChatType.CHAT_ROOM }
         }
@@ -65,9 +71,32 @@ class ChatsViewModel @Inject constructor(
     internal fun findUsers(username: String) {
         viewModelScope.launch {
             usersByIdentifier = null
-            with(findUsersByUsername(username)) {
+            with(findUsersByUsernameUseCase(username)) {
                 usersByIdentifier = if (this is Result.Success) data
                 else emptyList()
+            }
+        }
+    }
+
+    internal fun getPersonalChat(
+        otherUserId: String,
+        complete: (Chat) -> Unit
+    ) {
+        viewModelScope.launch {
+            _chats.firstOrNull()?.let { chats ->
+                chats.firstOrNull { c ->
+                    c.chat.type == ChatType.PERSONAL
+                            && c.chat.participants.firstOrNull { p ->
+                        p.userId == otherUserId
+                    } != null
+                }?.chat ?: run {
+                    val res = userRepository.getUserById(otherUserId)
+                    if (res is Result.Success) res.data.createTempPersonalChat()
+                    else null
+                }
+            }?.let {
+                Log.d("Chats", it.toString())
+                complete(it)
             }
         }
     }

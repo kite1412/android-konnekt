@@ -93,6 +93,7 @@ import nrr.konnekt.feature.chats.util.PersonDropdownItems
 @Composable
 internal fun ChatsScreen(
     navigateToCreateGroupChat: () -> Unit,
+    navigateToConversation: (Chat) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
@@ -110,7 +111,7 @@ internal fun ChatsScreen(
             contentPadding = contentPadding,
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
-            onChatClick = {},
+            onChatClick = navigateToConversation,
             onArchiveChat = {},
             onClearChat = {},
             onLeaveChat = {},
@@ -121,9 +122,17 @@ internal fun ChatsScreen(
                 viewModel.createChatType = null
                 viewModel.usersByIdentifier = null
             },
-            onUserClick = {},
+            onUserClick = { u ->
+                viewModel.getPersonalChat(
+                    otherUserId = u.id,
+                    complete = navigateToConversation
+                )
+            },
             onUserSearch = viewModel::findUsers,
             navigateToCreateGroupChat = navigateToCreateGroupChat,
+            onCreateChatRoom = {
+
+            },
             modifier = modifier
         )
     }
@@ -150,6 +159,7 @@ private fun ChatsScreen(
     onUserSearch: (String) -> Unit,
     onUserClick: (User) -> Unit,
     navigateToCreateGroupChat: () -> Unit,
+    onCreateChatRoom: (name: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -221,6 +231,7 @@ private fun ChatsScreen(
             onSearch = onUserSearch,
             dismiss = dismissPopup,
             onUserClick = onUserClick,
+            onCreateChatRoom = onCreateChatRoom,
             usersByIdentifier = usersByIdentifier
         )
     }
@@ -505,6 +516,7 @@ private fun CreateChatPopup(
     onSearch: (username: String) -> Unit,
     dismiss: () -> Unit,
     onUserClick: (User) -> Unit,
+    onCreateChatRoom: (name: String) -> Unit,
     modifier: Modifier = Modifier,
     usersByIdentifier: List<User>? = null
 ) {
@@ -563,6 +575,8 @@ private fun CreateChatPopup(
                 onUserClick = onUserClick,
                 onSearch = onSearch,
                 users = usersByIdentifier
+            ) else if (type == ChatType.CHAT_ROOM) CreateChatRoom(
+                onCreate = onCreateChatRoom
             )
         }
     }
@@ -645,6 +659,31 @@ private fun SearchUser(
 }
 
 @Composable
+private fun CreateChatRoom(
+    onCreate: (name: String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.End
+    ) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            placeholder = "Chat room name"
+        )
+        ShadowedButton(
+            onClick = { onCreate(name) },
+            enabled = name.isNotBlank() && name.length > 3,
+        ) {
+            Text(text = "Create")
+        }
+    }
+}
+
+@Composable
 private fun User(
     user: User,
     onClick: (User) -> Unit,
@@ -718,6 +757,7 @@ private fun ChatsScreenPreview(
                 onUserClick = {},
                 onUserSearch = {},
                 navigateToCreateGroupChat = {},
+                onCreateChatRoom = {},
                 modifier = Modifier.padding(it),
             )
         }

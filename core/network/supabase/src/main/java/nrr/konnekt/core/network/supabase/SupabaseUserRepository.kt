@@ -13,9 +13,9 @@ internal class SupabaseUserRepository @Inject constructor(
     authentication: Authentication
 ) : UserRepository, SupabaseService(authentication) {
     override suspend fun getUsersByUsername(username: String): UserResult<List<User>> =
-        try {
-            val res = performSuspendingAuthenticatedAction {
-                users {
+        performSuspendingAuthenticatedAction {
+            try {
+                val res = users {
                     select {
                         filter {
                             User::username like "%$username%"
@@ -23,10 +23,27 @@ internal class SupabaseUserRepository @Inject constructor(
                         }
                     }.decodeList<User>()
                 }
+                Success(res)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Error(UserError.Unknown)
             }
-            Success(res)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Error(UserError.Unknown)
+        }
+
+    override suspend fun getUserById(id: String): UserResult<User> =
+        performSuspendingAuthenticatedAction {
+            try {
+                val res = users {
+                    select {
+                        filter {
+                            User::id eq id
+                        }
+                    }.decodeSingle<User>()
+                }
+                Success(res)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Error(UserError.Unknown)
+            }
         }
 }

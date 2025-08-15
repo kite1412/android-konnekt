@@ -173,11 +173,24 @@ internal class SupabaseChatRepository @Inject constructor(
                         }
                     }
             }
+            val participants = joinedChats.flatMapLatest { chats ->
+                flowOf(
+                    chatParticipants {
+                        select {
+                            filter {
+                                SupabaseChatParticipant::chatId isIn chats.map { it.id }
+                            }
+                        }.decodeList<SupabaseChatParticipant>()
+                    }
+                        .map(SupabaseChatParticipant::toChatParticipant)
+                )
+            }
             val chats = combine(
                 flow = joinedChats,
                 flow2 = settings,
-                flow3 = otherUsers
-            ) { chats, settings, otherUsers ->
+                flow3 = otherUsers,
+                flow4 = participants
+            ) { chats, settings, otherUsers, participants ->
                 chats.map { c ->
                     c.copy(
                         setting = if (c.type != ChatType.PERSONAL) settings
@@ -191,7 +204,8 @@ internal class SupabaseChatRepository @Inject constructor(
                                     name = it.username,
                                     iconPath = it.imagePath
                                 )
-                            }
+                            },
+                        participants = participants.filter { p -> p.chatId == c.id }
                     )
                 }
             }
@@ -267,7 +281,6 @@ internal class SupabaseChatRepository @Inject constructor(
                         }
                             .thenByDescending { it.chat.createdAt }
                     )
-//                    .onEach { Log.d(LOG_TAG, it.toString()) }
             }
         }
 
@@ -280,6 +293,7 @@ internal class SupabaseChatRepository @Inject constructor(
                         select {
                             filter {
                                 SupabaseChatParticipant::chatId eq chatId
+                                SupabaseChatParticipant::leftAt eq null
                             }
                         }.decodeList<SupabaseChatParticipant>()
                     }
@@ -294,6 +308,25 @@ internal class SupabaseChatRepository @Inject constructor(
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
         TODO("Not yet implemented")
     }
+
+    override suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>> =
+        performSuspendingAuthenticatedAction { _ ->
+            try {
+                val participants = chatParticipants {
+                    select {
+                        filter {
+                            SupabaseChatParticipant::chatId eq chatId
+                        }
+                    }.decodeList<SupabaseChatParticipant>()
+                }
+                    .map(SupabaseChatParticipant::toChatParticipant)
+
+                Success(participants)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Error(ChatError.Unknown)
+            }
+        }
 
     override suspend fun getChatDetail(chatId: String): ChatResult<ChatDetail> {
         TODO("Not yet implemented")

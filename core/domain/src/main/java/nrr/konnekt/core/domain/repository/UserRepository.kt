@@ -18,6 +18,14 @@ interface UserRepository {
      */
     suspend fun getUsersByUsername(username: String): UserResult<List<User>>
 
+    /**
+     * Get a user by id.
+     *
+     * @param id The id of the user.
+     * @return The user with the given id.
+     */
+    suspend fun getUserById(id: String): UserResult<User>
+
     sealed interface UserError : Error {
         object Unknown : UserError
     }

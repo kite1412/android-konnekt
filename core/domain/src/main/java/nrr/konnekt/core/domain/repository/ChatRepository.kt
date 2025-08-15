@@ -11,7 +11,6 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
-import nrr.konnekt.core.model.Message
 import kotlin.time.Instant
 
 typealias ChatResult<T> = Result<T, ChatRepository.ChatError>
@@ -24,8 +23,8 @@ typealias ChatResult<T> = Result<T, ChatRepository.ChatError>
  */
 interface ChatRepository {
     /**
-     * Observe the latest message in each chat the logged in user subscribed to,
-     * and listen for [Message.isHidden] and [Message.editedAt].
+     * Observe the latest message in each chat the logged in user joined to,
+     * and listen to their changes.
      *
      * @return A flow of the latest chat messages.
      */
@@ -46,6 +45,14 @@ interface ChatRepository {
      * @return A list of chats the user is subscribed to.
      */
     suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>>
+
+    /**
+     * Get a list of chat participants.
+     *
+     * @param chatId The ID of the chat to get participants for.
+     * @return A list of chat participants.
+     */
+    suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>>
 
     /**
      * Get the detail of a chat.

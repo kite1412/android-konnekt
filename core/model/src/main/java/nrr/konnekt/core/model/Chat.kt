@@ -12,5 +12,6 @@ data class Chat(
     @SerialName("created_at")
     @Contextual
     val createdAt: Instant,
-    val setting: ChatSetting?
+    val setting: ChatSetting?,
+    val participants: List<ChatParticipant> = emptyList()
 )

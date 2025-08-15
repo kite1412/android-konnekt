@@ -2,7 +2,7 @@ package nrr.konnekt.feature.chats.util
 
 internal enum class ChatFilter(displayName: String) {
     ALL("All"),
-    PERSON("Person"),
+    PERSONAL("Personal"),
     GROUP("Group"),
     CHAT_ROOM("Chat Room");
 
