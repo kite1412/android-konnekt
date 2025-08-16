@@ -69,6 +69,7 @@ class ChatsViewModel @Inject constructor(
         )
     internal var createChatType by mutableStateOf<ChatType?>(null)
     internal var usersByIdentifier by mutableStateOf<List<User>?>(null)
+    internal var createChatActionEnabled by mutableStateOf(true)
 
     internal fun findUsers(username: String) {
         viewModelScope.launch {
@@ -85,6 +86,7 @@ class ChatsViewModel @Inject constructor(
         complete: (Chat) -> Unit
     ) {
         viewModelScope.launch {
+            createChatActionEnabled = false
             _chats.firstOrNull()?.let { chats ->
                 chats.firstOrNull { c ->
                     c.chat.type == ChatType.PERSONAL
@@ -96,7 +98,10 @@ class ChatsViewModel @Inject constructor(
                     if (res is Result.Success) res.data.createTempPersonalChat()
                     else null
                 }
-            }?.let(complete)
+            }?.let {
+                createChatActionEnabled = true
+                complete(it)
+            }
         }
     }
 
@@ -105,10 +110,12 @@ class ChatsViewModel @Inject constructor(
         complete: (Chat) -> Unit
     ) {
         viewModelScope.launch {
+            createChatActionEnabled = false
             val res = createChatUseCase(
                 type = ChatType.CHAT_ROOM,
                 chatSetting = CreateChatSetting(name)
             )
+            createChatActionEnabled = true
             if (res is Result.Success) complete(res.data)
         }
     }

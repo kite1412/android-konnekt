@@ -137,6 +137,7 @@ internal fun ChatsScreen(
                     complete = navigateToConversation
                 )
             },
+            createActionEnabled = viewModel.createChatActionEnabled,
             modifier = modifier
         )
     }
@@ -164,6 +165,7 @@ private fun ChatsScreen(
     onUserClick: (User) -> Unit,
     navigateToCreateGroupChat: () -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
+    createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -236,7 +238,8 @@ private fun ChatsScreen(
             dismiss = dismissPopup,
             onUserClick = onUserClick,
             onCreateChatRoom = onCreateChatRoom,
-            usersByIdentifier = usersByIdentifier
+            usersByIdentifier = usersByIdentifier,
+            createActionEnabled = createActionEnabled
         )
     }
 }
@@ -521,6 +524,7 @@ private fun CreateChatPopup(
     dismiss: () -> Unit,
     onUserClick: (User) -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
+    createActionEnabled: Boolean,
     modifier: Modifier = Modifier,
     usersByIdentifier: List<User>? = null
 ) {
@@ -578,9 +582,11 @@ private fun CreateChatPopup(
                 onIdentifierChange = { i -> userIdentifier = i },
                 onUserClick = onUserClick,
                 onSearch = onSearch,
-                users = usersByIdentifier
+                users = usersByIdentifier,
+                clickUserEnabled = createActionEnabled
             ) else if (type == ChatType.CHAT_ROOM) CreateChatRoom(
-                onCreate = onCreateChatRoom
+                onCreate = onCreateChatRoom,
+                enabled = createActionEnabled
             )
         }
     }
@@ -593,6 +599,7 @@ private fun SearchUser(
     onSearch: (username: String) -> Unit,
     onUserClick: (User) -> Unit,
     users: List<User>?,
+    clickUserEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(identifier) {
@@ -626,7 +633,8 @@ private fun SearchUser(
                     ) {
                         User(
                             user = users[it],
-                            onClick = onUserClick
+                            onClick = onUserClick,
+                            enabled = clickUserEnabled
                         )
                     }
                 }
@@ -665,6 +673,7 @@ private fun SearchUser(
 @Composable
 private fun CreateChatRoom(
     onCreate: (name: String) -> Unit,
+    enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     var name by rememberSaveable { mutableStateOf("") }
@@ -691,7 +700,7 @@ private fun CreateChatRoom(
         )
         ShadowedButton(
             onClick = { onCreate(name) },
-            enabled = name.isNotBlank() && name.length > 3
+            enabled = enabled && name.isNotBlank() && name.length > 3,
         ) {
             Text(text = "Create")
         }
@@ -702,12 +711,13 @@ private fun CreateChatRoom(
 private fun User(
     user: User,
     onClick: (User) -> Unit,
+    enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable {
+            .clickable(enabled) {
                 onClick(user)
             }
             .padding(8.dp),
@@ -773,6 +783,7 @@ private fun ChatsScreenPreview(
                 onUserSearch = {},
                 navigateToCreateGroupChat = {},
                 onCreateChatRoom = {},
+                createActionEnabled = true,
                 modifier = Modifier.padding(it),
             )
         }
