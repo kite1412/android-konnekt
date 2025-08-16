@@ -36,6 +36,7 @@
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/authentication" />
             <option value="$PROJECT_DIR$/feature/chats" />
+            <option value="$PROJECT_DIR$/feature/conversation" />
           </set>
         </option>
       </GradleProjectSettings>
