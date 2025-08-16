@@ -489,6 +489,11 @@ private fun Chats(
                             (this == null || readAt == null)
                         }
                     },
+                    deletedByCurrentUser = {
+                        it.messageDetail?.messageStatuses?.firstOrNull { s ->
+                            s.userId == user.id
+                        }?.isDeleted == true
+                    },
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
                             when (type) {

@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -64,6 +65,7 @@ fun LazyListScope.chats(
     onClick: (LatestChatMessage) -> Unit,
     sentByCurrentUser: (LatestChatMessage) -> Boolean,
     unreadByCurrentUser: (LatestChatMessage) -> Boolean,
+    deletedByCurrentUser: (LatestChatMessage) -> Boolean,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
     items(
@@ -76,6 +78,7 @@ fun LazyListScope.chats(
                 onClick = onClick,
                 sentByCurrentUser = sentByCurrentUser(this),
                 unreadByCurrentUser = unreadByCurrentUser(this),
+                deletedByCurrentUser = deletedByCurrentUser(this),
                 dropdownItems = dropdownItems?.let { c ->
                     { dismiss ->
                         c(this, dismiss, this@with)
@@ -92,6 +95,7 @@ private fun ChatCard(
     onClick: (LatestChatMessage) -> Unit,
     sentByCurrentUser: Boolean,
     unreadByCurrentUser: Boolean,
+    deletedByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
     iconDiameter: Dp = 40.dp,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null
@@ -154,6 +158,16 @@ private fun ChatCard(
                             Text(
                                 text = buildAnnotatedString {
                                     messageDetail?.let {
+                                        val deletedStyle = { block: AnnotatedString.Builder.() -> Unit ->
+                                            withStyle(
+                                                style = SpanStyle(
+                                                    fontStyle = FontStyle.Italic,
+                                                    color = DarkGray
+                                                ),
+                                                block = block
+                                            )
+                                        }
+
                                         if (sentByCurrentUser) withStyle(
                                             style = SpanStyle(
                                                 fontStyle = FontStyle.Italic
@@ -161,18 +175,17 @@ private fun ChatCard(
                                         ) {
                                             append("You: ")
                                         } else append("${it.sender.username}: ")
-                                        if (!it.message.isHidden) withStyle(
-                                            style = SpanStyle(
-                                                color = Color.White
-                                            )
-                                        ) {
-                                            append(it.message.content)
-                                        } else withStyle(
-                                            style = SpanStyle(
-                                                fontStyle = FontStyle.Italic,
-                                                color = DarkGray
-                                            )
-                                        ) {
+                                        if (!it.message.isHidden) {
+                                            if (!deletedByCurrentUser) withStyle(
+                                                style = SpanStyle(
+                                                    color = Color.White
+                                                )
+                                            ) {
+                                                append(it.message.content)
+                                            } else deletedStyle {
+                                                append("You deleted this message")
+                                            }
+                                        } else deletedStyle {
                                             append("Message has been deleted")
                                         }
                                     } ?: withStyle(
@@ -254,6 +267,7 @@ private fun ChatCardsPreview(
                     onClick = {},
                     sentByCurrentUser = { false },
                     unreadByCurrentUser = { false },
+                    deletedByCurrentUser = { false },
                     dropdownItems = { dismiss, chat ->
                         DropdownItem(
                             text = "Clear Chat",
