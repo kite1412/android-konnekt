@@ -696,7 +696,8 @@ private fun CreateChatRoom(
                     error = name.length <= 3,
                     message = "Chat room name must be at least 4 characters long"
                 )
-            )
+            ),
+            singleLine = true
         )
         ShadowedButton(
             onClick = { onCreate(name) },

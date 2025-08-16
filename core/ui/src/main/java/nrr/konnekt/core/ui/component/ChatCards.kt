@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.Cyan
+import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
@@ -160,12 +161,19 @@ private fun ChatCard(
                                         ) {
                                             append("You: ")
                                         } else append("${it.sender.username}: ")
-                                        withStyle(
+                                        if (!it.message.isHidden) withStyle(
                                             style = SpanStyle(
                                                 color = Color.White
                                             )
                                         ) {
                                             append(it.message.content)
+                                        } else withStyle(
+                                            style = SpanStyle(
+                                                fontStyle = FontStyle.Italic,
+                                                color = DarkGray
+                                            )
+                                        ) {
+                                            append("Message has been deleted")
                                         }
                                     } ?: withStyle(
                                         style = SpanStyle(fontStyle = FontStyle.Italic)
