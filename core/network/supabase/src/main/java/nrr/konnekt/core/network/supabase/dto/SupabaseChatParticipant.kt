@@ -1,5 +1,6 @@
 package nrr.konnekt.core.network.supabase.dto
 
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.ChatParticipant
@@ -14,8 +15,10 @@ internal data class SupabaseChatParticipant(
     val userId: String,
     val role: String,
     @SerialName("joined_at")
+    @Contextual
     val joinedAt: Instant,
     @SerialName("left_at")
+    @Contextual
     val leftAt: Instant?
 )
 

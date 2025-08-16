@@ -1,6 +1,5 @@
 package nrr.konnekt.feature.chats
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,7 +13,9 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.repository.UserRepository
+import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
 import nrr.konnekt.core.domain.util.Result
@@ -30,7 +31,8 @@ class ChatsViewModel @Inject constructor(
     authentication: Authentication,
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
     private val userRepository: UserRepository,
-    private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase
+    private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase,
+    private val createChatUseCase: CreateChatUseCase
 ) : ViewModel() {
     internal var chatFilter by mutableStateOf(ChatFilter.ALL)
     internal var searchValue by mutableStateOf("")
@@ -94,10 +96,20 @@ class ChatsViewModel @Inject constructor(
                     if (res is Result.Success) res.data.createTempPersonalChat()
                     else null
                 }
-            }?.let {
-                Log.d("Chats", it.toString())
-                complete(it)
-            }
+            }?.let(complete)
+        }
+    }
+
+    internal fun createChatRoom(
+        name: String,
+        complete: (Chat) -> Unit
+    ) {
+        viewModelScope.launch {
+            val res = createChatUseCase(
+                type = ChatType.CHAT_ROOM,
+                chatSetting = CreateChatSetting(name)
+            )
+            if (res is Result.Success) complete(res.data)
         }
     }
 }

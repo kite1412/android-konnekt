@@ -131,8 +131,11 @@ internal fun ChatsScreen(
             },
             onUserSearch = viewModel::findUsers,
             navigateToCreateGroupChat = navigateToCreateGroupChat,
-            onCreateChatRoom = {
-
+            onCreateChatRoom = { name ->
+                viewModel.createChatRoom(
+                    name = name,
+                    complete = navigateToConversation
+                )
             },
             modifier = modifier
         )

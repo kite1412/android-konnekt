@@ -6,5 +6,5 @@ data class CreateChatSetting(
     val name: String,
     val description: String? = null,
     val icon: FileUpload? = null,
-    val permissionSettings: ChatPermissionSettings
+    val permissionSettings: ChatPermissionSettings? = null
 )

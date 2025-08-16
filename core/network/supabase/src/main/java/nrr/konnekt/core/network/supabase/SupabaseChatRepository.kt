@@ -1,15 +1,20 @@
 package nrr.konnekt.core.network.supabase
 
+import android.util.Log
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
@@ -24,6 +29,7 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Event
@@ -46,10 +52,12 @@ import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toSupabaseChatSetting
 import nrr.konnekt.core.network.supabase.util.Bucket
+import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
+import nrr.konnekt.core.network.supabase.util.Tables.MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
@@ -70,28 +78,35 @@ internal class SupabaseChatRepository @Inject constructor(
     )
     override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> =
         performAuthenticatedAction { u ->
-            val participatedIn = performOperation(CHAT_PARTICIPANTS) {
-                selectAsFlow(
-                    primaryKeys = listOf(
-                        SupabaseChatParticipant::chatId,
-                        SupabaseChatParticipant::userId
-                    ),
-                    filter = FilterOperation(
-                        column = "user_id",
-                        operator = FilterOperator.EQ,
-                        value = u.id
+            val participatedIn = channelFlow {
+                performOperation(CHAT_PARTICIPANTS) {
+                    selectAsFlow(
+                        primaryKeys = listOf(
+                            SupabaseChatParticipant::chatId,
+                            SupabaseChatParticipant::userId
+                        ),
+                        filter = FilterOperation(
+                            column = "user_id",
+                            operator = FilterOperator.EQ,
+                            value = u.id
+                        )
                     )
-                )
-                    .map { l ->
-                        l
-                            .filter { it.leftAt == null }
-                            .map {
-                                JoinedChat(
-                                    chatId = it.chatId,
-                                    userId = it.userId
-                                )
-                            }
-                    }
+                        .map { l ->
+                            l
+                                .filter { it.leftAt == null }
+                                .map {
+                                    JoinedChat(
+                                        chatId = it.chatId,
+                                        userId = it.userId
+                                    )
+                                }
+                        }
+                        .onEach {
+                            Log.d(LOG_TAG, "joined chats: $it")
+                            send(it)
+                        }
+                        .launchIn(this@channelFlow)
+                }
             }
             val toInValues: List<String>.() -> String = {
                 joinToString(
@@ -101,15 +116,17 @@ internal class SupabaseChatRepository @Inject constructor(
                 )
             }
             val joinedChats = participatedIn.flatMapLatest { jc ->
-                flowOf(
-                    chats {
-                        select {
-                            filter {
-                                SupabaseChat::id isIn jc.map { c -> c.chatId }
-                            }
-                        }.decodeList<SupabaseChat>()
-                    }.map(SupabaseChat::toChat)
-                )
+                flow {
+                    emit(
+                        chats {
+                            select {
+                                filter {
+                                    SupabaseChat::id isIn jc.map { c -> c.chatId }
+                                }
+                            }.decodeList<SupabaseChat>()
+                        }.map(SupabaseChat::toChat)
+                    )
+                }
             }
             val supabaseSettings = joinedChats.flatMapLatest { c ->
                 performOperation(CHAT_SETTINGS) {
@@ -240,17 +257,19 @@ internal class SupabaseChatRepository @Inject constructor(
                     }
                 )
             }
-            val messageStatuses = combine(
-                flow = senders,
-                flow2 = messages
-            ) { senders, messages ->
-                messageStatuses {
-                    select {
-                        filter {
-                            MessageStatus::messageId isIn messages.map { m -> m.id }
-                            MessageStatus::userId isIn senders.map { s -> s.id }
-                        }
-                    }.decodeList<MessageStatus>()
+            val messageStatuses = messages.flatMapLatest { messages ->
+                performOperation(MESSAGE_STATUSES) {
+                    selectAsFlow(
+                        primaryKeys = listOf(
+                            MessageStatus::messageId,
+                            MessageStatus::userId
+                        ),
+                        filter = FilterOperation(
+                            column = "message_id",
+                            operator = FilterOperator.IN,
+                            value = messages.map { it.id }.toInValues()
+                        )
+                    )
                 }
             }
 
@@ -286,6 +305,9 @@ internal class SupabaseChatRepository @Inject constructor(
                         }
                             .thenByDescending { it.chat.createdAt }
                     )
+                    .onEach {
+                        Log.d(LOG_TAG, "latest chat: $it")
+                    }
             }
         }
 
@@ -431,7 +453,8 @@ internal class SupabaseChatRepository @Inject constructor(
                         val permissionSettings = if (type == ChatType.GROUP) chatSetting?.let {
                             chatPermissionSettings {
                                 insert(
-                                    cs.permissionSettings.toSupabaseChatPermissionSettings(chat.id)
+                                    cs.permissionSettings?.toSupabaseChatPermissionSettings(chat.id)
+                                        ?: ChatPermissionSettings().toSupabaseChatPermissionSettings(chat.id)
                                 ) {
                                     select()
                                 }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
