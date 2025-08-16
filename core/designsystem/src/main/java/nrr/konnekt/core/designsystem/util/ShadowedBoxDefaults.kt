@@ -16,6 +16,8 @@ object ShadowedBoxDefaults {
         shadowColor: Color = MaterialTheme.colorScheme.primary,
         backgroundColor: Color = MaterialTheme.colorScheme.background,
         contentColor: Color = shadowColor,
+        borderColor: Color = shadowColor,
+        borderWidth: Dp = 2.dp,
         space: Dp = 4.dp,
         contentPadding: PaddingValues = PaddingValues(
             horizontal = 16.dp,
@@ -25,6 +27,8 @@ object ShadowedBoxDefaults {
         shadowColor = shadowColor,
         backgroundColor = backgroundColor,
         contentColor = contentColor,
+        borderColor = borderColor,
+        borderWidth = borderWidth,
         space = space,
         contentPadding = contentPadding
     )
@@ -34,6 +38,8 @@ data class ShadowedBoxStyle(
     val shadowColor: Color,
     val backgroundColor: Color,
     val contentColor: Color,
+    val borderColor: Color,
+    val borderWidth: Dp,
     val space: Dp,
     val contentPadding: PaddingValues,
 )

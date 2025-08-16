@@ -33,6 +33,7 @@ import nrr.konnekt.core.designsystem.util.ShadowedBoxStyle
 fun ShadowedBox(
     modifier: Modifier = Modifier,
     style: ShadowedBoxStyle = ShadowedBoxDefaults.defaultStyle(),
+    reverse: Boolean = false,
     content: @Composable BoxScope.() -> Unit
 ) {
     with(style) {
@@ -43,18 +44,24 @@ fun ShadowedBox(
                 .width(IntrinsicSize.Max)
                 .height(IntrinsicSize.Max)
                 .padding(
-                    top = initialSpace.value.dp,
-                    end = initialSpace.value.dp
+                    top = initialSpace,
+                    end = if (!reverse) initialSpace else 0.dp,
+                    start = if (!reverse) 0.dp else initialSpace
                 )
         ) {
             Canvas(
                 modifier = Modifier
                     .size(space)
                     .offset(y = -space)
-                    .align(Alignment.TopStart)
+                    .align(
+                        if (!reverse) Alignment.TopStart else Alignment.TopEnd
+                    )
             ) {
                 val path = Path().apply {
-                    moveTo(size.width, 0f)
+                    moveTo(
+                        x = if (!reverse) size.width else 0f,
+                        y = 0f
+                    )
                     lineTo(size.width, size.height)
                     lineTo(0f, size.height)
                     close()
@@ -68,13 +75,24 @@ fun ShadowedBox(
             Canvas(
                 modifier = Modifier
                     .size(space)
-                    .offset(x = space)
-                    .align(Alignment.BottomEnd)
+                    .offset(x = if (!reverse) space else -space)
+                    .align(
+                        if (!reverse) Alignment.BottomEnd else Alignment.BottomStart
+                    )
             ) {
                 val path = Path().apply {
-                    moveTo(0f, size.height)
-                    lineTo(size.width, 0f)
-                    lineTo(0f, 0f)
+                    moveTo(
+                        x = if (!reverse) 0f else size.width,
+                        y = size.height
+                    )
+                    lineTo(
+                        x = if (!reverse) size.width else 0f,
+                        y = 0f
+                    )
+                    lineTo(
+                        x = if (!reverse) 0f else size.width,
+                        y = 0f
+                    )
                     close()
                 }
                 drawPath(
@@ -87,25 +105,24 @@ fun ShadowedBox(
                 modifier = Modifier
                     .background(shadowColor)
                     .fillMaxSize()
+                    .offset(
+                        x = if (!reverse) space else -space,
+                        y = -space
+                    )
+                    .sizeIn(
+                        minWidth = 50.dp,
+                        minHeight = 25.dp
+                    )
+                    .fillMaxSize()
+                    .border(
+                        width = borderWidth,
+                        color = borderColor
+                    )
+                    .background(backgroundColor)
+                    .padding(contentPadding)
             ) {
-                Box(
-                    modifier = Modifier
-                        .offset(x = space, y = -space)
-                        .sizeIn(
-                            minWidth = 50.dp,
-                            minHeight = 25.dp
-                        )
-                        .fillMaxSize()
-                        .border(
-                            width = 2.dp,
-                            color = shadowColor
-                        )
-                        .background(backgroundColor)
-                        .padding(contentPadding)
-                ) {
-                    CompositionLocalProvider(LocalContentColor provides contentColor) {
-                        content()
-                    }
+                CompositionLocalProvider(LocalContentColor provides contentColor) {
+                    content()
                 }
             }
         }

@@ -56,6 +56,8 @@ internal fun ShadowedButtonStyle.toShadowedBoxStyle(
     shadowColor = if (enabled) shadowColor else disabledShadowColor,
     backgroundColor = if (enabled) backgroundColor else disabledBackgroundColor,
     contentColor = if (enabled) contentColor else disabledContentColor,
+    borderColor = shadowColor,
+    borderWidth = 2.dp,
     space = space,
     contentPadding = contentPadding
 )
