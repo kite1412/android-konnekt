@@ -77,7 +77,7 @@ import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
-import nrr.konnekt.core.ui.component.ChatIcon
+import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
@@ -734,7 +734,7 @@ private fun User(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ChatIcon(
+            AvatarIcon(
                 name = user.username,
                 iconPath = user.imagePath
             )

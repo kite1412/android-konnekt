@@ -21,7 +21,7 @@ import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedImage
 
 @Composable
-fun ChatIcon(
+fun AvatarIcon(
     name: String,
     modifier: Modifier = Modifier,
     iconPath: String? = null,

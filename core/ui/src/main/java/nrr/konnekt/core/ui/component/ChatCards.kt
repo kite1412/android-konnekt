@@ -141,7 +141,7 @@ private fun ChatCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        ChatIcon(
+                        AvatarIcon(
                             name = chat.setting?.name ?: chat.id,
                             iconPath = chat.setting?.iconPath,
                             diameter = iconDiameter

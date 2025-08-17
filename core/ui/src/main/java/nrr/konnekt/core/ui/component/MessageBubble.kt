@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
@@ -27,38 +29,36 @@ import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
+import nrr.konnekt.core.designsystem.util.ShadowedBoxStyle
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.toTimeString
 
-/**
- * @param sentByCurrentUser whether the message was sent by the current user
- */
 @Composable
 fun MessageBubble(
     message: Message,
     modifier: Modifier = Modifier,
     sentByCurrentUser: Boolean = true,
-    withTail: Boolean = true,
     deletedByCurrentUser: Boolean = false,
-    tailSize: Dp = 10.dp
-) {
-    val shadowedBoxStyle = ShadowedBoxDefaults.defaultStyle(
+    shadowedBoxStyle: ShadowedBoxStyle = ShadowedBoxDefaults.defaultStyle(
         shadowColor = Color.Black,
         backgroundColor = Lime,
         borderColor = if (sentByCurrentUser) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.secondary,
+        else MaterialTheme.colorScheme.secondary,
         borderWidth = 4.dp,
         space = 8.dp,
         contentPadding = PaddingValues(
             horizontal = 12.dp,
             vertical = 8.dp
         )
-    )
-    val tailColor = shadowedBoxStyle.borderColor
-
+    ),
+    withTail: Boolean = true,
+    tailSize: Dp = 10.dp,
+    tailColor: Color = shadowedBoxStyle.borderColor
+) {
     Row(
         modifier = modifier
             .then(
@@ -116,6 +116,96 @@ fun MessageBubble(
             color = tailColor,
             reverse = false
         )
+    }
+}
+
+@Composable
+fun MessageBubble(
+    sender: User,
+    message: Message,
+    modifier: Modifier = Modifier,
+    sentByCurrentUser: Boolean = true,
+    deletedByCurrentUser: Boolean = false,
+    shadowedBoxStyle: ShadowedBoxStyle = ShadowedBoxDefaults.defaultStyle(
+        shadowColor = Color.Black,
+        backgroundColor = Lime,
+        borderColor = if (sentByCurrentUser) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.secondary,
+        borderWidth = 4.dp,
+        space = 8.dp,
+        contentPadding = PaddingValues(
+            horizontal = 12.dp,
+            vertical = 8.dp
+        )
+    ),
+    withTail: Boolean = true,
+    tailSize: Dp = 10.dp,
+    avatarDiameter: Dp = 40.dp,
+    tailColor: Color = shadowedBoxStyle.borderColor
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AvatarIcon(
+                name = sender.username,
+                iconPath = sender.imagePath,
+                diameter = avatarDiameter
+            )
+            Text(
+                text = sender.username,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
+        Column(
+            horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
+        ) {
+            if (withTail) Canvas(
+                modifier = with(avatarDiameter / 2) {
+                    Modifier
+                        .padding(
+                            start = if (sentByCurrentUser) 0.dp else this,
+                            end = if (sentByCurrentUser) this else 0.dp
+                        )
+                        .size(tailSize)
+                }
+            ) {
+                val path = Path().apply {
+                    moveTo(0f, size.height)
+                    lineTo(
+                        x = if (!sentByCurrentUser) 0f else size.width,
+                        y = 0f
+                    )
+                    lineTo(size.width, size.height)
+                    close()
+                }
+
+                drawPath(
+                    path = path,
+                    color = tailColor
+                )
+            }
+            MessageBubble(
+                message = message,
+                modifier = Modifier
+                    .padding(
+                        start = if (sentByCurrentUser) 0.dp else avatarDiameter / 2 - tailSize,
+                        end = if (sentByCurrentUser) tailSize else 0.dp
+                    ),
+                sentByCurrentUser = sentByCurrentUser,
+                shadowedBoxStyle = shadowedBoxStyle,
+                withTail = false,
+                deletedByCurrentUser = deletedByCurrentUser,
+                tailSize = tailSize
+            )
+        }
     }
 }
 
@@ -191,10 +281,20 @@ private fun MessageBubblePreview(
                 deletedByCurrentUser = true
             )
             MessageBubble(
+                sender = data.user,
                 message = data.latestChatMessages.firstNotNullOf {
                     it.messageDetail?.message
                 },
                 sentByCurrentUser = false
+            )
+
+            MessageBubble(
+                sender = data.user,
+                message = data.latestChatMessages.firstNotNullOf {
+                    it.messageDetail?.message
+                },
+                sentByCurrentUser = false,
+                withTail = false
             )
             MessageBubble(
                 message = message,

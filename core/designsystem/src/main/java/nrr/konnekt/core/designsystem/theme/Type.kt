@@ -20,6 +20,11 @@ private val Nunito = FontFamily(
         weight = FontWeight.Normal
     ),
     Font(
+        resId = R.font.nunito_semibold,
+        style = FontStyle.Normal,
+        weight = FontWeight.SemiBold
+    ),
+    Font(
         resId = R.font.nunito_bold,
         style = FontStyle.Normal,
         weight = FontWeight.Bold
@@ -28,12 +33,11 @@ private val Nunito = FontFamily(
         resId = R.font.nunito_italic,
         style = FontStyle.Italic,
         weight = FontWeight.Normal
-    ),
+    )
 )
 
 const val NORMAL_LINE_HEIGHT_MULTIPLIER = 1.4f
 
-// Set of Material typography styles to start with
 val Typography = Typography(
     bodyLarge = with(20) {
         TextStyle(
