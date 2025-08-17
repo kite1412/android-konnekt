@@ -14,9 +14,11 @@ object ButtonDefaults {
         shadowColor: Color = MaterialTheme.colorScheme.onPrimary,
         backgroundColor: Color = MaterialTheme.colorScheme.primary,
         contentColor: Color = shadowColor,
+        borderColor: Color = shadowColor,
         disabledShadowColor: Color = Gray,
         disabledBackgroundColor: Color = backgroundColor.copy(alpha = 0.7f),
         disabledContentColor: Color = disabledShadowColor,
+        disabledBorderColor: Color = disabledShadowColor,
         space: Dp = 4.dp,
         contentPadding: PaddingValues = PaddingValues(
             horizontal = 16.dp,
@@ -26,9 +28,11 @@ object ButtonDefaults {
         shadowColor = shadowColor,
         backgroundColor = backgroundColor,
         contentColor = contentColor,
+        borderColor = borderColor,
         disabledShadowColor = disabledShadowColor,
         disabledBackgroundColor = disabledBackgroundColor,
         disabledContentColor = disabledContentColor,
+        disabledBorderColor = disabledBorderColor,
         space = space,
         contentPadding = contentPadding
     )
@@ -38,9 +42,11 @@ data class ShadowedButtonStyle(
     val shadowColor: Color,
     val backgroundColor: Color,
     val contentColor: Color,
+    val borderColor: Color,
     val disabledShadowColor: Color,
     val disabledBackgroundColor: Color,
     val disabledContentColor: Color,
+    val disabledBorderColor: Color,
     val space: Dp,
     val contentPadding: PaddingValues
 )
@@ -50,13 +56,18 @@ internal fun ShadowedButtonStyle.toShadowedBoxStyle(
     shadowColor: Color = this.shadowColor,
     backgroundColor: Color = this.backgroundColor,
     contentColor: Color = this.contentColor,
+    borderColor: Color = this.borderColor,
+    disabledShadowColor: Color = this.disabledShadowColor,
+    disabledBackgroundColor: Color = this.disabledBackgroundColor,
+    disabledContentColor: Color = this.disabledContentColor,
+    disabledBorderColor: Color = this.disabledBorderColor,
     space: Dp = this.space,
     contentPadding: PaddingValues = this.contentPadding
 ) = ShadowedBoxStyle(
     shadowColor = if (enabled) shadowColor else disabledShadowColor,
     backgroundColor = if (enabled) backgroundColor else disabledBackgroundColor,
     contentColor = if (enabled) contentColor else disabledContentColor,
-    borderColor = shadowColor,
+    borderColor = if (enabled) borderColor else disabledBorderColor,
     borderWidth = 2.dp,
     space = space,
     contentPadding = contentPadding

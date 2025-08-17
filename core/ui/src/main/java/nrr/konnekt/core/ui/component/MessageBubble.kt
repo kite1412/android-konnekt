@@ -42,9 +42,9 @@ fun MessageBubble(
     modifier: Modifier = Modifier,
     sentByCurrentUser: Boolean = true,
     withTail: Boolean = true,
-    deletedByCurrentUser: Boolean = false
+    deletedByCurrentUser: Boolean = false,
+    tailSize: Dp = 10.dp
 ) {
-    val tailSize = 10.dp
     val shadowedBoxStyle = ShadowedBoxDefaults.defaultStyle(
         shadowColor = Color.Black,
         backgroundColor = Lime,
