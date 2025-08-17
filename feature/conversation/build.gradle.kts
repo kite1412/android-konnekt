@@ -4,4 +4,10 @@ plugins {
 
 android {
     namespace = "nrr.konnekt.feature.conversation"
+
+    kotlin {
+        sourceSets.all {
+            languageSettings.optIn("kotlin.time.ExperimentalTime")
+        }
+    }
 }

@@ -21,4 +21,5 @@ object KonnektIcon {
     val x = R.drawable.x
     val chevronsDown = R.drawable.chevrons_down
     val ellipsis = R.drawable.ellipsis
+    val chevronLeft = R.drawable.chevron_left
 }

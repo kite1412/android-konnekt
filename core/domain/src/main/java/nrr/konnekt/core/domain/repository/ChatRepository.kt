@@ -39,6 +39,14 @@ interface ChatRepository {
     fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>>
 
     /**
+     * Get a chat by its ID.
+     *
+     * @param chatId The ID of the chat to get.
+     * @return The chat with the given ID.
+     */
+    suspend fun getChatById(chatId: String): ChatResult<Chat>
+
+    /**
      * Get a list of chats the user is joined to.
      *
      * @param userId The ID of the user to get joined chats for.
