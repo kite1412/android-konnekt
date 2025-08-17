@@ -20,4 +20,5 @@ object KonnektIcon {
     val messageCircleOff = R.drawable.message_circle_off
     val x = R.drawable.x
     val chevronsDown = R.drawable.chevrons_down
+    val ellipsis = R.drawable.ellipsis
 }

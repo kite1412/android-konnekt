@@ -57,7 +57,8 @@ fun MessageBubble(
     ),
     withTail: Boolean = true,
     tailSize: Dp = 10.dp,
-    tailColor: Color = shadowedBoxStyle.borderColor
+    tailColor: Color = shadowedBoxStyle.borderColor,
+    seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
@@ -73,43 +74,48 @@ fun MessageBubble(
             color = tailColor,
             reverse = true
         )
-        ShadowedBox(
-            reverse = !sentByCurrentUser,
-            style = shadowedBoxStyle
+        Column(
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            with(message) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = if (isHidden) "Message has been deleted" else if (deletedByCurrentUser)
-                            "You deleted this message" else content,
-                        style = LocalTextStyle.current.copy(
-                            color = if (isHidden || deletedByCurrentUser) DarkGray else shadowedBoxStyle.contentColor,
-                            fontStyle = if (isHidden || deletedByCurrentUser) FontStyle.Italic else FontStyle.Normal
-                        )
-                    )
-                    CompositionLocalProvider(
-                        LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
-                            color = DarkGray
-                        )
+            ShadowedBox(
+                reverse = !sentByCurrentUser,
+                style = shadowedBoxStyle
+            ) {
+                with(message) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.End
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (sentAt != editedAt) Text(
-                                text = "Edited",
-                                style = LocalTextStyle.current.copy(
-                                    fontStyle = FontStyle.Italic
-                                )
+                        Text(
+                            text = if (isHidden) "Message has been deleted" else if (deletedByCurrentUser)
+                                "You deleted this message" else content,
+                            style = LocalTextStyle.current.copy(
+                                color = if (isHidden || deletedByCurrentUser) DarkGray else shadowedBoxStyle.contentColor,
+                                fontStyle = if (isHidden || deletedByCurrentUser) FontStyle.Italic else FontStyle.Normal
                             )
-                            Text(sentAt.toTimeString())
+                        )
+                        CompositionLocalProvider(
+                            LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+                                color = DarkGray
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (sentAt != editedAt) Text(
+                                    text = "Edited",
+                                    style = LocalTextStyle.current.copy(
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                )
+                                Text(sentAt.toTimeString())
+                            }
                         }
                     }
                 }
             }
+            if (sentByCurrentUser && seenContent != null) seenContent(MessageSeenIndicator)
         }
         if (withTail && sentByCurrentUser) Tail(
             size = tailSize,
@@ -141,7 +147,8 @@ fun MessageBubble(
     withTail: Boolean = true,
     tailSize: Dp = 10.dp,
     avatarDiameter: Dp = 40.dp,
-    tailColor: Color = shadowedBoxStyle.borderColor
+    tailColor: Color = shadowedBoxStyle.borderColor,
+    seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     Column(
         modifier = modifier,
@@ -152,17 +159,29 @@ fun MessageBubble(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AvatarIcon(
-                name = sender.username,
-                iconPath = sender.imagePath,
-                diameter = avatarDiameter
+            val composables = listOf<@Composable () -> Unit>(
+                {
+                    AvatarIcon(
+                        name = sender.username,
+                        iconPath = sender.imagePath,
+                        diameter = avatarDiameter
+                    )
+                },
+                {
+                    Text(
+                        text = sender.username,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
             )
-            Text(
-                text = sender.username,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.SemiBold
-                )
-            )
+
+            composables.run {
+                (if (sentByCurrentUser) asReversed() else this).forEach {
+                    it()
+                }
+            }
         }
         Column(
             horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
@@ -203,7 +222,8 @@ fun MessageBubble(
                 shadowedBoxStyle = shadowedBoxStyle,
                 withTail = false,
                 deletedByCurrentUser = deletedByCurrentUser,
-                tailSize = tailSize
+                tailSize = tailSize,
+                seenContent = seenContent
             )
         }
     }
@@ -278,7 +298,10 @@ private fun MessageBubblePreview(
             MessageBubble(
                 message = message,
                 withTail = false,
-                deletedByCurrentUser = true
+                deletedByCurrentUser = true,
+                seenContent = {
+                    PersonalSeenIndicator()
+                }
             )
             MessageBubble(
                 sender = data.user,
@@ -287,14 +310,19 @@ private fun MessageBubblePreview(
                 },
                 sentByCurrentUser = false
             )
-
             MessageBubble(
                 sender = data.user,
                 message = data.latestChatMessages.firstNotNullOf {
                     it.messageDetail?.message
                 },
-                sentByCurrentUser = false,
-                withTail = false
+                seenContent = {
+                    GroupSeenIndicator(
+                        seenBy = data.latestChatMessages.mapNotNull {
+                            it.messageDetail?.sender
+                        },
+                        maxShown = 2
+                    )
+                }
             )
             MessageBubble(
                 message = message,
