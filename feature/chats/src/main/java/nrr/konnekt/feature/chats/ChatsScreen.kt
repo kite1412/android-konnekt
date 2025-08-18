@@ -480,19 +480,22 @@ private fun Chats(
                         it.messageDetail != null
                                 && user.id != it.messageDetail?.sender?.id
                                 && with(
-                            it.messageDetail
-                                ?.messageStatuses
-                                ?.firstOrNull { s ->
-                                    s.userId == user.id
+                                    it.messageDetail
+                                        ?.message
+                                        ?.messageStatuses
+                                        ?.firstOrNull { s ->
+                                            s.userId == user.id
+                                        }
+                                ) {
+                                    (this == null || readAt == null)
                                 }
-                        ) {
-                            (this == null || readAt == null)
-                        }
                     },
                     deletedByCurrentUser = {
-                        it.messageDetail?.messageStatuses?.firstOrNull { s ->
-                            s.userId == user.id
-                        }?.isDeleted == true
+                        it.messageDetail?.message
+                            ?.messageStatuses
+                            ?.firstOrNull { s ->
+                                s.userId == user.id
+                            }?.isDeleted == true
                     },
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {

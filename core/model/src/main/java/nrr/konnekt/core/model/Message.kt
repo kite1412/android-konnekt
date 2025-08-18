@@ -10,5 +10,6 @@ data class Message(
     val sentAt: Instant,
     val editedAt: Instant,
     val isHidden: Boolean,
+    val messageStatuses: List<MessageStatus> = emptyList(),
     val attachments: List<Attachment> = emptyList()
 )

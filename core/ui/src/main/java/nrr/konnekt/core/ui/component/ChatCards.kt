@@ -208,7 +208,7 @@ private fun ChatCard(
                                 text = it.info().run {
                                     if (isToday) localDateTime.time.toStringIgnoreSecond()
                                     else if (daysAgo == 1) "Yesterday"
-                                    else localDateTime.toStringFormatted()
+                                    else localDateTime.date.toStringFormatted()
                                 },
                                 style = MaterialTheme.typography.bodySmall
                             )

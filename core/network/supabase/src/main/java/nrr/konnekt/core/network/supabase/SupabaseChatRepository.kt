@@ -291,9 +291,10 @@ internal class SupabaseChatRepository @Inject constructor(
                                         ?.let { sender ->
                                             MessageDetail(
                                                 sender = sender,
-                                                message = m,
-                                                messageStatuses = messageStatuses
-                                                    .filter { ms -> ms.messageId == m.id }
+                                                message = m.copy(
+                                                    messageStatuses = messageStatuses
+                                                        .filter { ms -> ms.messageId == m.id }
+                                                ),
                                             )
                                         }
                                 }

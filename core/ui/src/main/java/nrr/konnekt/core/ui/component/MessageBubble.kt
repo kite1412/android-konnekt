@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +59,7 @@ fun MessageBubble(
     withTail: Boolean = true,
     tailSize: Dp = 10.dp,
     tailColor: Color = shadowedBoxStyle.borderColor,
+    maxContentWidth: Dp = 350.dp,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     Row(
@@ -75,6 +77,7 @@ fun MessageBubble(
             reverse = true
         )
         Column(
+            modifier = Modifier.sizeIn(maxWidth = maxContentWidth),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             ShadowedBox(
@@ -146,8 +149,9 @@ fun MessageBubble(
     ),
     withTail: Boolean = true,
     tailSize: Dp = 10.dp,
-    avatarDiameter: Dp = 40.dp,
     tailColor: Color = shadowedBoxStyle.borderColor,
+    avatarDiameter: Dp = 40.dp,
+    maxContentWidth: Dp = 350.dp,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     Column(
@@ -223,6 +227,7 @@ fun MessageBubble(
                 withTail = false,
                 deletedByCurrentUser = deletedByCurrentUser,
                 tailSize = tailSize,
+                maxContentWidth = maxContentWidth,
                 seenContent = seenContent
             )
         }

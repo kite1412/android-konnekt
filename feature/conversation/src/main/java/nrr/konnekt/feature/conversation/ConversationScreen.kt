@@ -3,12 +3,14 @@ package nrr.konnekt.feature.conversation
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -18,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,24 +31,36 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.datetime.LocalDate
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.model.util.toStringFormatted
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
+import nrr.konnekt.core.ui.component.MessageBubble
+import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.feature.conversation.util.ActiveStatus
+import nrr.konnekt.feature.conversation.util.ConversationItem
+import nrr.konnekt.feature.conversation.util.UiEvent
+import nrr.konnekt.feature.conversation.util.info
+import nrr.konnekt.feature.conversation.util.mapToConversationItem
 import kotlin.time.Instant
 
 @Composable
@@ -55,33 +70,54 @@ internal fun ConversationScreen(
     modifier: Modifier = Modifier,
     viewModel: ConversationViewModel = hiltViewModel()
 ) {
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
     val chat by viewModel.chat.collectAsStateWithLifecycle()
+    val messages by viewModel.messages.collectAsStateWithLifecycle(null)
+    val snackbarHostState = LocalSnackbarHostState.current
 
-    chat?.let {
-        ConversationScreen(
-            chat = it,
-            // TODO
-            totalActiveParticipants = 2 ,
-            onNavigateBack = navigateBack,
-            onChatClick = navigateToChatDetail,
-            modifier = modifier,
-            // TODO
-            peerLastActive = now()
-        )
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is UiEvent.NavigateBack -> navigateBack()
+                is UiEvent.ShowSnackbar ->
+                    snackbarHostState.showSnackbar(event.message)
+            }
+        }
+    }
+    currentUser?.let { u ->
+        chat?.let { c ->
+            messages?.let { m ->
+                ConversationScreen(
+                    currentUser = u,
+                    chat = c,
+                    messages = m,
+                    // TODO
+                    totalActiveParticipants = 2 ,
+                    onNavigateBack = navigateBack,
+                    onChatClick = navigateToChatDetail,
+                    modifier = modifier,
+                    // TODO
+                    peerLastActive = now()
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun ConversationScreen(
+    currentUser: User,
     chat: Chat,
     totalActiveParticipants: Int,
+    messages: List<Message>,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
     Column(
-        modifier = modifier
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Header(
             chat = chat,
@@ -92,6 +128,16 @@ private fun ConversationScreen(
         ) {
 
         }
+        Conversation(
+            items = messages.mapToConversationItem(),
+            chatType = chat.type,
+            sentByCurrentUser = { m -> m.senderId == currentUser.id },
+            deletedByCurrentUser = { m ->
+                m.messageStatuses
+                    .firstOrNull { it.userId == currentUser.id }
+                    ?.isDeleted == true
+            }
+        )
     }
 }
 
@@ -245,16 +291,119 @@ private fun Header(
     }
 }
 
+@Composable
+private fun Conversation(
+    items: List<ConversationItem>,
+    chatType: ChatType,
+    sentByCurrentUser: (Message) -> Boolean,
+    deletedByCurrentUser: (Message) -> Boolean,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        reverseLayout = true
+    ) {
+        items(
+            count = items.size,
+            key = { i -> items[i].key }
+        ) {
+            when (val item = items[it]) {
+                is ConversationItem.DateHeader -> DateHeader(
+                    date = item.date,
+                    modifier = Modifier.padding(
+                        top = 12.dp,
+                        bottom = 8.dp
+                    )
+                )
+                is ConversationItem.MessageItem -> {
+                    val applyTopPadding = it + 1 < items.size
+                        && items[it + 1] is ConversationItem.MessageItem
+
+                    when (chatType) {
+                        ChatType.PERSONAL -> AdjustedMessageBubble(
+                            message = item.message,
+                            sentByCurrentUser = sentByCurrentUser(item.message),
+                            wasSentByPreviousUser = item.wasSentByPreviousUser,
+                            deletedByCurrentUser = deletedByCurrentUser(item.message),
+                            applyTopPadding = applyTopPadding
+                        )
+                        else -> {}
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdjustedMessageBubble(
+    message: Message,
+    sentByCurrentUser: Boolean,
+    wasSentByPreviousUser: Boolean,
+    deletedByCurrentUser: Boolean,
+    modifier: Modifier = Modifier,
+    applyTopPadding: Boolean = true
+) {
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                top = if (applyTopPadding)
+                    if (!wasSentByPreviousUser) 16.dp else 4.dp
+                else 0.dp
+            ),
+        contentAlignment = if (sentByCurrentUser) Alignment.CenterEnd
+            else Alignment.CenterStart
+    ) {
+        MessageBubble(
+            message = message,
+            sentByCurrentUser = sentByCurrentUser,
+            withTail = !wasSentByPreviousUser,
+            deletedByCurrentUser = deletedByCurrentUser,
+            maxContentWidth = this.maxWidth * 0.9f
+        )
+    }
+}
+
+@Composable
+private fun DateHeader(
+    date: LocalDate,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = with(date.info()) {
+            if (isToday) "Today"
+            else if (daysAgo == 1) "Yesterday"
+            else date.toStringFormatted("dd MMMM yyyy")
+        },
+        modifier = modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.bodySmall.copy(
+            color = Lime,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold
+        )
+    )
+}
+
 @Preview
 @Composable
 private fun ConversationScreenPreview(
     @PreviewParameter(ConversationProvider::class)
     conversation: Conversation
 ) {
+    val user = User(
+        id = "user1",
+        username = "Kite",
+        email = "kite@example.com",
+        createdAt = now()
+    )
+
     KonnektTheme {
         Scaffold {
             ConversationScreen(
+                currentUser = user,
                 chat = conversation.chat,
+                messages = conversation.messages,
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 onChatClick = {},

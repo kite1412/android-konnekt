@@ -58,12 +58,12 @@ class PreviewParameterDataProvider
                     content = "Hey Bob, how’s your day?",
                     sentAt = now(),
                     editedAt = Instant.parse("2025-07-10T15:00:00Z"),
-                    isHidden = false
+                    isHidden = false,
+                    messageStatuses = listOf(
+                        MessageStatus("m1", "u1", Instant.parse("2025-07-10T15:01:00Z"), false),
+                        MessageStatus("m1", "u2", Instant.parse("2025-07-10T15:02:00Z"), false)
+                    )
                 ),
-                messageStatuses = listOf(
-                    MessageStatus("m1", "u1", Instant.parse("2025-07-10T15:01:00Z"), false),
-                    MessageStatus("m1", "u2", Instant.parse("2025-07-10T15:02:00Z"), false)
-                )
             )
         ),
         LatestChatMessage(
@@ -100,6 +100,11 @@ class PreviewParameterDataProvider
                     sentAt = now() - 1.days,
                     editedAt = now(),
                     isHidden = false,
+                    messageStatuses = listOf(
+                        MessageStatus("m2", "u1", Instant.parse("2025-07-05T12:05:00Z"), false),
+                        MessageStatus("m2", "u2", Instant.parse("2025-07-05T12:00:10Z"), false),
+                        MessageStatus("m2", "u3", null, false)
+                    ),
                     attachments = listOf(
                         Attachment(
                             id = "a1",
@@ -110,11 +115,6 @@ class PreviewParameterDataProvider
                             metadata = null
                         )
                     )
-                ),
-                messageStatuses = listOf(
-                    MessageStatus("m2", "u1", Instant.parse("2025-07-05T12:05:00Z"), false),
-                    MessageStatus("m2", "u2", Instant.parse("2025-07-05T12:00:10Z"), false),
-                    MessageStatus("m2", "u3", null, false)
                 )
             )
         ),
@@ -155,11 +155,11 @@ class PreviewParameterDataProvider
                     content = "Are we still on for tonight?",
                     sentAt = Instant.parse("2025-07-21T17:30:00Z"),
                     editedAt = Instant.parse("2025-07-21T17:30:00Z"),
-                    isHidden = false
-                ),
-                messageStatuses = listOf(
-                    MessageStatus("m3", "u3", Instant.parse("2025-07-21T17:31:00Z"), false),
-                    MessageStatus("m3", "u4", null, false)
+                    isHidden = false,
+                    messageStatuses = listOf(
+                        MessageStatus("m3", "u3", Instant.parse("2025-07-21T17:31:00Z"), false),
+                        MessageStatus("m3", "u4", null, false)
+                    )
                 )
             )
         ),
@@ -215,13 +215,13 @@ class PreviewParameterDataProvider
                     content = "I’ve booked the cabin! 🏕️",
                     sentAt = Instant.parse("2025-07-26T09:00:00Z"),
                     editedAt = Instant.parse("2025-07-26T09:00:00Z"),
-                    isHidden = false
-                ),
-                messageStatuses = listOf(
-                    MessageStatus("m4", "u1", Instant.parse("2025-07-26T09:01:00Z"), false),
-                    MessageStatus("m4", "u2", Instant.parse("2025-07-26T09:02:00Z"), false),
-                    MessageStatus("m4", "u3", Instant.parse("2025-07-26T09:03:00Z"), false),
-                    MessageStatus("m4", "u4", Instant.parse("2025-07-26T09:00:05Z"), false)
+                    isHidden = false,
+                    messageStatuses = listOf(
+                        MessageStatus("m4", "u1", Instant.parse("2025-07-26T09:01:00Z"), false),
+                        MessageStatus("m4", "u2", Instant.parse("2025-07-26T09:02:00Z"), false),
+                        MessageStatus("m4", "u3", Instant.parse("2025-07-26T09:03:00Z"), false),
+                        MessageStatus("m4", "u4", Instant.parse("2025-07-26T09:00:05Z"), false)
+                    )
                 )
             )
         ),
@@ -273,12 +273,12 @@ class PreviewParameterDataProvider
                     content = "Push your code to GitHub before 10 PM!",
                     sentAt = Instant.parse("2025-07-01T18:00:00Z"),
                     editedAt = Instant.parse("2025-07-01T18:00:00Z"),
-                    isHidden = false
-                ),
-                messageStatuses = listOf(
-                    MessageStatus("m5", "u1", Instant.parse("2025-07-01T18:01:00Z"), false),
-                    MessageStatus("m5", "u2", Instant.parse("2025-07-01T18:01:30Z"), false),
-                    MessageStatus("m5", "u3", null, false)
+                    isHidden = false,
+                    messageStatuses = listOf(
+                        MessageStatus("m5", "u1", Instant.parse("2025-07-01T18:01:00Z"), false),
+                        MessageStatus("m5", "u2", Instant.parse("2025-07-01T18:01:30Z"), false),
+                        MessageStatus("m5", "u3", null, false)
+                    )
                 )
             )
         )
