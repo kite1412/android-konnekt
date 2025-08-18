@@ -333,43 +333,41 @@ internal class SupabaseChatRepository @Inject constructor(
             }
 
     override suspend fun getChatById(chatId: String): ChatResult<Chat> =
-        performSuspendingAuthenticatedAction res@{ _ ->
-            try {
-                chats {
-                    select {
-                        filter {
-                            SupabaseChat::id eq chatId
-                        }
-                    }.decodeSingleOrNull<SupabaseChat>()
-                }
-                    ?.toChat()
-                    ?.run {
-                        copy(
-                            setting = chatSettings {
+        try {
+            chats {
+                select {
+                    filter {
+                        SupabaseChat::id eq chatId
+                    }
+                }.decodeSingleOrNull<SupabaseChat>()
+            }
+                ?.toChat()
+                ?.run {
+                    copy(
+                        setting = chatSettings {
+                            select {
+                                filter {
+                                    SupabaseChatSetting::chatId eq id
+                                }
+                            }.decodeSingleOrNull<SupabaseChatSetting>()
+                        }?.toChatSetting(
+                            permissionSettings = if (type != ChatType.PERSONAL) chatPermissionSettings {
                                 select {
                                     filter {
-                                        SupabaseChatSetting::chatId eq id
+                                        SupabaseChatPermissionSettings::chatId eq id
                                     }
-                                }.decodeSingleOrNull<SupabaseChatSetting>()
-                            }?.toChatSetting(
-                                permissionSettings = if (type != ChatType.PERSONAL) chatPermissionSettings {
-                                    select {
-                                        filter {
-                                            SupabaseChatPermissionSettings::chatId eq id
-                                        }
-                                    }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
-                                }?.toChatPermissionSettings()
-                                else null
-                            ) ?: return@res Error(ChatError.ChatNotFound)
-                        )
-                    }
-                    ?. let {
-                        Success(it)
-                    }?: Error(ChatError.ChatNotFound)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Error(ChatError.Unknown)
-            }
+                                }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
+                            }?.toChatPermissionSettings()
+                            else null
+                        ) ?: return Error(ChatError.ChatNotFound)
+                    )
+                }
+                ?.let {
+                    Success(it)
+                } ?: Error(ChatError.ChatNotFound)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Error(ChatError.Unknown)
         }
 
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
@@ -377,22 +375,20 @@ internal class SupabaseChatRepository @Inject constructor(
     }
 
     override suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>> =
-        performSuspendingAuthenticatedAction { _ ->
-            try {
-                val participants = chatParticipants {
-                    select {
-                        filter {
-                            SupabaseChatParticipant::chatId eq chatId
-                        }
-                    }.decodeList<SupabaseChatParticipant>()
-                }
-                    .map(SupabaseChatParticipant::toChatParticipant)
-
-                Success(participants)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Error(ChatError.Unknown)
+        try {
+            val participants = chatParticipants {
+                select {
+                    filter {
+                        SupabaseChatParticipant::chatId eq chatId
+                    }
+                }.decodeList<SupabaseChatParticipant>()
             }
+                .map(SupabaseChatParticipant::toChatParticipant)
+
+            Success(participants)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Error(ChatError.Unknown)
         }
 
     override suspend fun getChatDetail(chatId: String): ChatResult<ChatDetail> {

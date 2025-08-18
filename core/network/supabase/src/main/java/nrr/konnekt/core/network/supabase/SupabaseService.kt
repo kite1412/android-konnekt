@@ -19,9 +19,10 @@ internal abstract class SupabaseService(
     private val authentication: Authentication
 ) {
     protected suspend fun <R> performSuspendingAuthenticatedAction(action: suspend (User) -> R) =
-        authentication.loggedInUser.first()?.run {
-            action(this)
-        } ?: throw UnauthenticatedException()
+        with(authentication.loggedInUser.first()) {
+            if (this != null) action(this)
+            else throw UnauthenticatedException()
+        }
 
     protected fun <R> performAuthenticatedAction(action: (User) -> R) =
         authentication.getLoggedInUserOrNull()?.let(action)
@@ -30,12 +31,16 @@ internal abstract class SupabaseService(
     protected suspend fun <R> performSuspendingOperation(
         tableName: String,
         operation: suspend PostgrestQueryBuilder.() -> R
-    ) = operation(supabaseClient.postgrest[tableName])
+    ) = performSuspendingAuthenticatedAction {
+        operation(supabaseClient.postgrest[tableName])
+    }
 
     protected fun <R> performOperation(
         tableName: String,
         operation: PostgrestQueryBuilder.() -> R
-    ) = operation(supabaseClient.postgrest[tableName])
+    ) = performAuthenticatedAction {
+        operation(supabaseClient.postgrest[tableName])
+    }
 
     protected suspend fun <R> users(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(USERS, operation)
