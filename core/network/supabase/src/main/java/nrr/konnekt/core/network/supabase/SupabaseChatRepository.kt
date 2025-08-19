@@ -345,22 +345,22 @@ internal class SupabaseChatRepository @Inject constructor(
                 ?.toChat()
                 ?.run {
                     copy(
-                        setting = chatSettings {
+                        setting = if (type != ChatType.PERSONAL) chatSettings {
                             select {
                                 filter {
                                     SupabaseChatSetting::chatId eq id
                                 }
                             }.decodeSingleOrNull<SupabaseChatSetting>()
                         }?.toChatSetting(
-                            permissionSettings = if (type != ChatType.PERSONAL) chatPermissionSettings {
+                            permissionSettings = chatPermissionSettings {
                                 select {
                                     filter {
                                         SupabaseChatPermissionSettings::chatId eq id
                                     }
                                 }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
                             }?.toChatPermissionSettings()
-                            else null
-                        ) ?: return Error(ChatError.ChatNotFound)
+                        ) else getPersonalChatSetting(chatId)
+                            ?: return Error(ChatError.ChatNotFound)
                     )
                 }
                 ?.let {
@@ -369,6 +369,35 @@ internal class SupabaseChatRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             Error(ChatError.Unknown)
+        }
+
+   private suspend fun getPersonalChatSetting(chatId: String) =
+        performSuspendingAuthenticatedAction { u ->
+            chatParticipants {
+                select {
+                    filter {
+                        SupabaseChatParticipant::chatId eq chatId
+                        SupabaseChatParticipant::userId neq u.id
+                    }
+                }
+                    .decodeSingleOrNull<SupabaseChatParticipant>()
+                    ?.let {
+                        users {
+                            select {
+                                filter {
+                                    User::id eq it.userId
+                                }
+                            }
+                                .decodeSingleOrNull<User>()
+                                ?.let { user ->
+                                    ChatSetting(
+                                        name = user.username,
+                                        iconPath = user.imagePath
+                                    )
+                                }
+                        }
+                    }
+            }
         }
 
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
