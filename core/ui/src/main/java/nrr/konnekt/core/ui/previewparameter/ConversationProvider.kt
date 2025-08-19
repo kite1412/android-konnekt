@@ -14,6 +14,7 @@ import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.util.now
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
@@ -118,6 +119,78 @@ private val personalConversation = Conversation(
             isHidden = false,
             messageStatuses = listOf(
                 MessageStatus("m6", "user2", now + 3.minutes, false)
+            )
+        ),
+        Message(
+            id = "m0",
+            chatId = "chat1",
+            senderId = "user2",
+            content = "Hey, remember that trip we planned?",
+            sentAt = now - 5.days,
+            editedAt = now - 5.days + 1.minutes,
+            isHidden = false,
+            messageStatuses = listOf(
+                MessageStatus("m0", "user1", now - 5.days + 2.minutes, false)
+            )
+        ),
+        Message(
+            id = "m7",
+            chatId = "chat1",
+            senderId = "user2",
+            content = "I was just thinking about that the other day.",
+            sentAt = now - 2.days,
+            editedAt = now - 2.days,
+            isHidden = false,
+            messageStatuses = listOf(
+                MessageStatus("m7", "user1", now - 2.days + 1.minutes, false)
+            )
+        ),
+        Message(
+            id = "m8",
+            chatId = "chat1",
+            senderId = "user1",
+            content = "Oh yeah! We should revisit the plan sometime soon.",
+            sentAt = now - 2.days + 10.minutes,
+            editedAt = now - 2.days + 12.minutes, // edited slightly later
+            isHidden = false,
+            messageStatuses = listOf(
+                MessageStatus("m8", "user2", now - 2.days + 13.minutes, false)
+            )
+        ),
+        Message(
+            id = "m9",
+            chatId = "chat1",
+            senderId = "user2",
+            content = "For sure, let’s do it after your work slows down.",
+            sentAt = now - 12.hours,
+            editedAt = now - 12.hours,
+            isHidden = false,
+            messageStatuses = listOf(
+                MessageStatus("m9", "user1", now - 12.hours + 1.minutes, false)
+            )
+        ),
+        Message(
+            id = "m10",
+            chatId = "chat1",
+            senderId = "user1",
+            content = "Sounds like a plan 😄",
+            sentAt = now + 10.minutes,
+            editedAt = now + 10.minutes,
+            isHidden = false,
+            messageStatuses = listOf(
+                MessageStatus("m10", "user2", now + 11.minutes, false)
+            )
+        ),
+        Message(
+            id = "m11",
+            chatId = "chat1",
+            senderId = "user2",
+            content = "I’ll check my schedule later today.",
+            sentAt = now + 15.minutes,
+            editedAt = now + 15.minutes,
+            isHidden = true, // hidden for some reason
+            messageStatuses = listOf(
+                MessageStatus("m11", "user1", now + 16.minutes, false)
             )
         )
     )

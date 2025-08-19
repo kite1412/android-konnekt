@@ -22,4 +22,11 @@ object KonnektIcon {
     val chevronsDown = R.drawable.chevrons_down
     val ellipsis = R.drawable.ellipsis
     val chevronLeft = R.drawable.chevron_left
+    val send = R.drawable.send
+    val paperclip = R.drawable.paperclip
+    val mic = R.drawable.mic
+    val image = R.drawable.image
+    val video = R.drawable.video
+    val file = R.drawable.file
+    val audio = R.drawable.audio
 }

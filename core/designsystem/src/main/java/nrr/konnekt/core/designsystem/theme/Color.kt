@@ -12,6 +12,10 @@ val Purple = Color(0xFFA356DD)
 val Blue = Color(0xFF568ADD)
 val Red = Color(0xFFFF2E2E)
 val Cyan = Color(0xFF3AD7E3)
+val Yellow = Color(0xFFFFEA00)
+val BrightRed = Color(0xFFFF725F)
+val BrightBlue = Color(0xFF7AC5FF)
+val Magenta = Color(0xFFDE46CF)
 
 // TODO remove later
 val PurpleGrey80 = Color(0xFFCCC2DC)

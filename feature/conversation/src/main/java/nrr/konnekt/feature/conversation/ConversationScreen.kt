@@ -1,5 +1,9 @@
 package nrr.konnekt.feature.conversation
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,7 +11,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -35,15 +45,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.datetime.LocalDate
+import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
@@ -58,7 +73,9 @@ import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.feature.conversation.util.ActiveStatus
 import nrr.konnekt.feature.conversation.util.ConversationItem
+import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
+import nrr.konnekt.feature.conversation.util.attachments
 import nrr.konnekt.feature.conversation.util.info
 import nrr.konnekt.feature.conversation.util.mapToConversationItem
 import kotlin.time.Instant
@@ -91,6 +108,12 @@ internal fun ConversationScreen(
                     currentUser = u,
                     chat = c,
                     messages = m,
+                    messageInput = viewModel.messageInput,
+                    onMessageInputChange = { viewModel.messageInput = it },
+                    composerAction = null,
+                    onComposerActionChange = {},
+                    onSend = {},
+                    onAttachmentClick = {},
                     // TODO
                     totalActiveParticipants = 2 ,
                     onNavigateBack = navigateBack,
@@ -110,14 +133,20 @@ private fun ConversationScreen(
     chat: Chat,
     totalActiveParticipants: Int,
     messages: List<Message>,
+    messageInput: String,
+    onMessageInputChange: (String) -> Unit,
+    composerAction: MessageComposerAction?,
+    onComposerActionChange: (MessageComposerAction?) -> Unit,
+    onSend: (String) -> Unit,
+    onAttachmentClick: (AttachmentType) -> Unit,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = modifier.fillMaxHeight(),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         Header(
             chat = chat,
@@ -128,16 +157,32 @@ private fun ConversationScreen(
         ) {
 
         }
-        Conversation(
-            items = messages.mapToConversationItem(),
-            chatType = chat.type,
-            sentByCurrentUser = { m -> m.senderId == currentUser.id },
-            deletedByCurrentUser = { m ->
-                m.messageStatuses
-                    .firstOrNull { it.userId == currentUser.id }
-                    ?.isDeleted == true
-            }
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .imePadding(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Conversation(
+                items = messages.mapToConversationItem(),
+                chatType = chat.type,
+                sentByCurrentUser = { m -> m.senderId == currentUser.id },
+                deletedByCurrentUser = { m ->
+                    m.messageStatuses
+                        .firstOrNull { it.userId == currentUser.id }
+                        ?.isDeleted == true
+                },
+                modifier = Modifier.weight(1f)
+            )
+            MessageComposer(
+                message = messageInput,
+                onMessageChange = onMessageInputChange,
+                action = composerAction,
+                onActionChange = onComposerActionChange,
+                onSend = onSend,
+                onAttachmentClick = onAttachmentClick
+            )
+        }
     }
 }
 
@@ -167,7 +212,9 @@ private fun Header(
         var dropdownExpanded by remember { mutableStateOf(false) }
 
         Row(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -301,7 +348,8 @@ private fun Conversation(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        reverseLayout = true
+        reverseLayout = true,
+        verticalArrangement = Arrangement.Top
     ) {
         items(
             count = items.size,
@@ -366,6 +414,173 @@ private fun AdjustedMessageBubble(
 }
 
 @Composable
+private fun MessageComposer(
+    message: String,
+    onMessageChange: (String) -> Unit,
+    action: MessageComposerAction?,
+    onActionChange: (MessageComposerAction?) -> Unit,
+    onSend: (String) -> Unit,
+    onAttachmentClick: (AttachmentType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        ShadowedTextField(
+            value = message,
+            onValueChange = onMessageChange,
+            placeholder = "Message...",
+            actions = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    val iconSize = 24.dp
+                    val iconModifier = { onClick: () -> Unit ->
+                        Modifier
+                            .size(iconSize)
+                            .clickable(
+                                indication = null,
+                                interactionSource = null,
+                                onClick = onClick
+                            )
+                    }
+
+                    Box {
+                        Icon(
+                            painter = painterResource(KonnektIcon.paperclip),
+                            contentDescription = "attachments",
+                            modifier = iconModifier {
+                                onActionChange(MessageComposerAction.Attachment)
+                            }
+                        )
+
+                        val density = LocalDensity.current
+                        if (action == MessageComposerAction.Attachment) {
+                            val startPadding = 48.dp
+
+                            Popup(
+                                alignment = Alignment.BottomEnd,
+                                offset = with(density) {
+                                    IntOffset(
+                                        x = startPadding.roundToPx(),
+                                        y = -iconSize.roundToPx() - 4.dp.roundToPx()
+                                    )
+                                },
+                                onDismissRequest = {
+                                    onActionChange(null)
+                                }
+                            ) {
+                                Attachments(
+                                    startPadding = startPadding,
+                                    onClick = onAttachmentClick
+                                )
+                            }
+                        }
+                    }
+                    AnimatedContent(
+                        targetState = message.isNotEmpty()
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                id = if (it) KonnektIcon.send else KonnektIcon.mic
+                            ),
+                            contentDescription = "attachments",
+                            modifier = iconModifier {
+                                if (it) onSend(message)
+                            }
+                        )
+                    }
+                }
+            }
+        )
+    }
+}
+
+// bottom end must be placed on top of the icon
+@Composable
+private fun Attachments(
+    startPadding: Dp,
+    onClick: (AttachmentType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+    ) {
+        val borderWidth = 2.dp
+        val primary = MaterialTheme.colorScheme.primary
+
+        Row(
+            modifier = Modifier
+                .padding(
+                    start = startPadding
+                )
+                .border(
+                    color = primary,
+                    width = borderWidth
+                )
+                .background(MaterialTheme.colorScheme.background)
+                .padding(
+                    vertical = 8.dp,
+                    horizontal = 16.dp
+                ),
+            horizontalArrangement = Arrangement.spacedBy(
+                space = 8.dp,
+                alignment = Alignment.CenterHorizontally
+            ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            attachments.forEach {
+                IconButton(
+                    onClick = { onClick(it.type) }
+                ) {
+                    Icon(
+                        painter = painterResource(it.iconId),
+                        contentDescription = it.type.toString(),
+                        tint = it.iconTint
+                    )
+                }
+            }
+        }
+
+        val background = MaterialTheme.colorScheme.background
+        Canvas(
+            modifier = Modifier
+                .size(16.dp)
+                .align(Alignment.End)
+                .offset(
+                    x = -startPadding,
+                    y = -borderWidth * (1.1f)
+                )
+        ) {
+            val path = Path().apply {
+                moveTo(0f, 0f)
+                lineTo(size.width / 2, size.height)
+                lineTo(size.width, 0f)
+                close()
+            }
+
+            drawPath(
+                path = path,
+                color = background
+            )
+            drawLine(
+                color = primary,
+                start = Offset(0f, 0f),
+                end = Offset(size.width / 2, size.height),
+                strokeWidth = borderWidth.toPx()
+            )
+            drawLine(
+                color = primary,
+                start = Offset(size.width, 0f),
+                end = Offset(size.width / 2, size.height),
+                strokeWidth = borderWidth.toPx()
+            )
+        }
+    }
+}
+
+@Composable
 private fun DateHeader(
     date: LocalDate,
     modifier: Modifier = Modifier
@@ -397,6 +612,8 @@ private fun ConversationScreenPreview(
         email = "kite@example.com",
         createdAt = now()
     )
+    var messageInput by remember { mutableStateOf("") }
+    var composerAction by remember { mutableStateOf<MessageComposerAction?>(null) }
 
     KonnektTheme {
         Scaffold {
@@ -404,6 +621,12 @@ private fun ConversationScreenPreview(
                 currentUser = user,
                 chat = conversation.chat,
                 messages = conversation.messages,
+                messageInput = messageInput,
+                onMessageInputChange = { v -> messageInput = v },
+                composerAction = composerAction,
+                onComposerActionChange = { a -> composerAction = a },
+                onSend = {},
+                onAttachmentClick = {},
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 onChatClick = {},

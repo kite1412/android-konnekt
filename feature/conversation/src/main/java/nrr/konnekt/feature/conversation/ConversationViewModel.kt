@@ -1,5 +1,8 @@
 package nrr.konnekt.feature.conversation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -32,6 +35,7 @@ class ConversationViewModel @Inject constructor(
     )
     internal val currentUser = authentication.loggedInUser
     internal val messages = messageRepository.observeMessages(chatId)
+    internal var messageInput by mutableStateOf("")
 
     private var _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
