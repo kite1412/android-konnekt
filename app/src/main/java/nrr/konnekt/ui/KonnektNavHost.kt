@@ -13,6 +13,8 @@ import nrr.konnekt.authentication.navigation.AuthenticationRoute
 import nrr.konnekt.authentication.navigation.authenticationScreen
 import nrr.konnekt.feature.chats.navigation.chatsScreen
 import nrr.konnekt.feature.chats.navigation.navigateToChats
+import nrr.konnekt.feature.conversation.navigation.conversationScreen
+import nrr.konnekt.feature.conversation.navigation.navigateToConversation
 
 @Composable
 internal fun KonnektNavHost(
@@ -41,14 +43,21 @@ internal fun KonnektNavHost(
         startDestination = AuthenticationRoute,
         modifier = modifier
     ) {
-        chatsScreen(
-            navigateToCreateGroupChat = {},
-            navigateToConversation = {},
-            contentPadding = rootContentPadding(scaffoldPadding)
-        )
         authenticationScreen(
             contentPadding = rootContentPadding(scaffoldPadding),
             onSignedIn = {  }
+        )
+        chatsScreen(
+            navigateToCreateGroupChat = {},
+            navigateToConversation = {
+                navController.navigateToConversation(it.id)
+            },
+            contentPadding = rootContentPadding(scaffoldPadding)
+        )
+        conversationScreen(
+            navigateBack = { navController.popBackStack() },
+            navigateToChatDetail = {},
+            contentPadding = contentPadding(scaffoldPadding)
         )
     }
 }

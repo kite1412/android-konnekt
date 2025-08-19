@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
@@ -86,6 +88,7 @@ import kotlin.time.Instant
 internal fun ConversationScreen(
     navigateBack: () -> Unit,
     navigateToChatDetail: (Chat) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ConversationViewModel = hiltViewModel()
 ) {
@@ -120,6 +123,7 @@ internal fun ConversationScreen(
                     totalActiveParticipants = 2 ,
                     onNavigateBack = navigateBack,
                     onChatClick = navigateToChatDetail,
+                    contentPadding = contentPadding,
                     modifier = modifier,
                     // TODO
                     peerLastActive = now()
@@ -143,14 +147,16 @@ private fun ConversationScreen(
     onAttachmentClick: (AttachmentType) -> Unit,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
     Column(
         modifier = modifier
-            .fillMaxHeight()
+            .fillMaxSize()
             .bottomRadialGradient()
-            .topRadialGradient(),
+            .topRadialGradient()
+            .padding(contentPadding),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Header(
@@ -635,6 +641,7 @@ private fun ConversationScreenPreview(
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 onChatClick = {},
+                contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()
             )

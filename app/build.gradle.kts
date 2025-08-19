@@ -17,6 +17,7 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.feature.authentication)
     implementation(projects.feature.chats)
+    implementation(projects.feature.conversation)
 
     implementation(libs.androidx.hilt.navigation.compose)
 
