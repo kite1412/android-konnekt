@@ -71,6 +71,8 @@ import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
+import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.conversation.util.ActiveStatus
 import nrr.konnekt.feature.conversation.util.ConversationItem
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
@@ -145,7 +147,10 @@ private fun ConversationScreen(
     peerLastActive: Instant? = null
 ) {
     Column(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .fillMaxHeight()
+            .bottomRadialGradient()
+            .topRadialGradient(),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Header(
