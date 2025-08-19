@@ -8,6 +8,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -67,7 +68,11 @@ internal fun KonnektApp(
                     startAnimation = isSignedIn != null
                 ) else {
                     Scaffold(modifier = modifier) { p ->
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .consumeWindowInsets(p)
+                        ) {
                             isSignedIn?.let {
                                 KonnektNavHost(
                                     isSignedIn = it,
