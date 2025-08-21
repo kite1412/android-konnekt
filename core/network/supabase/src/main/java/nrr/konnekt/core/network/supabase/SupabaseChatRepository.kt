@@ -5,16 +5,19 @@ import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
@@ -26,6 +29,7 @@ import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
 import nrr.konnekt.core.domain.util.Error
+import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
@@ -68,110 +72,93 @@ internal class SupabaseChatRepository @Inject constructor(
     authentication: Authentication,
     private val userPresenceManager: SupabaseUserPresenceManager
 ) : ChatRepository, SupabaseService(authentication) {
-    /*
-        TODO:
-         - resolve messages' attachments
-     */
-    @OptIn(
-        SupabaseExperimental::class,
-        ExperimentalCoroutinesApi::class
-    )
-    override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> =
+    @OptIn(SupabaseExperimental::class)
+    private val participatedIn by lazy {
         performAuthenticatedAction { u ->
-            val participatedIn = channelFlow {
-                performOperation(CHAT_PARTICIPANTS) {
-                    selectAsFlow(
-                        primaryKeys = listOf(
-                            SupabaseChatParticipant::chatId,
-                            SupabaseChatParticipant::userId
-                        ),
-                        filter = FilterOperation(
-                            column = "user_id",
-                            operator = FilterOperator.EQ,
-                            value = u.id
-                        )
-                    )
-                        .map { l ->
-                            l
-                                .filter { it.leftAt == null }
-                                .map {
-                                    JoinedChat(
-                                        chatId = it.chatId,
-                                        userId = it.userId
-                                    )
-                                }
-                        }
-                        .onEach {
-                            Log.d(LOG_TAG, "joined chats: $it")
-                            send(it)
-                        }
-                        .launchIn(this@channelFlow)
-                }
+            performOperation(CHAT_PARTICIPANTS) {
+                selectAsFlow(
+                    primaryKey = SupabaseChatParticipant::userId,
+                    filter = FilterOperation(
+                        column = "user_id",
+                        operator = FilterOperator.EQ,
+                        value = u.id
+                    ),
+                    channelName = "participated_in"
+                )
+                    .map { l ->
+                        l
+                            .filter { it.leftAt == null }
+                            .map {
+                                JoinedChat(
+                                    chatId = it.chatId,
+                                    userId = it.userId
+                                )
+                            }
+                    }
+                    .onEach {
+                        Log.d(LOG_TAG, "joined chats: $it")
+                    }
+                    .share()
             }
-            val toInValues: List<String>.() -> String = {
-                joinToString(
-                    separator = ",",
-                    prefix = "(",
-                    postfix = ")"
+        }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val joinedChats by lazy {
+        participatedIn.flatMapLatest { jc ->
+            flow {
+                emit(
+                    chats {
+                        select {
+                            filter {
+                                SupabaseChat::id isIn jc.map { c -> c.chatId }
+                            }
+                        }.decodeList<SupabaseChat>()
+                    }.map(SupabaseChat::toChat)
                 )
             }
-            val joinedChats = participatedIn.flatMapLatest { jc ->
-                flow {
-                    emit(
-                        chats {
-                            select {
-                                filter {
-                                    SupabaseChat::id isIn jc.map { c -> c.chatId }
-                                }
-                            }.decodeList<SupabaseChat>()
-                        }.map(SupabaseChat::toChat)
+        }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class, SupabaseExperimental::class)
+    private val chatSettings by lazy {
+        joinedChats.flatMapLatest { c ->
+            performOperation(CHAT_SETTINGS) {
+                selectAsFlow(
+                    primaryKey = SupabaseChatSetting::chatId,
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.IN,
+                        value = c.map { it.id }.toInValues()
                     )
-                }
+                ).share()
             }
-            val supabaseSettings = joinedChats.flatMapLatest { c ->
-                performOperation(CHAT_SETTINGS) {
-                    selectAsFlow(
-                        primaryKey = SupabaseChatSetting::chatId,
-                        filter = FilterOperation(
-                            column = "chat_id",
-                            operator = FilterOperator.IN,
-                            value = c.map { it.id }.toInValues()
-                        )
+        }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class, SupabaseExperimental::class)
+    private val chatPermissionSettings by lazy {
+        chatSettings.flatMapLatest { s ->
+            performOperation(CHAT_PERMISSION_SETTINGS) {
+                selectAsFlow(
+                    primaryKey = SupabaseChatPermissionSettings::chatId,
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.IN,
+                        value = s.map { it.chatId }.toInValues()
                     )
-                }
+                )
             }
-            val supabasePermissionSettings = supabaseSettings.flatMapLatest { s ->
-                performOperation(CHAT_PERMISSION_SETTINGS) {
-                    selectAsFlow(
-                        primaryKey = SupabaseChatPermissionSettings::chatId,
-                        filter = FilterOperation(
-                            column = "chat_id",
-                            operator = FilterOperator.IN,
-                            value = s.map { it.chatId }.toInValues()
-                        )
-                    )
-                }
-            }
-            val settings = combine(
-                flow = supabaseSettings,
-                flow2 = supabasePermissionSettings
-            ) { settings, permissionSettings ->
-                settings.map { s ->
-                    s.chatId to s.toChatSetting(
-                        permissionSettings = permissionSettings.firstOrNull { ps ->
-                            ps.chatId == s.chatId
-                        }?.toChatPermissionSettings()
-                    )
-                }
-            }
-            val otherUsers = joinedChats.flatMapLatest { c ->
+        }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class, SupabaseExperimental::class)
+    private val personalChatParticipants by lazy {
+        performAuthenticatedAction { u ->
+            joinedChats.flatMapLatest { c ->
                 c.filter { it.type == ChatType.PERSONAL }
                     .let { filtered ->
                         chatParticipants {
                             select {
                                 filter {
                                     SupabaseChatParticipant::chatId isIn
-                                        filtered.map { f -> f.id }
+                                            filtered.map { f -> f.id }
                                     SupabaseChatParticipant::userId neq u.id
                                 }
                             }.decodeList<SupabaseChatParticipant>()
@@ -187,65 +174,129 @@ internal class SupabaseChatRepository @Inject constructor(
                                 )
                                     .map { users ->
                                         users.map { u ->
-                                            p.first { it.userId == u.id }.chatId to
-                                                u
+                                            p.first { it.userId == u.id }.chatId to u
                                         }
                                     }
+                                    .share()
                             } else flowOf(emptyList())
                         }
                     }
             }
-            val participants = joinedChats.flatMapLatest { chats ->
-                flowOf(
-                    chatParticipants {
-                        select {
-                            filter {
-                                SupabaseChatParticipant::chatId isIn chats.map { it.id }
-                            }
-                        }.decodeList<SupabaseChatParticipant>()
-                    }
-                        .map(SupabaseChatParticipant::toChatParticipant)
+        }
+    }
+    private val settings by lazy {
+        combine(
+            flow = chatSettings,
+            flow2 = chatPermissionSettings
+        ) { settings, permissionSettings ->
+            settings.map { s ->
+                s.chatId to s.toChatSetting(
+                    permissionSettings = permissionSettings.firstOrNull { ps ->
+                        ps.chatId == s.chatId
+                    }?.toChatPermissionSettings()
                 )
             }
-            val chats = combine(
-                flow = joinedChats,
-                flow2 = settings,
-                flow3 = otherUsers,
-                flow4 = participants
-            ) { chats, settings, otherUsers, participants ->
-                chats.map { c ->
-                    c.copy(
-                        setting = if (c.type != ChatType.PERSONAL) settings
-                            .firstOrNull { s -> s.first == c.id }
-                            ?.second
-                        else otherUsers
-                            .firstOrNull { it.first == c.id }
-                            ?.second
-                            ?.let {
-                                ChatSetting(
-                                    name = it.username,
-                                    iconPath = it.imagePath
-                                )
-                            },
-                        participants = participants.filter { p -> p.chatId == c.id }
-                    )
-                }
-            }
-            val messages = chats.flatMapLatest { c ->
-                performOperation(MESSAGES) {
-                    selectAsFlow(
-                        primaryKey = SupabaseMessage::id,
-                        filter = FilterOperation(
-                            column = "chat_id",
-                            operator = FilterOperator.IN,
-                            value = c.map { c -> c.id }.toInValues()
-                        )
-                    )
-                        .map {
-                            it.sortedByDescending { m -> m.sentAt }
+        }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val participants by lazy {
+        joinedChats.flatMapLatest { chats ->
+            flowOf(
+                chatParticipants {
+                    select {
+                        filter {
+                            SupabaseChatParticipant::chatId isIn chats.map { it.id }
                         }
+                    }.decodeList<SupabaseChatParticipant>()
                 }
+                    .map(SupabaseChatParticipant::toChatParticipant)
+            )
+        }
+    }
+    private val chats by lazy {
+        combine(
+            flow = joinedChats,
+            flow2 = settings,
+            flow3 = personalChatParticipants,
+            flow4 = participants
+        ) { chats, settings, otherUsers, participants ->
+            chats.map { c ->
+                c.copy(
+                    setting = if (c.type != ChatType.PERSONAL) settings
+                        .firstOrNull { s -> s.first == c.id }
+                        ?.second
+                    else otherUsers
+                        .firstOrNull { it.first == c.id }
+                        ?.second
+                        ?.let {
+                            ChatSetting(
+                                name = it.username,
+                                iconPath = it.imagePath
+                            )
+                        },
+                    participants = participants.filter { p -> p.chatId == c.id }
+                )
             }
+        }
+    }
+    @OptIn(ExperimentalCoroutinesApi::class, SupabaseExperimental::class)
+    private val messages by lazy {
+        chats.flatMapLatest { c ->
+            performOperation(MESSAGES) {
+                selectAsFlow(
+                    primaryKey = SupabaseMessage::id,
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.IN,
+                        value = c.map { c -> c.id }.toInValues()
+                    )
+                )
+                    .map {
+                        it.sortedByDescending { m -> m.sentAt }
+                    }
+                    .share()
+            }
+        }
+    }
+    @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
+    private val messageStatuses by lazy {
+        messages.flatMapLatest { messages ->
+            performOperation(MESSAGE_STATUSES) {
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        MessageStatus::messageId,
+                        MessageStatus::userId
+                    ),
+                    filter = FilterOperation(
+                        column = "message_id",
+                        operator = FilterOperator.IN,
+                        value = messages.map { it.id }.toInValues()
+                    )
+                ).share()
+            }
+        }
+    }
+
+    private fun List<String>.toInValues(): String =
+        joinToString(
+            separator = ",",
+            prefix = "(",
+            postfix = ")"
+        )
+
+    private fun <T> Flow<T>.share() = shareIn(
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        started = SharingStarted.WhileSubscribed(5000),
+        replay = 1
+    )
+
+    /*
+        TODO:
+         - resolve messages' attachments
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> =
+        performAuthenticatedAction { u ->
             val senders = messages.flatMapLatest { m ->
                 flowOf(
                     users {
@@ -256,21 +307,6 @@ internal class SupabaseChatRepository @Inject constructor(
                         }.decodeList<User>()
                     }
                 )
-            }
-            val messageStatuses = messages.flatMapLatest { messages ->
-                performOperation(MESSAGE_STATUSES) {
-                    selectAsFlow(
-                        primaryKeys = listOf(
-                            MessageStatus::messageId,
-                            MessageStatus::userId
-                        ),
-                        filter = FilterOperation(
-                            column = "message_id",
-                            operator = FilterOperator.IN,
-                            value = messages.map { it.id }.toInValues()
-                        )
-                    )
-                }
             }
 
             combine(
@@ -360,7 +396,12 @@ internal class SupabaseChatRepository @Inject constructor(
                                 }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
                             }?.toChatPermissionSettings()
                         ) else getPersonalChatSetting(chatId)
-                            ?: return Error(ChatError.ChatNotFound)
+                            ?: return Error(ChatError.ChatNotFound),
+                        participants = (getChatParticipants(chatId)
+                            .takeIf {
+                                it is Result.Success
+                            } as? Result.Success<List<ChatParticipant>>)
+                            ?.data ?: emptyList()
                     )
                 }
                 ?.let {

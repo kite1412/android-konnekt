@@ -26,17 +26,22 @@ import javax.inject.Inject
 import kotlin.time.Instant
 
 internal class SupabaseUserPresenceManager @Inject constructor(
-    authentication: Authentication
+    private val authentication: Authentication
 ) : UserPresenceManager, SupabaseService(authentication) {
     private val _activeUsers: MutableStateFlow<List<UserStatus>> = MutableStateFlow(emptyList())
     val activeUsers = _activeUsers.asStateFlow()
     override fun observeUserPresence(userId: String): Flow<UserPresence?> =
         channelFlow {
+            if (presenceChannel.status.value != RealtimeChannel.Status.SUBSCRIBED)
+                authentication.getLoggedInUserOrNull()?.let {
+                    markUserActive(it)
+                }
+
             _activeUsers
-                .onEach {
+                .onEach { userStatuses ->
                     trySend(
                         UserPresence(
-                            isActive = it.firstOrNull { u -> u.userId == userId } != null,
+                            isActive = userStatuses.firstOrNull { u -> u.userId == userId } != null,
                             status = userStatuses {
                                 select {
                                     filter {
