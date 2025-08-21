@@ -96,6 +96,8 @@ internal fun ConversationScreen(
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
     val chat by viewModel.chat.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle(null)
+    val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
+    val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
 
     LaunchedEffect(Unit) {
@@ -121,13 +123,13 @@ internal fun ConversationScreen(
                     onSend = {},
                     onAttachmentClick = {},
                     // TODO
-                    totalActiveParticipants = 2 ,
+                    totalActiveParticipants = totalActiveParticipants ?: 0,
                     onNavigateBack = navigateBack,
                     onChatClick = navigateToChatDetail,
                     contentPadding = contentPadding,
                     modifier = modifier,
                     // TODO
-                    peerLastActive = now()
+                    peerLastActive = peerLastActive
                 )
             }
         }
