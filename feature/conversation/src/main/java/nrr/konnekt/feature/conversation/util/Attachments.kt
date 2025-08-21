@@ -26,7 +26,7 @@ internal val attachments = listOf(
         iconTint = BrightRed
     ),
     Attachment(
-        type = AttachmentType.FILE,
+        type = AttachmentType.DOCUMENT,
         iconId = KonnektIcon.file,
         iconTint = BrightBlue
     ),

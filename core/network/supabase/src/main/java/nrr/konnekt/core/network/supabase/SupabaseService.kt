@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.first
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
@@ -65,4 +66,8 @@ internal abstract class SupabaseService(
 
     protected suspend fun <R> userStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(USER_STATUSES, operation)
+
+    protected suspend fun <R> attachments(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(ATTACHMENTS, operation)
+
 }

@@ -64,7 +64,7 @@ internal class ChatTest : TestSetup() {
                 permissionSettings = ChatPermissionSettings(),
                 icon = FileUpload(
                     fileName = "any.png",
-                    fileType = "png",
+                    fileExtension = "png",
                     content = loadFile("konnekt-icon.png")
                 )
             )

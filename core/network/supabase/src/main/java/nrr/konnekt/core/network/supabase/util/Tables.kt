@@ -9,4 +9,5 @@ internal object Tables {
     const val MESSAGES = "messages"
     const val MESSAGE_STATUSES = "message_statuses"
     const val USER_STATUSES = "user_statuses"
+    const val ATTACHMENTS = "attachments"
 }

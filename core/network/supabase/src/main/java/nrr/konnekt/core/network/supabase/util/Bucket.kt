@@ -4,9 +4,9 @@ import io.github.jan.supabase.storage.BucketApi
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
 import nrr.konnekt.core.network.supabase.supabaseClient
-import nrr.konnekt.core.network.supabase.util.MediaType.allowedAudioTypes
-import nrr.konnekt.core.network.supabase.util.MediaType.allowedImageTypes
-import nrr.konnekt.core.network.supabase.util.MediaType.allowedVideoTypes
+import nrr.konnekt.core.network.supabase.util.FileType.allowedAudioExtensions
+import nrr.konnekt.core.network.supabase.util.FileType.allowedImageExtensions
+import nrr.konnekt.core.network.supabase.util.FileType.allowedVideoExtensions
 
 internal enum class Bucket(
     val fixedFolders: List<String>,
@@ -14,14 +14,14 @@ internal enum class Bucket(
 ) {
     ICON(
         fixedFolders = listOf("person", "group"),
-        allowedExtensions = allowedImageTypes
+        allowedExtensions = allowedImageExtensions
     ),
     CHAT_MEDIA(
         fixedFolders = emptyList(),
         allowedExtensions = listOf(
-            *allowedImageTypes.toTypedArray(),
-            *allowedVideoTypes.toTypedArray(),
-            *allowedAudioTypes.toTypedArray()
+            *allowedImageExtensions.toTypedArray(),
+            *allowedVideoExtensions.toTypedArray(),
+            *allowedAudioExtensions.toTypedArray()
         )
     );
 

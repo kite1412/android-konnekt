@@ -490,97 +490,92 @@ internal class SupabaseChatRepository @Inject constructor(
                 ChatError.ChatSettingNotFound
             )
 
-        try {
-            chats {
-                val newChat = insert(SupabaseCreateChat(type.toString())) {
-                    select()
-                }.decodeSingleOrNull<SupabaseChat>()
+        chats {
+            val newChat = insert(SupabaseCreateChat(type.toString())) {
+                select()
+            }.decodeSingleOrNull<SupabaseChat>()
 
-                newChat?.let { chat ->
-                    var chatIconPath: String? = null
-                    chatSetting?.icon?.let { fileUpload ->
-                        with(Bucket.ICON) {
-                            require(
-                                type == ChatType.GROUP
-                                    && allowedExtensions.contains(fileUpload.fileType)
+            newChat?.let { chat ->
+                var chatIconPath: String? = null
+                chatSetting?.icon?.let { fileUpload ->
+                    with(Bucket.ICON) {
+                        require(
+                            type == ChatType.GROUP
+                                    && allowedExtensions.contains(fileUpload.fileExtension)
                                     && fileUpload.content.isNotEmpty()
-                            ) {
-                                "Invalid file upload"
-                            }
-                            val path = createPath(
-                                fileName = "${chat.id}.${fileUpload.fileType}",
-                                rootFolder = type.toString()
-                            )
-                            try {
-                                perform {
-                                    upload(
-                                        path = path.pathInBucket,
-                                        data = fileUpload.content
-                                    ) {
-                                        this.userMetadata = buildJsonObject {
-                                            put("user_id", u.id)
-                                            put("email", u.email)
-                                        }
-                                    }
-                                    chatIconPath = path.fullPath
-                                }
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                return@chats Error(
-                                    ChatError.FileUploadError
-                                )
-                            }
+                        ) {
+                            "Invalid file upload"
                         }
-                    }
-                    chatParticipants {
-                        val admin = SupabaseCreateChatParticipant(
-                            chatId = chat.id,
-                            userId = u.id,
-                            role = if (type != ChatType.PERSONAL) ParticipantRole.ADMIN.toString()
-                            else ParticipantRole.MEMBER.toString()
+                        val path = createPath(
+                            fileName = "${chat.id}.${fileUpload.fileExtension}",
+                            rootFolder = type.toString()
                         )
-                        val participants = participantIds?.map { uid ->
-                            SupabaseCreateChatParticipant(
-                                chatId = chat.id,
-                                userId = uid,
-                                role = ParticipantRole.MEMBER.toString()
+                        try {
+                            perform {
+                                upload(
+                                    path = path.pathInBucket,
+                                    data = fileUpload.content
+                                ) {
+                                    this.userMetadata = buildJsonObject {
+                                        put("user_id", u.id)
+                                        put("email", u.email)
+                                    }
+                                }
+                                chatIconPath = path.fullPath
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            return@chats Error(
+                                ChatError.FileUploadError
                             )
                         }
-                        insert(listOf(admin) + (participants ?: emptyList()))
                     }
-                    val setting = if (type != ChatType.PERSONAL) chatSetting?.let { cs ->
-                        val chatSetting = chatSettings {
+                }
+                chatParticipants {
+                    val admin = SupabaseCreateChatParticipant(
+                        chatId = chat.id,
+                        userId = u.id,
+                        role = if (type != ChatType.PERSONAL) ParticipantRole.ADMIN.toString()
+                        else ParticipantRole.MEMBER.toString()
+                    )
+                    val participants = participantIds?.map { uid ->
+                        SupabaseCreateChatParticipant(
+                            chatId = chat.id,
+                            userId = uid,
+                            role = ParticipantRole.MEMBER.toString()
+                        )
+                    }
+                    insert(listOf(admin) + (participants ?: emptyList()))
+                }
+                val setting = if (type != ChatType.PERSONAL) chatSetting?.let { cs ->
+                    val chatSetting = chatSettings {
+                        insert(
+                            value = cs.toSupabaseChatSetting(
+                                chatId = chat.id,
+                                iconPath = chatIconPath
+                            )
+                        ) {
+                            select()
+                        }.decodeSingleOrNull<SupabaseChatSetting>()
+                    }
+                    val permissionSettings = if (type == ChatType.GROUP) chatSetting?.let {
+                        chatPermissionSettings {
                             insert(
-                                value = cs.toSupabaseChatSetting(
-                                    chatId = chat.id,
-                                    iconPath = chatIconPath
-                                )
+                                cs.permissionSettings?.toSupabaseChatPermissionSettings(chat.id)
+                                    ?: ChatPermissionSettings().toSupabaseChatPermissionSettings(chat.id)
                             ) {
                                 select()
-                            }.decodeSingleOrNull<SupabaseChatSetting>()
+                            }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
                         }
-                        val permissionSettings = if (type == ChatType.GROUP) chatSetting?.let {
-                            chatPermissionSettings {
-                                insert(
-                                    cs.permissionSettings?.toSupabaseChatPermissionSettings(chat.id)
-                                        ?: ChatPermissionSettings().toSupabaseChatPermissionSettings(chat.id)
-                                ) {
-                                    select()
-                                }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
-                            }
-                        } else null
-                        chatSetting?.toChatSetting(
-                            permissionSettings?.toChatPermissionSettings()
-                        )
                     } else null
+                    chatSetting?.toChatSetting(
+                        permissionSettings?.toChatPermissionSettings()
+                    )
+                } else null
 
-                    Success(chat.toChat(setting))
-                }
-            } ?: Error(ChatError.Unknown)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Error(ChatError.Unknown)
-        }
+                Success(chat.toChat(setting))
+            }
+        } ?: Error(ChatError.Unknown)
     }
 
     override suspend fun createEvent(

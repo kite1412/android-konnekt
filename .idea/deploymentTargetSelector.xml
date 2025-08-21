@@ -13,12 +13,6 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="ChatsScreenPreview">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="createGroupChatSuccess()">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="MessageBubblePreview">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
@@ -26,6 +20,12 @@
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="ConversationScreenPreview">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="sendMessageNoAttachmentsSuccess()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="sendMessageWithAttachmentsSuccess()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
