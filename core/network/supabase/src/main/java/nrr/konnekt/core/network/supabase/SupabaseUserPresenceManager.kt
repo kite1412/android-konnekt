@@ -45,7 +45,7 @@ internal class SupabaseUserPresenceManager @Inject constructor(
                             status = userStatuses {
                                 select {
                                     filter {
-                                        UserStatus::userId
+                                        UserStatus::userId eq userId
                                     }
                                 }.decodeSingleOrNull<UserStatus>()
                             } ?: UserStatus(

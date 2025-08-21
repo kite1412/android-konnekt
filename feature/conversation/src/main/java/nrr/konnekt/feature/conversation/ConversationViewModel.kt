@@ -10,16 +10,22 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
+import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
-import nrr.konnekt.core.domain.repository.MessageRepository
+import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
+import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
+import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -31,17 +37,25 @@ import kotlin.time.Instant
 @HiltViewModel
 class ConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    observeMessagesUseCase: ObserveMessagesUseCase,
     private val authentication: Authentication,
     private val chatRepository: ChatRepository,
-    private val messageRepository: MessageRepository,
-    private val userPresenceManager: UserPresenceManager
+    private val userPresenceManager: UserPresenceManager,
+    private val sendMessageUseCase: SendMessageUseCase
 ) : ViewModel() {
     private val chatId: String = checkNotNull(
         savedStateHandle.toRoute<ConversationRoute>().chatId
     )
-    internal val currentUser = authentication.loggedInUser
-    internal val messages = messageRepository.observeMessages(chatId)
+    internal val currentUser = authentication
+        .loggedInUser
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    internal val messages = observeMessagesUseCase(chatId)
     internal var messageInput by mutableStateOf("")
+    internal var sendingMessage by mutableStateOf(false)
 
     private var _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
@@ -77,13 +91,13 @@ class ConversationViewModel @Inject constructor(
                     val data = res.data
 
                     data.participants.firstOrNull { p ->
-                        authentication.getLoggedInUserOrNull()?.id?.let {
+                        currentUser.first()?.id?.let {
                             p.userId != it
                         } == true
                     }
-                        ?.let {
+                        ?.let { p ->
                             userPresenceManager
-                                .observeUserPresence(it.userId)
+                                .observeUserPresence(p.userId)
                                 .onEach { np ->
                                      np?.let { p ->
                                          _totalActiveParticipants.value =
@@ -96,6 +110,38 @@ class ConversationViewModel @Inject constructor(
                 }
                 else -> {}
             }
+        }
+    }
+
+    internal fun sendMessage(
+        content: String,
+        attachments: List<FileUpload>? = null
+    ) {
+        viewModelScope.launch {
+            sendingMessage = true
+            val res = sendMessageUseCase(
+                chatId = chatId,
+                content = content,
+                attachment = attachments
+            )
+            if (res is Result.Error) {
+                _events.emit(
+                    value = UiEvent.ShowSnackbar(
+                        when (res.error) {
+                            is MessageError.ChatNotFound -> "Chat not found"
+                            is MessageError.FileUploadError -> "File upload error"
+                            is MessageError.DisallowedFileType -> "Disallowed file type: " +
+                                    (res.error as MessageError.DisallowedFileType)
+                                        .fileTypes
+                                        .joinToString()
+                            is MessageError.MessageNotFound -> "Message not found"
+                            else -> "Fail to send message"
+                        }
+                    )
+                )
+            }
+            messageInput = ""
+            sendingMessage = false
         }
     }
 }

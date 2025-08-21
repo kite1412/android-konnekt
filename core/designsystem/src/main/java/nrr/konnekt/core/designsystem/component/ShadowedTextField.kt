@@ -47,6 +47,7 @@ fun ShadowedTextField(
     label: String? = null,
     actions: (@Composable () -> Unit)? = null,
     singleLine: Boolean = true,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle()
 ) {
@@ -128,6 +129,7 @@ fun ShadowedTextField(
                             },
                             cursorBrush = SolidColor(style.textStyle.color),
                             singleLine = singleLine,
+                            maxLines = maxLines,
                             visualTransformation = visualTransformation
                         )
                     }

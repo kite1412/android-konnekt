@@ -68,6 +68,7 @@ import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -105,6 +106,7 @@ internal fun ConversationScreen(
     val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
+    val messageInput = viewModel.messageInput
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -122,19 +124,20 @@ internal fun ConversationScreen(
                     currentUser = u,
                     chat = c,
                     messages = m,
-                    messageInput = viewModel.messageInput,
+                    messageInput = messageInput,
                     onMessageInputChange = { viewModel.messageInput = it },
                     composerAction = null,
                     onComposerActionChange = {},
-                    onSend = {},
+                    onSend = {
+                        viewModel.sendMessage(it)
+                    },
                     onAttachmentClick = {},
-                    // TODO
+                    sendingMessage = viewModel.sendingMessage,
                     totalActiveParticipants = totalActiveParticipants ?: 0,
                     onNavigateBack = navigateBack,
                     onChatClick = navigateToChatDetail,
                     contentPadding = contentPadding,
                     modifier = modifier,
-                    // TODO
                     peerLastActive = peerLastActive
                 )
             }
@@ -154,6 +157,7 @@ private fun ConversationScreen(
     onComposerActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     onAttachmentClick: (AttachmentType) -> Unit,
+    sendingMessage: Boolean,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
     contentPadding: PaddingValues,
@@ -246,7 +250,8 @@ private fun ConversationScreen(
                     action = composerAction,
                     onActionChange = onComposerActionChange,
                     onSend = onSend,
-                    onAttachmentClick = onAttachmentClick
+                    onAttachmentClick = onAttachmentClick,
+                    sendingMessage = sendingMessage
                 )
             }
             if (messages.isNotEmpty() && lastVisibleDate.isNotBlank())
@@ -513,6 +518,7 @@ private fun MessageComposer(
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     onAttachmentClick: (AttachmentType) -> Unit,
+    sendingMessage: Boolean,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -528,15 +534,17 @@ private fun MessageComposer(
                     horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     val iconSize = 24.dp
-                    val iconModifier = { onClick: () -> Unit ->
-                        Modifier
+                    fun iconModifier(
+                        clickEnabled: Boolean = true,
+                        onClick: () -> Unit
+                    ) = Modifier
                             .size(iconSize)
                             .clickable(
+                                enabled = clickEnabled,
                                 indication = null,
                                 interactionSource = null,
                                 onClick = onClick
                             )
-                    }
 
                     Box {
                         Icon(
@@ -578,13 +586,24 @@ private fun MessageComposer(
                                 id = if (it) KonnektIcon.send else KonnektIcon.mic
                             ),
                             contentDescription = "attachments",
-                            modifier = iconModifier {
+                            modifier = iconModifier(
+                                clickEnabled = !sendingMessage && message.isNotBlank()
+                            ) {
                                 if (it) onSend(message)
                             }
                         )
                     }
                 }
-            }
+            },
+            label = if (sendingMessage) "Sending..." else null,
+            style = TextFieldDefaults.defaultShadowedStyle(
+                labelTextStyle = MaterialTheme.typography.bodySmall.copy(
+                    fontStyle = FontStyle.Italic,
+                    color = Gray
+                )
+            ),
+            singleLine = false,
+            maxLines = 5
         )
     }
 }
@@ -746,6 +765,7 @@ private fun ConversationScreenPreview(
                 onComposerActionChange = { a -> composerAction = a },
                 onSend = {},
                 onAttachmentClick = {},
+                sendingMessage = false,
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 onChatClick = {},
