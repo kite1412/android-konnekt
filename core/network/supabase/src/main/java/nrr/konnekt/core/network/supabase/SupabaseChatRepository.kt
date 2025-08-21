@@ -77,13 +77,15 @@ internal class SupabaseChatRepository @Inject constructor(
         performAuthenticatedAction { u ->
             performOperation(CHAT_PARTICIPANTS) {
                 selectAsFlow(
-                    primaryKey = SupabaseChatParticipant::userId,
+                    primaryKeys = listOf(
+                        SupabaseChatParticipant::userId,
+                        SupabaseChatParticipant::chatId
+                    ),
                     filter = FilterOperation(
                         column = "user_id",
                         operator = FilterOperator.EQ,
                         value = u.id
-                    ),
-                    channelName = "participated_in"
+                    )
                 )
                     .map { l ->
                         l
@@ -286,7 +288,7 @@ internal class SupabaseChatRepository @Inject constructor(
 
     private fun <T> Flow<T>.share() = shareIn(
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.WhileSubscribed(5_000),
         replay = 1
     )
 

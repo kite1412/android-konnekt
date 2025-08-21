@@ -6,14 +6,15 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.AuthResult
@@ -34,25 +35,30 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
         get() = _loggedInUser.asStateFlow()
 
     init {
-        client.auth.sessionStatus
-            .onEach {
-                val user = client.auth
-                    .currentUserOrNull()
-                    ?.toUser()
-                    ?.let {
-                        client.postgrest.from(USERS).select {
-                            filter {
-                                User::id eq it.id
+        CoroutineScope(Dispatchers.Main).launch {
+            client.auth.sessionStatus
+                .first()
+                .let {
+                    if (it is SessionStatus.Authenticated) {
+                        val user = client.auth
+                            .currentUserOrNull()
+                            ?.toUser()
+                            ?.let { u ->
+                                client.postgrest.from(USERS).select {
+                                    filter {
+                                        User::id eq u.id
+                                    }
+                                }.decodeSingleOrNull<User>()
                             }
-                        }.decodeSingleOrNull<User>()
+                        Log.d(LOG_TAG, "Current user: $user")
+                        _loggedInUser.value = user
                     }
-                Log.d(LOG_TAG, "Current user: $user")
-                _loggedInUser.value = user
-            }
-            .launchIn(CoroutineScope(Dispatchers.Default))
+                }
+        }
     }
 
-    override fun getLoggedInUserOrNull(): User? = _loggedInUser.value
+    override fun getLoggedInUserOrNull(): User? =
+        client.auth.currentUserOrNull()?.toUser()
 
     override suspend fun login(
         email: String,
