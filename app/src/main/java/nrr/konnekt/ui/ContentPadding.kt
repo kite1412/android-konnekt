@@ -18,6 +18,12 @@ internal fun contentPadding(scaffoldPadding: PaddingValues? = null) =
         scaffoldPadding = scaffoldPadding
     )
 
+internal fun smallContentPadding(scaffoldPadding: PaddingValues? = null) =
+    getContentPadding(
+        padding = 8.dp,
+        scaffoldPadding = scaffoldPadding
+    )
+
 private fun getContentPadding(
     padding: Dp,
     scaffoldPadding: PaddingValues? = null

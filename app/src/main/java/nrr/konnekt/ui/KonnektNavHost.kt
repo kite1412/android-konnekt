@@ -57,7 +57,7 @@ internal fun KonnektNavHost(
         conversationScreen(
             navigateBack = { navController.popBackStack() },
             navigateToChatDetail = {},
-            contentPadding = contentPadding(scaffoldPadding)
+            contentPadding = smallContentPadding(scaffoldPadding)
         )
     }
 }

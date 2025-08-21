@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -357,8 +358,15 @@ private fun Conversation(
     deletedByCurrentUser: (Message) -> Boolean,
     modifier: Modifier = Modifier
 ) {
+    val state = rememberLazyListState()
+
+    LaunchedEffect(items.size) {
+        if (state.firstVisibleItemIndex == 1)
+            state.animateScrollToItem(0)
+    }
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
+        state = state,
         reverseLayout = true,
         verticalArrangement = Arrangement.Top
     ) {
