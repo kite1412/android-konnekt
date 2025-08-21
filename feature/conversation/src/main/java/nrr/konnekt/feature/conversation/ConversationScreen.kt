@@ -1,7 +1,9 @@
 package nrr.konnekt.feature.conversation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +22,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -31,12 +35,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalDensity
@@ -54,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.theme.Gray
@@ -67,7 +74,6 @@ import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
-import nrr.konnekt.core.model.util.toStringFormatted
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
@@ -81,7 +87,7 @@ import nrr.konnekt.feature.conversation.util.ConversationItem
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.attachments
-import nrr.konnekt.feature.conversation.util.info
+import nrr.konnekt.feature.conversation.util.dateHeaderString
 import nrr.konnekt.feature.conversation.util.mapToConversationItem
 import kotlin.time.Instant
 
@@ -171,31 +177,89 @@ private fun ConversationScreen(
         ) {
 
         }
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .imePadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .fillMaxSize()
+                .imePadding()
         ) {
-            Conversation(
-                items = messages.mapToConversationItem(),
-                chatType = chat.type,
-                sentByCurrentUser = { m -> m.senderId == currentUser.id },
-                deletedByCurrentUser = { m ->
-                    m.messageStatuses
-                        .firstOrNull { it.userId == currentUser.id }
-                        ?.isDeleted == true
-                },
-                modifier = Modifier.weight(1f)
-            )
-            MessageComposer(
-                message = messageInput,
-                onMessageChange = onMessageInputChange,
-                action = composerAction,
-                onActionChange = onComposerActionChange,
-                onSend = onSend,
-                onAttachmentClick = onAttachmentClick
-            )
+            var showFloatingDateHeader by remember {
+                mutableStateOf(true)
+            }
+            var lastVisibleDate by remember {
+                mutableStateOf("")
+            }
+
+            Column(
+                modifier = Modifier.fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                val conversationItems = messages.mapToConversationItem()
+                val state = rememberLazyListState()
+                val scrollInProgress by remember {
+                    derivedStateOf(
+                        state::isScrollInProgress
+                    )
+                }
+                val visibleItems by remember {
+                    derivedStateOf {
+                        state.layoutInfo.visibleItemsInfo
+                    }
+                }
+
+                LaunchedEffect(scrollInProgress) {
+                    if (scrollInProgress) {
+                        showFloatingDateHeader = true
+                    } else {
+                        delay(1000)
+                        showFloatingDateHeader = false
+                    }
+                }
+                LaunchedEffect(visibleItems) {
+                    if (visibleItems.isNotEmpty()) {
+                        visibleItems.lastOrNull()?.index?.let { i ->
+                            (conversationItems
+                                .slice(i until conversationItems.size)
+                                .firstOrNull { item ->
+                                    item is ConversationItem.DateHeader
+                                } as? ConversationItem.DateHeader)
+                                ?.let {
+                                    lastVisibleDate = it.date.dateHeaderString()
+                                }
+                        }
+                    }
+                }
+                Conversation(
+                    items = conversationItems,
+                    chatType = chat.type,
+                    sentByCurrentUser = { m -> m.senderId == currentUser.id },
+                    deletedByCurrentUser = { m ->
+                        m.messageStatuses
+                            .firstOrNull { it.userId == currentUser.id }
+                            ?.isDeleted == true
+                    },
+                    modifier = Modifier.weight(1f),
+                    state = state
+                )
+                MessageComposer(
+                    message = messageInput,
+                    onMessageChange = onMessageInputChange,
+                    action = composerAction,
+                    onActionChange = onComposerActionChange,
+                    onSend = onSend,
+                    onAttachmentClick = onAttachmentClick
+                )
+            }
+            if (messages.isNotEmpty() && lastVisibleDate.isNotBlank())
+                this@Column.AnimatedVisibility(
+                    visible = showFloatingDateHeader,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
+                ) {
+                    FloatingDateHeader(
+                        date = lastVisibleDate
+                    )
+                }
         }
     }
 }
@@ -352,16 +416,16 @@ private fun Header(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Conversation(
     items: List<ConversationItem>,
     chatType: ChatType,
     sentByCurrentUser: (Message) -> Boolean,
     deletedByCurrentUser: (Message) -> Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    state: LazyListState = rememberLazyListState()
 ) {
-    val state = rememberLazyListState()
-
     LaunchedEffect(items.size) {
         if (items.size >= 2) {
             val index = state.firstVisibleItemIndex
@@ -614,11 +678,7 @@ private fun DateHeader(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = with(date.info()) {
-            if (isToday) "Today"
-            else if (daysAgo == 1) "Yesterday"
-            else date.toStringFormatted("dd MMMM yyyy")
-        },
+        text = date.dateHeaderString(),
         modifier = modifier.fillMaxWidth(),
         style = MaterialTheme.typography.bodySmall.copy(
             color = Lime,
@@ -626,6 +686,37 @@ private fun DateHeader(
             fontWeight = FontWeight.Bold
         )
     )
+}
+
+@Composable
+private fun FloatingDateHeader(
+    date: String,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(4.dp)
+    val color = Lime
+
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.background)
+            .border(
+                width = 1.dp,
+                color = color,
+                shape = shape
+            )
+            .padding(
+                vertical = 8.dp,
+                horizontal = 16.dp
+            )
+    ) {
+        Text(
+            text = date,
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = color
+            )
+        )
+    }
 }
 
 @Preview
