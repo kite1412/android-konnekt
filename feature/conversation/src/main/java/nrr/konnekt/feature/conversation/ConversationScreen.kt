@@ -361,8 +361,15 @@ private fun Conversation(
     val state = rememberLazyListState()
 
     LaunchedEffect(items.size) {
-        if (state.firstVisibleItemIndex == 1)
-            state.animateScrollToItem(0)
+        if (items.size >= 2) {
+            val index = state.firstVisibleItemIndex
+
+            if (
+                (index == 2
+                && items.getOrNull(index) is ConversationItem.DateHeader)
+                || index == 1
+            ) state.animateScrollToItem(0)
+        }
     }
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
