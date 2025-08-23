@@ -83,6 +83,7 @@ import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
@@ -319,9 +320,9 @@ private fun Header(
                 user.imagePath?.let {
                     val avatar by rememberResolvedFile(it)
 
-                    avatar?.let { bitmap ->
+                    avatar?.let { ba ->
                         Image(
-                            bitmap = bitmap,
+                            bitmap = ba.asImageBitmap(),
                             contentDescription = "avatar",
                             modifier = Modifier.fillMaxSize(),
                             alignment = Alignment.Center

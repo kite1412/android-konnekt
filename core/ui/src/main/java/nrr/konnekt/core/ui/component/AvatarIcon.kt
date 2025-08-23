@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 
@@ -37,7 +38,7 @@ fun AvatarIcon(
     ) {
         icon?.let {
             Image(
-                bitmap = it,
+                bitmap = it.asImageBitmap(),
                 contentDescription = "chat icon",
                 modifier = Modifier.fillMaxSize()
             )

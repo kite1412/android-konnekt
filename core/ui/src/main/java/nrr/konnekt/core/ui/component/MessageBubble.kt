@@ -1,42 +1,60 @@
 package nrr.konnekt.core.ui.component
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedBoxStyle
+import nrr.konnekt.core.model.Attachment
+import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.asImageBitmap
+import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.toTimeString
+import kotlin.time.Instant
 
 @Composable
 fun MessageBubble(
@@ -62,69 +80,93 @@ fun MessageBubble(
     maxContentWidth: Dp = 350.dp,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
-    Row(
+    Column(
         modifier = modifier
             .then(
-                if (!withTail) {
+                if (!withTail)
                     if (sentByCurrentUser) Modifier.padding(end = tailSize)
                     else Modifier.padding(start = tailSize)
-                } else Modifier
+                else Modifier
             ),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
     ) {
-        if (withTail && !sentByCurrentUser) Tail(
-            size = tailSize,
-            color = tailColor,
-            reverse = true
-        )
-        Column(
-            modifier = Modifier.sizeIn(maxWidth = maxContentWidth),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            ShadowedBox(
-                reverse = !sentByCurrentUser,
-                style = shadowedBoxStyle
+        if (message.attachments.isNotEmpty()) {
+            val shape = RoundedCornerShape(8.dp)
+
+            MessageAttachments(
+                attachments = message.attachments,
+                messageSentAt = message.sentAt,
+                maxWidth = maxContentWidth,
+                modifier = Modifier
+                    .padding(
+                        start = if (!sentByCurrentUser && withTail) tailSize else 0.dp,
+                        end = if (sentByCurrentUser && withTail) tailSize else 0.dp
+                    )
+                    .clip(shape)
+                    .border(
+                        width = 1.dp,
+                        color = shadowedBoxStyle.borderColor,
+                        shape = shape
+                    )
+            )
+        }
+        if (message.content.isNotBlank()) Row {
+            if (withTail && !sentByCurrentUser) Tail(
+                size = tailSize,
+                color = tailColor,
+                reverse = true
+            )
+            Column(
+                modifier = Modifier.sizeIn(maxWidth = maxContentWidth),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                with(message) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        Text(
-                            text = if (isHidden) "Message has been deleted" else if (deletedByCurrentUser)
-                                "You deleted this message" else content,
-                            style = LocalTextStyle.current.copy(
-                                color = if (isHidden || deletedByCurrentUser) DarkGray else shadowedBoxStyle.contentColor,
-                                fontStyle = if (isHidden || deletedByCurrentUser) FontStyle.Italic else FontStyle.Normal
-                            )
-                        )
-                        CompositionLocalProvider(
-                            LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
-                                color = DarkGray
-                            )
+                ShadowedBox(
+                    reverse = !sentByCurrentUser,
+                    style = shadowedBoxStyle
+                ) {
+                    with(message) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalAlignment = Alignment.End
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                if (sentAt != editedAt) Text(
-                                    text = "Edited",
-                                    style = LocalTextStyle.current.copy(
-                                        fontStyle = FontStyle.Italic
-                                    )
+                            Text(
+                                text = if (isHidden) "Message has been deleted" else if (deletedByCurrentUser)
+                                    "You deleted this message" else content,
+                                style = LocalTextStyle.current.copy(
+                                    color = if (isHidden || deletedByCurrentUser) DarkGray else shadowedBoxStyle.contentColor,
+                                    fontStyle = if (isHidden || deletedByCurrentUser) FontStyle.Italic else FontStyle.Normal
                                 )
-                                Text(sentAt.toTimeString())
+                            )
+                            CompositionLocalProvider(
+                                LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+                                    color = DarkGray
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (sentAt != editedAt) Text(
+                                        text = "Edited",
+                                        style = LocalTextStyle.current.copy(
+                                            fontStyle = FontStyle.Italic
+                                        )
+                                    )
+                                    Text(sentAt.toTimeString())
+                                }
                             }
                         }
                     }
                 }
+                if (sentByCurrentUser && seenContent != null) seenContent(MessageSeenIndicator)
             }
-            if (sentByCurrentUser && seenContent != null) seenContent(MessageSeenIndicator)
+            if (withTail && sentByCurrentUser) Tail(
+                size = tailSize,
+                color = tailColor,
+                reverse = false
+            )
         }
-        if (withTail && sentByCurrentUser) Tail(
-            size = tailSize,
-            color = tailColor,
-            reverse = false
-        )
     }
 }
 
@@ -266,6 +308,72 @@ private fun Tail(
             path = path,
             color = color
         )
+    }
+}
+
+@Composable
+private fun MessageAttachments(
+    attachments: List<Attachment>,
+    messageSentAt: Instant,
+    maxWidth: Dp,
+    modifier: Modifier = Modifier
+) {
+    attachments.firstOrNull()?.let { a ->
+        val attachmentContent by rememberResolvedFile(a.path)
+        val maxWidth = min(maxWidth, 400.dp)
+
+        Box(
+            modifier = modifier
+                .sizeIn(
+                    maxWidth = maxWidth,
+                    maxHeight = maxWidth
+                )
+        ) {
+            if (attachmentContent != null) {
+                if (a.type == AttachmentType.IMAGE)
+                    with(attachmentContent!!.asImageBitmap()) {
+                        val ratio = this.width.toFloat() / this.height
+
+                        Image(
+                            bitmap = this,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .aspectRatio(ratio),
+                            contentScale = ContentScale.FillWidth
+                        )
+                    }
+            }
+            CompositionLocalProvider(
+                LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (attachments.size > 1) {
+                        Text(
+                            text = "${attachments.size - 1}+",
+                            style = LocalTextStyle.current.copy(
+                                fontStyle = FontStyle.Italic
+                            )
+                        )
+                        VerticalDivider(
+                            color = LocalContentColor.current,
+                            modifier = Modifier.fillMaxHeight()
+                        )
+                    }
+                    Text(
+                        text = messageSentAt.toTimeString()
+                    )
+                }
+            }
+        }
     }
 }
 
