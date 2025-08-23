@@ -437,8 +437,13 @@ private fun Conversation(
 
             if (
                 (index == 2
-                && items.getOrNull(index) is ConversationItem.DateHeader)
+                && items.getOrNull(1) is ConversationItem.DateHeader)
                 || index == 1
+                || if (items.first() is ConversationItem.MessageItem) {
+                    sentByCurrentUser(
+                        (items.first() as ConversationItem.MessageItem).message
+                    )
+                } else false
             ) state.animateScrollToItem(0)
         }
     }

@@ -1,6 +1,5 @@
 package nrr.konnekt.core.ui.util
 
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -18,7 +17,6 @@ fun rememberResolvedFile(
 }.also {
     LaunchedEffect(path) {
         if (path != null && it.value == null) {
-            Log.d("rememberResolvedFile", "resolving file: $path")
             it.value = fileResolver.resolveFile(path)
         }
     }
