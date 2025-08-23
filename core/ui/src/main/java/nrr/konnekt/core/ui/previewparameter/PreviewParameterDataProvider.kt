@@ -62,6 +62,16 @@ class PreviewParameterDataProvider
                     messageStatuses = listOf(
                         MessageStatus("m1", "u1", Instant.parse("2025-07-10T15:01:00Z"), false),
                         MessageStatus("m1", "u2", Instant.parse("2025-07-10T15:02:00Z"), false)
+                    ),
+                    attachments = listOf(
+                        Attachment(
+                            id = "a1",
+                            type = AttachmentType.IMAGE,
+                            path = "/attachments/meeting.png",
+                            name = "meeting.png",
+                            size = 2048,
+                            metadata = null
+                        )
                     )
                 ),
             )
@@ -104,16 +114,6 @@ class PreviewParameterDataProvider
                         MessageStatus("m2", "u1", Instant.parse("2025-07-05T12:05:00Z"), false),
                         MessageStatus("m2", "u2", Instant.parse("2025-07-05T12:00:10Z"), false),
                         MessageStatus("m2", "u3", null, false)
-                    ),
-                    attachments = listOf(
-                        Attachment(
-                            id = "a1",
-                            type = AttachmentType.IMAGE,
-                            path = "/attachments/meeting.png",
-                            name = "meeting.png",
-                            size = 2048,
-                            metadata = null
-                        )
                     )
                 )
             )

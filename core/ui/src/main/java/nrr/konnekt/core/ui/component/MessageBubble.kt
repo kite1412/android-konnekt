@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,7 +25,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +43,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import kotlinx.coroutines.delay
 import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
@@ -91,26 +97,18 @@ fun MessageBubble(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
     ) {
-        if (message.attachments.isNotEmpty()) {
-            val shape = RoundedCornerShape(8.dp)
-
+        if (message.attachments.isNotEmpty())
             MessageAttachments(
                 attachments = message.attachments,
                 messageSentAt = message.sentAt,
                 maxWidth = maxContentWidth,
+                borderColor = shadowedBoxStyle.borderColor,
                 modifier = Modifier
                     .padding(
                         start = if (!sentByCurrentUser && withTail) tailSize else 0.dp,
                         end = if (sentByCurrentUser && withTail) tailSize else 0.dp
                     )
-                    .clip(shape)
-                    .border(
-                        width = 1.dp,
-                        color = shadowedBoxStyle.borderColor,
-                        shape = shape
-                    )
             )
-        }
         if (message.content.isNotBlank()) Row {
             if (withTail && !sentByCurrentUser) Tail(
                 size = tailSize,
@@ -232,7 +230,7 @@ fun MessageBubble(
         Column(
             horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
         ) {
-            if (withTail) Canvas(
+            if (withTail && message.attachments.isEmpty()) Canvas(
                 modifier = with(avatarDiameter / 2) {
                     Modifier
                         .padding(
@@ -312,24 +310,33 @@ private fun Tail(
 }
 
 @Composable
-private fun MessageAttachments(
+private fun ColumnScope.MessageAttachments(
     attachments: List<Attachment>,
     messageSentAt: Instant,
     maxWidth: Dp,
+    borderColor: Color,
     modifier: Modifier = Modifier
 ) {
     attachments.firstOrNull()?.let { a ->
         val attachmentContent by rememberResolvedFile(a.path)
         val maxWidth = min(maxWidth, 400.dp)
 
-        Box(
-            modifier = modifier
-                .sizeIn(
-                    maxWidth = maxWidth,
-                    maxHeight = maxWidth
-                )
-        ) {
-            if (attachmentContent != null) {
+        if (attachmentContent != null) {
+            val shape = RoundedCornerShape(8.dp)
+
+            Box(
+                modifier = modifier
+                    .sizeIn(
+                        maxWidth = maxWidth,
+                        maxHeight = maxWidth
+                    )
+                    .clip(shape)
+                    .border(
+                        width = 1.dp,
+                        color = borderColor,
+                        shape = shape
+                    )
+            ) {
                 if (a.type == AttachmentType.IMAGE)
                     with(attachmentContent!!.asImageBitmap()) {
                         val ratio = this.width.toFloat() / this.height
@@ -342,37 +349,60 @@ private fun MessageAttachments(
                             contentScale = ContentScale.FillWidth
                         )
                     }
-            }
-            CompositionLocalProvider(
-                LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
-                    fontWeight = FontWeight.Bold
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .height(IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 ) {
-                    if (attachments.size > 1) {
-                        Text(
-                            text = "${attachments.size - 1}+",
-                            style = LocalTextStyle.current.copy(
-                                fontStyle = FontStyle.Italic
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                            .height(IntrinsicSize.Max),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (attachments.size > 1) {
+                            Text(
+                                text = "${attachments.size - 1}+",
+                                style = LocalTextStyle.current.copy(
+                                    fontStyle = FontStyle.Italic
+                                )
                             )
-                        )
-                        VerticalDivider(
-                            color = LocalContentColor.current,
-                            modifier = Modifier.fillMaxHeight()
+                            VerticalDivider(
+                                color = LocalContentColor.current,
+                                modifier = Modifier.fillMaxHeight()
+                            )
+                        }
+                        Text(
+                            text = messageSentAt.toTimeString()
                         )
                     }
-                    Text(
-                        text = messageSentAt.toTimeString()
-                    )
                 }
             }
+        } else {
+            var loadingText by remember { mutableStateOf("Loading media") }
+
+            LaunchedEffect(Unit) {
+                var i = 0
+                while (true) {
+                    if (i in 0..2) {
+                        loadingText += "."
+                        i++
+                    } else {
+                        loadingText = "Loading media"
+                        i = 0
+                    }
+                    delay(500)
+                }
+            }
+            Text(
+                text = loadingText,
+                modifier = modifier.align(Alignment.Start),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontStyle = FontStyle.Italic
+                )
+            )
         }
     }
 }
