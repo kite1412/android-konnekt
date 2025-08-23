@@ -38,9 +38,9 @@ internal class MessageTest : TestSetup() {
                 content = "Hello there!, with an image",
                 attachments = listOf(
                     FileUpload(
-                        fileName = "konnekt-icon",
+                        fileName = "an-image",
                         fileExtension = "png",
-                        content = loadFile("konnekt-icon.png")
+                        content = loadFile("an-image.png")
                     )
                 )
             ) is Result.Success

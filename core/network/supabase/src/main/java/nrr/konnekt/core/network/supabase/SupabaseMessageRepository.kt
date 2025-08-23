@@ -45,8 +45,23 @@ internal class SupabaseMessageRepository @Inject constructor(
                     value = chatId
                 )
             )
-                .map {
-                    it.map(SupabaseMessage::toMessage)
+                .map { m ->
+                    val attachments = attachments {
+                        select {
+                            filter {
+                                SupabaseAttachment::messageId isIn m.map { it.id }
+                            }
+                        }
+                            .decodeList<SupabaseAttachment>()
+                    }
+
+                    m.map {
+                        it.toMessage().copy(
+                            attachments = attachments.filter { a ->
+                                a.messageId == it.id
+                            }.map(SupabaseAttachment::toAttachment)
+                        )
+                    }
                 }
         }
 
