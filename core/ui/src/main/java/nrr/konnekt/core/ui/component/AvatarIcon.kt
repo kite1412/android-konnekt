@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nrr.konnekt.core.ui.util.getLetterColor
-import nrr.konnekt.core.ui.util.rememberResolvedImage
+import nrr.konnekt.core.ui.util.rememberResolvedFile
 
 @Composable
 fun AvatarIcon(
@@ -28,7 +28,7 @@ fun AvatarIcon(
     iconPath: String? = null,
     diameter: Dp = 40.dp
 ) {
-    val icon by rememberResolvedImage(iconPath)
+    val icon by rememberResolvedFile(iconPath)
 
     Box(
         modifier = modifier

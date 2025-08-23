@@ -5,7 +5,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.ImagePathResolver
+import nrr.konnekt.core.domain.FileResolver
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.annotation.DelegateResolver
 import nrr.konnekt.core.domain.repository.ChatRepository
@@ -13,7 +13,7 @@ import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.network.supabase.SupabaseAuthentication
 import nrr.konnekt.core.network.supabase.SupabaseChatRepository
-import nrr.konnekt.core.network.supabase.SupabaseImageResolver
+import nrr.konnekt.core.network.supabase.SupabaseFileResolver
 import nrr.konnekt.core.network.supabase.SupabaseMessageRepository
 import nrr.konnekt.core.network.supabase.SupabaseUserPresenceManager
 import nrr.konnekt.core.network.supabase.SupabaseUserRepository
@@ -48,7 +48,7 @@ internal interface SupabaseModule {
 
     @Binds
     @DelegateResolver
-    fun bindSupabaseImageResolver(
-        supabaseImageResolver: SupabaseImageResolver
-    ): ImagePathResolver
+    fun bindSupabaseFileResolver(
+        supabaseFileResolver: SupabaseFileResolver
+    ): FileResolver
 }

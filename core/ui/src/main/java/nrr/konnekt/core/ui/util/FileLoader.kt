@@ -6,16 +6,16 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import nrr.konnekt.core.domain.ImagePathResolver
-import nrr.konnekt.core.ui.compositionlocal.LocalImagePathResolver
+import nrr.konnekt.core.domain.FileResolver
+import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver
 
 @Composable
-fun rememberResolvedImage(
+fun rememberResolvedFile(
     path: String?,
-    imageResolver: ImagePathResolver = LocalImagePathResolver.current
+    fileResolver: FileResolver = LocalFileResolver.current
 ): State<ImageBitmap?> = produceState(null) {
     value = path?.let {
-        imageResolver.resolveImage(it)?.let { bytes ->
+        fileResolver.resolveFile(it)?.let { bytes ->
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size).asImageBitmap()
         }
     }

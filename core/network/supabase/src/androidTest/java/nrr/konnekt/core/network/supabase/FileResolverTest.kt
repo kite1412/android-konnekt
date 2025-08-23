@@ -10,14 +10,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-internal class ImageResolverTest : TestSetup() {
-    private lateinit var resolver: SupabaseImageResolver
+internal class FileResolverTest : TestSetup() {
+    private lateinit var resolver: SupabaseFileResolver
 
     @Before
     override fun init() = runBlocking {
         super.init()
         initUser()
-        resolver = SupabaseImageResolver()
+        resolver = SupabaseFileResolver()
     }
 
     @Test
@@ -41,7 +41,7 @@ internal class ImageResolverTest : TestSetup() {
             assert(chatMediaBucketRegex.matches(it))
         }
         listOf(iconPaths, chatMediaPaths).flatten().forEach {
-            Log.d(LOG_TAG, resolver.getImageInfo(it).toString())
+            Log.d(LOG_TAG, resolver.getFileInfo(it).toString())
         }
     }
 
@@ -49,7 +49,7 @@ internal class ImageResolverTest : TestSetup() {
     fun resolveImageSuccess() = runTest {
         // potentially fail if the file is not present in storage or ext doesn't match
         assert(
-            resolver.resolveImage(
+            resolver.resolveFile(
                 "icon/group/${getProperty("SUPABASE_CHAT_ID")}.png"
             ) != null
         )

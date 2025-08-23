@@ -85,7 +85,7 @@ import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.getLetterColor
-import nrr.konnekt.core.ui.util.rememberResolvedImage
+import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.chats.util.ChatFilter
 import nrr.konnekt.feature.chats.util.GroupDropdownItems
@@ -317,7 +317,7 @@ private fun Header(
                 contentAlignment = Alignment.Center
             ) {
                 user.imagePath?.let {
-                    val avatar by rememberResolvedImage(it)
+                    val avatar by rememberResolvedFile(it)
 
                     avatar?.let { bitmap ->
                         Image(
