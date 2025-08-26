@@ -41,7 +41,7 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
         get() = _loggedInUser.asStateFlow()
 
     init {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.Default).launch {
             client.auth.sessionStatus
                 .map {
                     when (it) {
