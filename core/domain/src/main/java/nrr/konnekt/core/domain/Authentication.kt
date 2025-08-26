@@ -2,6 +2,7 @@ package nrr.konnekt.core.domain
 
 import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.domain.Authentication.AuthError
+import nrr.konnekt.core.domain.util.AuthStatus
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.User
@@ -14,6 +15,11 @@ typealias AuthResult<T> = Result<T, AuthError>
  * to perform user-specific actions.
  */
 interface Authentication {
+    /**
+     * A flow of the authentication status.
+     */
+    val authStatus: Flow<AuthStatus>
+
     /**
      * A flow of the logged in user data.
      */

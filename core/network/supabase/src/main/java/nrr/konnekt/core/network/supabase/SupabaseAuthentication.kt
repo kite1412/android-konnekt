@@ -13,13 +13,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.AuthResult
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.Authentication.AuthError
+import nrr.konnekt.core.domain.util.AuthStatus
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
@@ -30,30 +32,54 @@ import javax.inject.Inject
 
 internal class SupabaseAuthentication @Inject constructor() : Authentication {
     private val client: SupabaseClient = supabaseClient
+    private val _authStatus = MutableStateFlow<AuthStatus>(AuthStatus.Loading)
     private val _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
+
+    override val authStatus: Flow<AuthStatus>
+        get() = _authStatus.asStateFlow()
     override val loggedInUser: Flow<User?>
         get() = _loggedInUser.asStateFlow()
 
     init {
         CoroutineScope(Dispatchers.Main).launch {
             client.auth.sessionStatus
-                .first()
-                .let {
-                    if (it is SessionStatus.Authenticated) {
-                        val user = client.auth
-                            .currentUserOrNull()
-                            ?.toUser()
-                            ?.let { u ->
-                                client.postgrest.from(USERS).select {
-                                    filter {
-                                        User::id eq u.id
-                                    }
-                                }.decodeSingleOrNull<User>()
+                .map {
+                    when (it) {
+                        is SessionStatus.Authenticated -> {
+                            val user = client.auth
+                                .currentUserOrNull()
+                                ?.toUser()
+                                ?.let { u ->
+                                    client.postgrest.from(USERS).select {
+                                        filter {
+                                            User::id eq u.id
+                                        }
+                                    }.decodeSingleOrNull<User>()
+                                }
+                            Log.d(LOG_TAG, "Current user: $user")
+                            if (user != null) {
+                                _loggedInUser.value = user
+                                _authStatus.value = AuthStatus.Authenticated(user)
+                            } else {
+                                logout()
+                                _authStatus.value = AuthStatus.Unauthenticated
                             }
-                        Log.d(LOG_TAG, "Current user: $user")
-                        _loggedInUser.value = user
+                        }
+                        is SessionStatus.NotAuthenticated -> {
+                            _loggedInUser.value = null
+                            _authStatus.value = AuthStatus.Unauthenticated
+                        }
+                        is SessionStatus.Initializing -> {
+                            _loggedInUser.value = null
+                            _authStatus.value = AuthStatus.Loading
+                        }
+                        is SessionStatus.RefreshFailure -> {
+                            _loggedInUser.value = null
+                            _authStatus.value = AuthStatus.Unauthenticated
+                        }
                     }
                 }
+                .launchIn(this)
         }
     }
 
