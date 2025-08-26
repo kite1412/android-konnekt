@@ -6,6 +6,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CoroutineScope
@@ -14,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -43,45 +44,48 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
     init {
         CoroutineScope(Dispatchers.Default).launch {
             client.auth.sessionStatus
-                .map {
+                .onEach {
                     when (it) {
                         is SessionStatus.Authenticated -> {
-                            val user = client.auth
-                                .currentUserOrNull()
-                                ?.toUser()
-                                ?.let { u ->
-                                    client.postgrest.from(USERS).select {
-                                        filter {
-                                            User::id eq u.id
-                                        }
-                                    }.decodeSingleOrNull<User>()
+                            if (
+                                it.source !is SessionSource.SignIn
+                                && _loggedInUser.value == null
+                            ) {
+                                val user = client.auth
+                                    .currentUserOrNull()
+                                    ?.toUser()
+                                    ?.let { u ->
+                                        client.postgrest.from(USERS).select {
+                                            filter {
+                                                User::id eq u.id
+                                            }
+                                        }.decodeSingleOrNull<User>()
+                                    }
+                                logCurrentUser(user)
+                                if (user != null) {
+                                    _loggedInUser.value = user
+                                    _authStatus.value = AuthStatus.Authenticated(user)
+                                } else {
+                                    _authStatus.value = AuthStatus.Unauthenticated
                                 }
-                            Log.d(LOG_TAG, "Current user: $user")
-                            if (user != null) {
-                                _loggedInUser.value = user
-                                _authStatus.value = AuthStatus.Authenticated(user)
-                            } else {
-                                logout()
-                                _authStatus.value = AuthStatus.Unauthenticated
                             }
                         }
                         is SessionStatus.NotAuthenticated -> {
                             _loggedInUser.value = null
                             _authStatus.value = AuthStatus.Unauthenticated
                         }
-                        is SessionStatus.Initializing -> {
-                            _loggedInUser.value = null
-                            _authStatus.value = AuthStatus.Loading
-                        }
                         is SessionStatus.RefreshFailure -> {
                             _loggedInUser.value = null
                             _authStatus.value = AuthStatus.Unauthenticated
                         }
+                        else -> {}
                     }
                 }
                 .launchIn(this)
         }
     }
+
+    private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
 
     override fun getLoggedInUserOrNull(): User? =
         client.auth.currentUserOrNull()?.toUser()
@@ -115,7 +119,13 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                         )
                         insert(new)
                         _loggedInUser.value = new
-                    } else _loggedInUser.value = user
+                        _authStatus.value = AuthStatus.Authenticated(new)
+                        logCurrentUser(new)
+                    } else {
+                        _loggedInUser.value = user
+                        _authStatus.value = AuthStatus.Authenticated(user)
+                        logCurrentUser(user)
+                    }
                 }
             }
             return _loggedInUser.value?.let {

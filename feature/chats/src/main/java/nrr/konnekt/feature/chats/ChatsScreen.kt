@@ -8,7 +8,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -83,10 +81,7 @@ import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
-import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.bottomRadialGradient
-import nrr.konnekt.core.ui.util.getLetterColor
-import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.chats.util.ChatFilter
 import nrr.konnekt.feature.chats.util.GroupDropdownItems
@@ -311,37 +306,11 @@ private fun Header(
                     )
                 }
             }
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                user.imagePath?.let {
-                    val avatar by rememberResolvedFile(it)
-
-                    avatar?.let { ba ->
-                        Image(
-                            bitmap = ba.asImageBitmap(),
-                            contentDescription = "avatar",
-                            modifier = Modifier.fillMaxSize(),
-                            alignment = Alignment.Center
-                        )
-                    }
-                } ?: with(user.username.first()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(getLetterColor()),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = this@with.toString(),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                }
-            }
+            AvatarIcon(
+                name = user.username,
+                iconPath = user.imagePath,
+                diameter = 50.dp
+            )
         }
     }
 }

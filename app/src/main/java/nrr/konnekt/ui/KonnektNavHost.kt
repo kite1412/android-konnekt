@@ -10,7 +10,6 @@ import nrr.konnekt.authentication.navigation.AuthenticationRoute
 import nrr.konnekt.authentication.navigation.authenticationScreen
 import nrr.konnekt.feature.chats.navigation.ChatsRoute
 import nrr.konnekt.feature.chats.navigation.chatsScreen
-import nrr.konnekt.feature.chats.navigation.navigateToChats
 import nrr.konnekt.feature.conversation.navigation.conversationScreen
 import nrr.konnekt.feature.conversation.navigation.navigateToConversation
 
@@ -27,14 +26,7 @@ internal fun KonnektNavHost(
         modifier = modifier
     ) {
         authenticationScreen(
-            contentPadding = rootContentPadding(scaffoldPadding),
-            onSignedIn = {
-                navController.navigateToChats {
-                    popUpTo(AuthenticationRoute) {
-                        inclusive = true
-                    }
-                }
-            }
+            contentPadding = rootContentPadding(scaffoldPadding)
         )
         chatsScreen(
             navigateToCreateGroupChat = {},

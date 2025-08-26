@@ -10,13 +10,11 @@ import nrr.konnekt.authentication.AuthenticationScreen
 object AuthenticationRoute
 
 fun NavGraphBuilder.authenticationScreen(
-    contentPadding: PaddingValues,
-    onSignedIn: () -> Unit
+    contentPadding: PaddingValues
 ) {
     composable<AuthenticationRoute> {
         AuthenticationScreen(
             contentPadding = contentPadding,
-            onSignedIn = onSignedIn
         )
     }
 }

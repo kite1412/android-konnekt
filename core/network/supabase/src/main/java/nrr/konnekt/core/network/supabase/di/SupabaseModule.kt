@@ -17,11 +17,13 @@ import nrr.konnekt.core.network.supabase.SupabaseFileResolver
 import nrr.konnekt.core.network.supabase.SupabaseMessageRepository
 import nrr.konnekt.core.network.supabase.SupabaseUserPresenceManager
 import nrr.konnekt.core.network.supabase.SupabaseUserRepository
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface SupabaseModule {
     @Binds
+    @Singleton
     fun bindAuthentication(
         supabaseAuthentication: SupabaseAuthentication
     ): Authentication

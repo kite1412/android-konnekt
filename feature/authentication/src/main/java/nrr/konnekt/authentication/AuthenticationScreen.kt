@@ -61,7 +61,6 @@ private val textFieldModifier = Modifier
 @Composable
 internal fun AuthenticationScreen(
     contentPadding: PaddingValues,
-    onSignedIn: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AuthenticationViewModel = hiltViewModel()
 ) {
@@ -84,7 +83,7 @@ internal fun AuthenticationScreen(
             is ActionState.Success -> {
                 if (viewModel.isSignIn) snackbarHostState.showSnackbar(
                     message = "Logged in"
-                ) { onSignedIn() }
+                )
             }
             is ActionState.Error -> {
                 snackbarHostState.showSnackbar(
