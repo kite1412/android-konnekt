@@ -31,7 +31,7 @@ internal fun List<Message>.mapToConversationItem(): List<ConversationItem> =
                 MessageItem(
                     message = m,
                     wasSentByPreviousUser = i + 1 < sorted.size &&
-                        sorted[i + 1].senderId == m.senderId
+                        sorted[i + 1].sender.id == m.sender.id
                 )
             } + listOf(DateHeader(date))
         }

@@ -444,14 +444,13 @@ private fun Chats(
                     latestChatMessages = chats,
                     onClick = { onChatClick(it.chat) },
                     sentByCurrentUser = {
-                        user.id == it.messageDetail?.sender?.id
+                        user.id == it.message?.sender?.id
                     },
                     unreadByCurrentUser = {
-                        it.messageDetail != null
-                                && user.id != it.messageDetail?.sender?.id
+                        it.message != null
+                                && user.id != it.message?.sender?.id
                                 && with(
-                                    it.messageDetail
-                                        ?.message
+                                    it.message
                                         ?.messageStatuses
                                         ?.firstOrNull { s ->
                                             s.userId == user.id
@@ -461,7 +460,7 @@ private fun Chats(
                                 }
                     },
                     deletedByCurrentUser = {
-                        it.messageDetail?.message
+                        it.message
                             ?.messageStatuses
                             ?.firstOrNull { s ->
                                 s.userId == user.id

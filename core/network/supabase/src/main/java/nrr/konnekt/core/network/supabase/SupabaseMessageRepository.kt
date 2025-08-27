@@ -17,6 +17,7 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
@@ -54,13 +55,25 @@ internal class SupabaseMessageRepository @Inject constructor(
                         }
                             .decodeList<SupabaseAttachment>()
                     }
+                    val senders = users {
+                        select {
+                            filter {
+                                User::id isIn m.map { it.senderId }
+                            }
+                        }
+                            .decodeList<User>()
+                    }
 
-                    m.map {
-                        it.toMessage().copy(
-                            attachments = attachments.filter { a ->
-                                a.messageId == it.id
-                            }.map(SupabaseAttachment::toAttachment)
-                        )
+                    m.mapNotNull {
+                        senders
+                            .firstOrNull { s -> s.id == it.senderId }
+                            ?.let { s ->
+                                it.toMessage(s).copy(
+                                    attachments = attachments.filter { a ->
+                                        a.messageId == it.id
+                                    }.map(SupabaseAttachment::toAttachment)
+                                )
+                            }
                     }
                 }
         }
@@ -146,7 +159,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                                 }
 
                                 return@result Success(
-                                    data = message.toMessage().copy(
+                                    data = message.toMessage(u).copy(
                                         attachments = attachments
                                     )
                                 )
@@ -157,7 +170,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                         }
                     }
 
-                    Success(message.toMessage())
+                    Success(message.toMessage(u))
                 }
         } ?: Error(MessageError.Unknown)
     }

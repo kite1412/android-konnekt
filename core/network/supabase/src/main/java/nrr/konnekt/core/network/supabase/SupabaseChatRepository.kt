@@ -24,7 +24,6 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
-import nrr.konnekt.core.domain.model.MessageDetail
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
@@ -321,18 +320,15 @@ internal class SupabaseChatRepository @Inject constructor(
                     .map { c ->
                         LatestChatMessage(
                             chat = c,
-                            messageDetail = messages
+                            message = messages
                                 .firstOrNull { m -> m.chatId == c.id }
-                                ?.toMessage()?.let { m ->
+                                ?.let { m ->
                                     senders
                                         .firstOrNull { u -> u.id == m.senderId }
-                                        ?.let { sender ->
-                                            MessageDetail(
-                                                sender = sender,
-                                                message = m.copy(
-                                                    messageStatuses = messageStatuses
-                                                        .filter { ms -> ms.messageId == m.id }
-                                                ),
+                                        ?.let { s ->
+                                            m.toMessage(s).copy(
+                                                messageStatuses = messageStatuses
+                                                    .filter { ms -> ms.messageId == m.id }
                                             )
                                         }
                                 }
@@ -340,7 +336,7 @@ internal class SupabaseChatRepository @Inject constructor(
                     }
                     .sortedWith(
                         compareByDescending<LatestChatMessage> {
-                            it.messageDetail?.message?.sentAt
+                            it.message?.sentAt
                         }
                             .thenByDescending { it.chat.createdAt }
                     )

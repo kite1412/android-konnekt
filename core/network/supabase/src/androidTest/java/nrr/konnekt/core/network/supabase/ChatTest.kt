@@ -87,8 +87,8 @@ internal class ChatTest : TestSetup() {
             logTag,
             "latest messages:\n${
                 res.joinToString(separator = ", ") {
-                    "${it.messageDetail?.message?.content}, " +
-                            "sender: ${it.messageDetail?.sender?.username}"
+                    "${it.message?.message?.content}, " +
+                            "sender: ${it.message?.sender?.username}"
                 }
             }"
         )

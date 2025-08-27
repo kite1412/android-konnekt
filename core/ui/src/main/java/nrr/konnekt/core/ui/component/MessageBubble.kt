@@ -416,7 +416,12 @@ private fun MessageBubblePreview(
     val message = Message(
         id = "m1",
         chatId = "c1",
-        senderId = "u1",
+        sender = User(
+            id = "u1",
+            username = "Mock",
+            email = "mock@mock.com",
+            createdAt = now()
+        ),
         content = """
             Lorem ipsum dolor sit amet, consectetur adipiscing elit,
             sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
@@ -435,7 +440,7 @@ private fun MessageBubblePreview(
         ) {
             MessageBubble(
                 message = data.latestChatMessages.firstNotNullOf {
-                    it.messageDetail?.message
+                    it.message
                 }
             )
             MessageBubble(
@@ -449,19 +454,19 @@ private fun MessageBubblePreview(
             MessageBubble(
                 sender = data.user,
                 message = data.latestChatMessages.firstNotNullOf {
-                    it.messageDetail?.message
+                    it.message
                 },
                 sentByCurrentUser = false
             )
             MessageBubble(
                 sender = data.user,
                 message = data.latestChatMessages.firstNotNullOf {
-                    it.messageDetail?.message
+                    it.message
                 },
                 seenContent = {
                     GroupSeenIndicator(
                         seenBy = data.latestChatMessages.mapNotNull {
-                            it.messageDetail?.sender
+                            it.message?.sender
                         },
                         maxShown = 2
                     )

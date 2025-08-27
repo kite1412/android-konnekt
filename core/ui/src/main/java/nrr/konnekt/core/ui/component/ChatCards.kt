@@ -157,7 +157,7 @@ private fun ChatCard(
                             )
                             Text(
                                 text = buildAnnotatedString {
-                                    messageDetail?.let {
+                                    message?.let {
                                         val deletedStyle = { block: AnnotatedString.Builder.() -> Unit ->
                                             withStyle(
                                                 style = SpanStyle(
@@ -175,13 +175,13 @@ private fun ChatCard(
                                         ) {
                                             append("You: ")
                                         } else append("${it.sender.username}: ")
-                                        if (!it.message.isHidden) {
+                                        if (!it.isHidden) {
                                             if (!deletedByCurrentUser) withStyle(
                                                 style = SpanStyle(
                                                     color = Color.White
                                                 )
                                             ) {
-                                                append(it.message.content)
+                                                append(it.content)
                                             } else deletedStyle {
                                                 append("You deleted this message")
                                             }
@@ -203,7 +203,7 @@ private fun ChatCard(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        messageDetail?.message?.sentAt?.let {
+                        message?.sentAt?.let {
                             Text(
                                 text = it.info().run {
                                     if (isToday) localDateTime.time.toStringIgnoreSecond()

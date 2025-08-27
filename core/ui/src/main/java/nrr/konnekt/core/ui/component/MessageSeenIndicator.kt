@@ -84,7 +84,7 @@ private fun GroupSeenIndicatorPreview(
     with(MessageSeenIndicator) {
         GroupSeenIndicator(
             seenBy = data.latestChatMessages.mapNotNull {
-                it.messageDetail?.sender
+                it.message?.sender
             },
             maxShown = 5,
             avatarDiameter = 30.dp

@@ -235,7 +235,7 @@ private fun ConversationScreen(
                 Conversation(
                     items = conversationItems,
                     chatType = chat.type,
-                    sentByCurrentUser = { m -> m.senderId == currentUser.id },
+                    sentByCurrentUser = { m -> m.sender.id == currentUser.id },
                     deletedByCurrentUser = { m ->
                         m.messageStatuses
                             .firstOrNull { it.userId == currentUser.id }
@@ -477,7 +477,17 @@ private fun Conversation(
                             deletedByCurrentUser = deletedByCurrentUser(item.message),
                             applyTopPadding = applyTopPadding
                         )
-                        else -> {}
+                        else -> {
+                            val sentByCurrentUser = sentByCurrentUser(item.message)
+
+                            AdjustedMessageBubble(
+                                message = item.message,
+                                sentByCurrentUser = sentByCurrentUser,
+                                wasSentByPreviousUser = item.wasSentByPreviousUser,
+                                deletedByCurrentUser = deletedByCurrentUser(item.message),
+                                applyTopPadding = applyTopPadding,
+                            )
+                        }
                     }
                 }
             }
@@ -492,6 +502,7 @@ private fun AdjustedMessageBubble(
     wasSentByPreviousUser: Boolean,
     deletedByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
+    sender: User? = null,
     applyTopPadding: Boolean = true
 ) {
     BoxWithConstraints(
@@ -505,7 +516,14 @@ private fun AdjustedMessageBubble(
         contentAlignment = if (sentByCurrentUser) Alignment.CenterEnd
             else Alignment.CenterStart
     ) {
-        MessageBubble(
+        if (sender == null) MessageBubble(
+            message = message,
+            sentByCurrentUser = sentByCurrentUser,
+            withTail = !wasSentByPreviousUser,
+            deletedByCurrentUser = deletedByCurrentUser,
+            maxContentWidth = this.maxWidth * 0.9f
+        ) else MessageBubble(
+            sender = sender,
             message = message,
             sentByCurrentUser = sentByCurrentUser,
             withTail = !wasSentByPreviousUser,

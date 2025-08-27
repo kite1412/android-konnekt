@@ -2,7 +2,6 @@ package nrr.konnekt.core.ui.previewparameter
 
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import nrr.konnekt.core.domain.model.LatestChatMessage
-import nrr.konnekt.core.domain.model.MessageDetail
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
@@ -42,7 +41,9 @@ class PreviewParameterDataProvider
                     permissionSettings = null
                 )
             ),
-            messageDetail = MessageDetail(
+            message = Message(
+                id = "m1",
+                chatId = "c1",
                 sender = User(
                     id = "u1",
                     email = "alice@example.com",
@@ -51,29 +52,24 @@ class PreviewParameterDataProvider
                     imagePath = "/images/alice.png",
                     createdAt = Instant.parse("2024-07-01T09:00:00Z")
                 ),
-                message = Message(
-                    id = "m1",
-                    chatId = "c1",
-                    senderId = "u1",
-                    content = "Hey Bob, how’s your day?",
-                    sentAt = now(),
-                    editedAt = Instant.parse("2025-07-10T15:00:00Z"),
-                    isHidden = false,
-                    messageStatuses = listOf(
-                        MessageStatus("m1", "u1", Instant.parse("2025-07-10T15:01:00Z"), false),
-                        MessageStatus("m1", "u2", Instant.parse("2025-07-10T15:02:00Z"), false)
-                    ),
-                    attachments = listOf(
-                        Attachment(
-                            id = "a1",
-                            type = AttachmentType.IMAGE,
-                            path = "/attachments/meeting.png",
-                            name = "meeting.png",
-                            size = 2048,
-                            metadata = null
-                        )
-                    )
+                content = "Hey Bob, how’s your day?",
+                sentAt = now(),
+                editedAt = Instant.parse("2025-07-10T15:00:00Z"),
+                isHidden = false,
+                messageStatuses = listOf(
+                    MessageStatus("m1", "u1", Instant.parse("2025-07-10T15:01:00Z"), false),
+                    MessageStatus("m1", "u2", Instant.parse("2025-07-10T15:02:00Z"), false)
                 ),
+                attachments = listOf(
+                    Attachment(
+                        id = "a1",
+                        type = AttachmentType.IMAGE,
+                        path = "/attachments/meeting.png",
+                        name = "meeting.png",
+                        size = 2048,
+                        metadata = null
+                    )
+                )
             )
         ),
         LatestChatMessage(
@@ -93,7 +89,9 @@ class PreviewParameterDataProvider
                     )
                 )
             ),
-            messageDetail = MessageDetail(
+            message = Message(
+                id = "m2",
+                chatId = "c2",
                 sender = User(
                     id = "u2",
                     email = "bob@example.com",
@@ -102,19 +100,14 @@ class PreviewParameterDataProvider
                     imagePath = "/images/bob.png",
                     createdAt = Instant.parse("2024-10-15T08:00:00Z")
                 ),
-                message = Message(
-                    id = "m2",
-                    chatId = "c2",
-                    senderId = "u2",
-                    content = "Don’t forget our meeting at 7 PM!",
-                    sentAt = now() - 1.days,
-                    editedAt = now(),
-                    isHidden = false,
-                    messageStatuses = listOf(
-                        MessageStatus("m2", "u1", Instant.parse("2025-07-05T12:05:00Z"), false),
-                        MessageStatus("m2", "u2", Instant.parse("2025-07-05T12:00:10Z"), false),
-                        MessageStatus("m2", "u3", null, false)
-                    )
+                content = "Don’t forget our meeting at 7 PM!",
+                sentAt = now() - 1.days,
+                editedAt = now(),
+                isHidden = false,
+                messageStatuses = listOf(
+                    MessageStatus("m2", "u1", Instant.parse("2025-07-05T12:05:00Z"), false),
+                    MessageStatus("m2", "u2", Instant.parse("2025-07-05T12:00:10Z"), false),
+                    MessageStatus("m2", "u3", null, false)
                 )
             )
         ),
@@ -130,7 +123,7 @@ class PreviewParameterDataProvider
                     permissionSettings = null
                 )
             ),
-            messageDetail = null
+            message = null
         ),
         LatestChatMessage(
             chat = Chat(
@@ -139,7 +132,9 @@ class PreviewParameterDataProvider
                 createdAt = Instant.parse("2025-07-20T10:00:00Z"),
                 setting = ChatSetting("Charlie & Diana")
             ),
-            messageDetail = MessageDetail(
+            message = Message(
+                id = "m3",
+                chatId = "c4",
                 sender = User(
                     id = "u3",
                     email = "charlie@example.com",
@@ -148,18 +143,13 @@ class PreviewParameterDataProvider
                     imagePath = null,
                     createdAt = Instant.parse("2025-01-10T09:00:00Z")
                 ),
-                message = Message(
-                    id = "m3",
-                    chatId = "c4",
-                    senderId = "u3",
-                    content = "Are we still on for tonight?",
-                    sentAt = Instant.parse("2025-07-21T17:30:00Z"),
-                    editedAt = Instant.parse("2025-07-21T17:30:00Z"),
-                    isHidden = false,
-                    messageStatuses = listOf(
-                        MessageStatus("m3", "u3", Instant.parse("2025-07-21T17:31:00Z"), false),
-                        MessageStatus("m3", "u4", null, false)
-                    )
+                content = "Are we still on for tonight?",
+                sentAt = Instant.parse("2025-07-21T17:30:00Z"),
+                editedAt = Instant.parse("2025-07-21T17:30:00Z"),
+                isHidden = false,
+                messageStatuses = listOf(
+                    MessageStatus("m3", "u3", Instant.parse("2025-07-21T17:31:00Z"), false),
+                    MessageStatus("m3", "u4", null, false)
                 )
             )
         ),
@@ -174,7 +164,7 @@ class PreviewParameterDataProvider
                     description = "Project X updates"
                 )
             ),
-            messageDetail = null
+            message = null
         ),
         LatestChatMessage(
             chat = Chat(
@@ -186,7 +176,7 @@ class PreviewParameterDataProvider
                     iconPath = "/icons/game.png"
                 )
             ),
-            messageDetail = null
+            message = null
         ),
         LatestChatMessage(
             chat = Chat(
@@ -199,7 +189,9 @@ class PreviewParameterDataProvider
                     description = "Planning weekend getaway"
                 )
             ),
-            messageDetail = MessageDetail(
+            message = Message(
+                id = "m4",
+                chatId = "c7",
                 sender = User(
                     id = "u4",
                     email = "diana@example.com",
@@ -208,20 +200,15 @@ class PreviewParameterDataProvider
                     imagePath = "/images/diana.png",
                     createdAt = Instant.parse("2025-05-15T08:00:00Z")
                 ),
-                message = Message(
-                    id = "m4",
-                    chatId = "c7",
-                    senderId = "u4",
-                    content = "I’ve booked the cabin! 🏕️",
-                    sentAt = Instant.parse("2025-07-26T09:00:00Z"),
-                    editedAt = Instant.parse("2025-07-26T09:00:00Z"),
-                    isHidden = false,
-                    messageStatuses = listOf(
-                        MessageStatus("m4", "u1", Instant.parse("2025-07-26T09:01:00Z"), false),
-                        MessageStatus("m4", "u2", Instant.parse("2025-07-26T09:02:00Z"), false),
-                        MessageStatus("m4", "u3", Instant.parse("2025-07-26T09:03:00Z"), false),
-                        MessageStatus("m4", "u4", Instant.parse("2025-07-26T09:00:05Z"), false)
-                    )
+                content = "I’ve booked the cabin! 🏕️",
+                sentAt = Instant.parse("2025-07-26T09:00:00Z"),
+                editedAt = Instant.parse("2025-07-26T09:00:00Z"),
+                isHidden = false,
+                messageStatuses = listOf(
+                    MessageStatus("m4", "u1", Instant.parse("2025-07-26T09:01:00Z"), false),
+                    MessageStatus("m4", "u2", Instant.parse("2025-07-26T09:02:00Z"), false),
+                    MessageStatus("m4", "u3", Instant.parse("2025-07-26T09:03:00Z"), false),
+                    MessageStatus("m4", "u4", Instant.parse("2025-07-26T09:00:05Z"), false)
                 )
             )
         ),
@@ -232,7 +219,7 @@ class PreviewParameterDataProvider
                 createdAt = Instant.parse("2025-07-30T08:00:00Z"),
                 setting = ChatSetting("Bob & Diana")
             ),
-            messageDetail = null
+            message = null
         ),
         LatestChatMessage(
             chat = Chat(
@@ -244,7 +231,7 @@ class PreviewParameterDataProvider
                     iconPath = "/icons/music.png"
                 )
             ),
-            messageDetail = null
+            message = null
         ),
         LatestChatMessage(
             chat = Chat(
@@ -257,7 +244,9 @@ class PreviewParameterDataProvider
                     description = "Build & Win!"
                 )
             ),
-            messageDetail = MessageDetail(
+            message = Message(
+                id = "m5",
+                chatId = "c10",
                 sender = User(
                     id = "u1",
                     email = "alice@example.com",
@@ -266,19 +255,14 @@ class PreviewParameterDataProvider
                     imagePath = "/images/alice.png",
                     createdAt = Instant.parse("2024-07-01T09:00:00Z")
                 ),
-                message = Message(
-                    id = "m5",
-                    chatId = "c10",
-                    senderId = "u1",
-                    content = "Push your code to GitHub before 10 PM!",
-                    sentAt = Instant.parse("2025-07-01T18:00:00Z"),
-                    editedAt = Instant.parse("2025-07-01T18:00:00Z"),
-                    isHidden = false,
-                    messageStatuses = listOf(
-                        MessageStatus("m5", "u1", Instant.parse("2025-07-01T18:01:00Z"), false),
-                        MessageStatus("m5", "u2", Instant.parse("2025-07-01T18:01:30Z"), false),
-                        MessageStatus("m5", "u3", null, false)
-                    )
+                content = "Push your code to GitHub before 10 PM!",
+                sentAt = Instant.parse("2025-07-01T18:00:00Z"),
+                editedAt = Instant.parse("2025-07-01T18:00:00Z"),
+                isHidden = false,
+                messageStatuses = listOf(
+                    MessageStatus("m5", "u1", Instant.parse("2025-07-01T18:01:00Z"), false),
+                    MessageStatus("m5", "u2", Instant.parse("2025-07-01T18:01:30Z"), false),
+                    MessageStatus("m5", "u3", null, false)
                 )
             )
         )
