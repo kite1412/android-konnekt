@@ -486,6 +486,7 @@ private fun Conversation(
                                 wasSentByPreviousUser = item.wasSentByPreviousUser,
                                 deletedByCurrentUser = deletedByCurrentUser(item.message),
                                 applyTopPadding = applyTopPadding,
+                                sender = if (sentByCurrentUser) null else item.message.sender
                             )
                         }
                     }
@@ -527,6 +528,7 @@ private fun AdjustedMessageBubble(
             message = message,
             sentByCurrentUser = sentByCurrentUser,
             withTail = !wasSentByPreviousUser,
+            withAvatar = !wasSentByPreviousUser,
             deletedByCurrentUser = deletedByCurrentUser,
             maxContentWidth = this.maxWidth * 0.9f
         )

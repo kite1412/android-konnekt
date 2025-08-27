@@ -188,6 +188,7 @@ fun MessageBubble(
         )
     ),
     withTail: Boolean = true,
+    withAvatar: Boolean = true,
     tailSize: Dp = 10.dp,
     tailColor: Color = shadowedBoxStyle.borderColor,
     avatarDiameter: Dp = 40.dp,
@@ -199,7 +200,7 @@ fun MessageBubble(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
     ) {
-        Row(
+        if (withAvatar) Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
