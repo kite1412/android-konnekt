@@ -5,7 +5,6 @@ import nrr.konnekt.core.domain.UserPresenceManager.UserPresenceManagerError
 import nrr.konnekt.core.domain.model.UserPresence
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
-import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserStatus
 
 typealias UserPresenceResult<T> = Result<T, UserPresenceManagerError>
@@ -25,25 +24,26 @@ interface UserPresenceManager {
     /**
      * Mark the current user as active/online.
      *
-     * @param user The user to mark as active.
+     * @return an updated [UserStatus] of current user
      */
-    suspend fun markUserActive(user: User): UserPresenceResult<UserStatus>
+    suspend fun markUserActive(): UserPresenceResult<UserStatus>
 
     /**
      * Mark the current user as inactive/offline.
      *
-     * @param user The user to mark as inactive.
+     * @return an updated [UserStatus] of current user
      */
-    suspend fun markUserInactive(user: User): UserPresenceResult<UserStatus>
+    suspend fun markUserInactive(): UserPresenceResult<UserStatus>
 
     /**
      * Update the last active time of the current user.
      *
-     * @param user The user to update the last active time for.
+     * @return an updated [UserStatus] of current user
      */
-    suspend fun updateLastActiveAt(user: User): UserPresenceResult<UserStatus>
+    suspend fun updateLastActiveAt(): UserPresenceResult<UserStatus>
 
     sealed interface UserPresenceManagerError : Error {
         object Unknown : UserPresenceManagerError
+        object Unauthenticated : UserPresenceManagerError
     }
 }

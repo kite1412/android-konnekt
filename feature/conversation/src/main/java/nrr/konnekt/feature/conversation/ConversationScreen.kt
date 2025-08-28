@@ -1,5 +1,7 @@
 package nrr.konnekt.feature.conversation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
@@ -126,12 +128,13 @@ internal fun ConversationScreen(
                     messages = m,
                     messageInput = messageInput,
                     onMessageInputChange = { viewModel.messageInput = it },
-                    composerAction = null,
-                    onComposerActionChange = {},
+                    composerAction = viewModel.composerAction,
+                    onComposerActionChange = {
+                        viewModel.composerAction = it
+                    },
                     onSend = {
                         viewModel.sendMessage(it)
                     },
-                    onAttachmentClick = {},
                     sendingMessage = viewModel.sendingMessage,
                     totalActiveParticipants = totalActiveParticipants ?: 0,
                     onNavigateBack = navigateBack,
@@ -156,7 +159,6 @@ private fun ConversationScreen(
     composerAction: MessageComposerAction?,
     onComposerActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
-    onAttachmentClick: (AttachmentType) -> Unit,
     sendingMessage: Boolean,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -250,7 +252,6 @@ private fun ConversationScreen(
                     action = composerAction,
                     onActionChange = onComposerActionChange,
                     onSend = onSend,
-                    onAttachmentClick = onAttachmentClick,
                     sendingMessage = sendingMessage
                 )
             }
@@ -542,10 +543,15 @@ private fun MessageComposer(
     action: MessageComposerAction?,
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
-    onAttachmentClick: (AttachmentType) -> Unit,
     sendingMessage: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val getMultipleContentsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { r ->
+
+    }
+
     Box(
         modifier = modifier.fillMaxWidth()
     ) {
@@ -598,7 +604,16 @@ private fun MessageComposer(
                             ) {
                                 Attachments(
                                     startPadding = startPadding,
-                                    onClick = onAttachmentClick
+                                    onClick = {
+                                        getMultipleContentsLauncher.launch(
+                                            when (it) {
+                                                AttachmentType.IMAGE -> "image/*"
+                                                AttachmentType.VIDEO -> "video/*"
+                                                AttachmentType.DOCUMENT -> "application/*"
+                                                AttachmentType.AUDIO -> "audio/*"
+                                            }
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -789,7 +804,6 @@ private fun ConversationScreenPreview(
                 composerAction = composerAction,
                 onComposerActionChange = { a -> composerAction = a },
                 onSend = {},
-                onAttachmentClick = {},
                 sendingMessage = false,
                 onNavigateBack = {},
                 totalActiveParticipants = 0,

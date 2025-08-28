@@ -44,6 +44,7 @@ internal interface SupabaseModule {
     ): MessageRepository
 
     @Binds
+    @Singleton
     fun bindUserPresenceManager(
         supabaseUserPresenceManager: SupabaseUserPresenceManager
     ): UserPresenceManager

@@ -30,6 +30,7 @@ import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
+import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import javax.inject.Inject
 import kotlin.time.Instant
@@ -56,6 +57,7 @@ class ConversationViewModel @Inject constructor(
     internal val messages = observeMessagesUseCase(chatId)
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
+    internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
 
     private var _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
