@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.conversation
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -85,13 +87,17 @@ import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.topRadialGradient
+import nrr.konnekt.feature.conversation.exception.UriConversionException
 import nrr.konnekt.feature.conversation.util.ActiveStatus
+import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.ConversationItem
+import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.attachments
 import nrr.konnekt.feature.conversation.util.dateHeaderString
 import nrr.konnekt.feature.conversation.util.mapToConversationItem
+import nrr.konnekt.feature.conversation.util.uriToComposerAttachment
 import kotlin.time.Instant
 
 @Composable
@@ -128,6 +134,10 @@ internal fun ConversationScreen(
                     messages = m,
                     messageInput = messageInput,
                     onMessageInputChange = { viewModel.messageInput = it },
+                    composerAttachments = viewModel.composerAttachments,
+                    onAddComposerAttachment = {
+                        viewModel.composerAttachments.add(it)
+                    },
                     composerAction = viewModel.composerAction,
                     onComposerActionChange = {
                         viewModel.composerAction = it
@@ -156,6 +166,8 @@ private fun ConversationScreen(
     messages: List<Message>,
     messageInput: String,
     onMessageInputChange: (String) -> Unit,
+    composerAttachments: List<ComposerAttachment>,
+    onAddComposerAttachment: (ComposerAttachment) -> Unit,
     composerAction: MessageComposerAction?,
     onComposerActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
@@ -249,6 +261,8 @@ private fun ConversationScreen(
                 MessageComposer(
                     message = messageInput,
                     onMessageChange = onMessageInputChange,
+                    attachments = composerAttachments,
+                    onAddAttachment = onAddComposerAttachment,
                     action = composerAction,
                     onActionChange = onComposerActionChange,
                     onSend = onSend,
@@ -540,16 +554,36 @@ private fun AdjustedMessageBubble(
 private fun MessageComposer(
     message: String,
     onMessageChange: (String) -> Unit,
+    attachments: List<ComposerAttachment>,
+    onAddAttachment: (ComposerAttachment) -> Unit,
     action: MessageComposerAction?,
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     sendingMessage: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val snackbarHostState = LocalSnackbarHostState.current
+    val context = LocalContext.current
+
     val getMultipleContentsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
-    ) { r ->
-
+    ) { res ->
+        res.forEach {
+            try {
+                val attachment = context.uriToComposerAttachment(it)
+                Log.d(
+                    LOG_TAG,
+                    "Add attachment: ${attachment.fileName}, " +
+                            "${attachment.type}, " +
+                            "with thumbnail: ${attachment.thumbnail != null}"
+                )
+                onAddAttachment(attachment)
+            } catch (e: UriConversionException) {
+                e.message?.let(snackbarHostState::showSnackbar)
+            } catch (_: Exception) {
+                snackbarHostState.showSnackbar("Fail to load file")
+            }
+        }
     }
 
     Box(
@@ -801,6 +835,8 @@ private fun ConversationScreenPreview(
                 messages = conversation.messages,
                 messageInput = messageInput,
                 onMessageInputChange = { v -> messageInput = v },
+                composerAttachments = emptyList(),
+                onAddComposerAttachment = {},
                 composerAction = composerAction,
                 onComposerActionChange = { a -> composerAction = a },
                 onSend = {},
