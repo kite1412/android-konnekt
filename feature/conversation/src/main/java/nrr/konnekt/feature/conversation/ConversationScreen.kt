@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -45,9 +47,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -586,9 +590,14 @@ private fun MessageComposer(
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxWidth()
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        if (attachments.isNotEmpty()) ComposerAttachments(
+            attachments = attachments,
+            modifier = Modifier.fillMaxWidth()
+        )
         ShadowedTextField(
             value = message,
             onValueChange = onMessageChange,
@@ -679,6 +688,103 @@ private fun MessageComposer(
             singleLine = false,
             maxLines = 5
         )
+    }
+}
+
+@Composable
+private fun ComposerAttachments(
+    attachments: List<ComposerAttachment>,
+    modifier: Modifier = Modifier
+) {
+    val borderColor = MaterialTheme.colorScheme.outline
+
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        val border: Modifier.() -> Modifier = {
+            val shape = RoundedCornerShape(8.dp)
+
+            border(
+                width = 1.dp,
+                color = borderColor,
+                shape = shape
+            )
+                .clip(shape)
+        }
+
+        items(attachments.size) {
+            val a = attachments[it]
+
+            if (a.thumbnail != null) Box {
+                Image(
+                    bitmap = a.thumbnail,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .border()
+                        .then(
+                            if (a.type == AttachmentType.VIDEO) Modifier.blur(2.dp)
+                            else Modifier
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+                if (a.type == AttachmentType.VIDEO) Icon(
+                    painter = painterResource(KonnektIcon.video),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(
+                            start = 8.dp,
+                            top = 8.dp
+                        ),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            } else Row(
+                modifier = Modifier
+                    .border()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        when (a.type) {
+                            AttachmentType.IMAGE -> KonnektIcon.image
+                            AttachmentType.VIDEO -> KonnektIcon.video
+                            AttachmentType.AUDIO -> KonnektIcon.audio
+                            AttachmentType.DOCUMENT -> KonnektIcon.file
+                        }
+                    ),
+                    contentDescription = null,
+                    tint = borderColor
+                )
+                Text(
+                    text = a.fileName.let {
+                        val strings = a.fileName.split('.')
+                        val fileNameMax = 10
+
+                        if (strings.size > 1) {
+                            val name = strings
+                                .take(strings.size - 1)
+                                .joinToString(".")
+                                .take(fileNameMax)
+
+                            name + if (name.length < fileNameMax) "" else "...." + strings.last()
+                        } else with(strings.first()) {
+                            take(fileNameMax) + if (length < fileNameMax) "" else "...."
+                        }
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = borderColor
+                    )
+                )
+            }
+        }
     }
 }
 
