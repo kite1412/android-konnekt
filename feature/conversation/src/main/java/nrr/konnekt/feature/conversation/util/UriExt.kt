@@ -6,7 +6,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.graphics.asImageBitmap
 import nrr.konnekt.core.model.AttachmentType
-import nrr.konnekt.core.model.util.AllowedAttachmentExtension
+import nrr.konnekt.core.model.util.AllowedFileType
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.feature.conversation.exception.AttachmentContentException
 import nrr.konnekt.feature.conversation.exception.AttachmentNameException
@@ -88,30 +88,5 @@ private fun Context.uriToByteArray(uri: Uri): ByteArray =
     }
 
 private fun Context.getAttachmentType(uri: Uri): AttachmentType =
-    with(contentResolver.getType(uri)) {
-        val extension = this?.substringAfterLast('/')
-            ?: throw AttachmentTypeException()
-        val checkExtension = { type: AttachmentType ->
-            checkExtension(extension, type)
-        }
-
-        when {
-            startsWith("image/") ->
-                checkExtension(AttachmentType.IMAGE)
-            startsWith("video/") ->
-                checkExtension(AttachmentType.VIDEO)
-            startsWith("audio/") ->
-                checkExtension(AttachmentType.AUDIO)
-            startsWith("application/") ->
-                checkExtension(AttachmentType.DOCUMENT)
-            this == "text/plain" -> AttachmentType.DOCUMENT
-            else -> null
-        }
-    } ?: throw AttachmentTypeException()
-
-private fun checkExtension(extension: String, type: AttachmentType): AttachmentType =
-    if (type == AttachmentType.IMAGE && AllowedAttachmentExtension.imageExtensions.contains(extension)) type
-    else if (type == AttachmentType.VIDEO && AllowedAttachmentExtension.videoExtensions.contains(extension)) type
-    else if (type == AttachmentType.AUDIO && AllowedAttachmentExtension.audioExtensions.contains(extension)) type
-    else if (type == AttachmentType.DOCUMENT && AllowedAttachmentExtension.documentExtensions.contains(extension)) type
-    else throw AttachmentTypeException("Unsupported file type")
+    contentResolver.getType(uri)?.let(AllowedFileType::isMimeTypeAllowed)
+        ?: throw AttachmentTypeException()

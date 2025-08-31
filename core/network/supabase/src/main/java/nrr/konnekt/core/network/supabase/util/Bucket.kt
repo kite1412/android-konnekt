@@ -3,10 +3,10 @@ package nrr.konnekt.core.network.supabase.util
 import io.github.jan.supabase.storage.BucketApi
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
-import nrr.konnekt.core.model.util.AllowedAttachmentExtension.audioExtensions
-import nrr.konnekt.core.model.util.AllowedAttachmentExtension.documentExtensions
-import nrr.konnekt.core.model.util.AllowedAttachmentExtension.imageExtensions
-import nrr.konnekt.core.model.util.AllowedAttachmentExtension.videoExtensions
+import nrr.konnekt.core.model.util.AllowedFileType.audioTypes
+import nrr.konnekt.core.model.util.AllowedFileType.documentTypes
+import nrr.konnekt.core.model.util.AllowedFileType.imageTypes
+import nrr.konnekt.core.model.util.AllowedFileType.videoTypes
 import nrr.konnekt.core.network.supabase.supabaseClient
 
 internal enum class Bucket(
@@ -15,16 +15,16 @@ internal enum class Bucket(
 ) {
     ICON(
         fixedFolders = listOf("person", "group"),
-        allowedExtensions = imageExtensions
+        allowedExtensions = imageTypes.map { it.extension }
     ),
     CHAT_MEDIA(
         fixedFolders = emptyList(),
         allowedExtensions = listOf(
-            *imageExtensions.toTypedArray(),
-            *videoExtensions.toTypedArray(),
-            *audioExtensions.toTypedArray(),
-            *documentExtensions.toTypedArray()
-        )
+            *imageTypes.toTypedArray(),
+            *videoTypes.toTypedArray(),
+            *audioTypes.toTypedArray(),
+            *documentTypes.toTypedArray()
+        ).map { it.extension }
     );
 
     override fun toString(): String =

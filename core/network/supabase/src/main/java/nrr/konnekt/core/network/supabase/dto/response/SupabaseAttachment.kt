@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentMetadata
-import nrr.konnekt.core.network.supabase.util.rawToAttachmentType
+import nrr.konnekt.core.model.AttachmentType
 
 @Serializable
 internal data class SupabaseAttachment(
@@ -27,3 +27,12 @@ internal fun SupabaseAttachment.toAttachment(
     size = size,
     metadata = metadata
 )
+
+private fun rawToAttachmentType(type: String) =
+    when (type) {
+        "image" -> AttachmentType.IMAGE
+        "video" -> AttachmentType.VIDEO
+        "audio" -> AttachmentType.AUDIO
+        "document" -> AttachmentType.DOCUMENT
+        else -> throw IllegalArgumentException("Invalid file type: $type")
+    }
