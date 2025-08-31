@@ -703,9 +703,8 @@ private fun ComposerAttachments(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Bottom
     ) {
+        val shape = RoundedCornerShape(8.dp)
         val border: Modifier.() -> Modifier = {
-            val shape = RoundedCornerShape(8.dp)
-
             border(
                 width = 1.dp,
                 color = borderColor,
@@ -717,30 +716,42 @@ private fun ComposerAttachments(
         items(attachments.size) {
             val a = attachments[it]
 
-            if (a.thumbnail != null) Box {
+            if (a.thumbnail != null) Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .border()
+            ) {
                 Image(
                     bitmap = a.thumbnail,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(80.dp)
-                        .border()
+                        .fillMaxSize()
+                        .clip(shape)
                         .then(
                             if (a.type == AttachmentType.VIDEO) Modifier.blur(2.dp)
                             else Modifier
                         ),
                     contentScale = ContentScale.Crop
                 )
-                if (a.type == AttachmentType.VIDEO) Icon(
-                    painter = painterResource(KonnektIcon.video),
-                    contentDescription = null,
+                if (a.type == AttachmentType.VIDEO) Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .padding(
-                            start = 8.dp,
-                            top = 8.dp
-                        ),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                        .fillMaxSize()
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.video),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    a.durationSeconds?.let { d ->
+                        Text(
+                            text = "${d / 60}:${"%02d".format(d % 60)}",
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             } else Row(
                 modifier = Modifier
                     .border()

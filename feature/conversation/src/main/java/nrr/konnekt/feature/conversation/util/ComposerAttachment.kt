@@ -8,7 +8,8 @@ internal data class ComposerAttachment(
     val type: AttachmentType,
     val content: ByteArray,
     val size: Long? = null,
-    val thumbnail: ImageBitmap? = null
+    val thumbnail: ImageBitmap? = null,
+    val durationSeconds: Long? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -24,7 +25,7 @@ internal data class ComposerAttachment(
 
     override fun hashCode(): Int {
         var result = fileName.hashCode()
-        result = 31 * result + (content?.contentHashCode() ?: 0)
+        result = 31 * result + (content.contentHashCode())
         return result
     }
 }

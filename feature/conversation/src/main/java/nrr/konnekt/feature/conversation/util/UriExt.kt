@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.util.AllowedFileType
@@ -20,6 +21,20 @@ internal fun Context.uriToComposerAttachment(uri: Uri): ComposerAttachment {
         fileName = getFileName(uri)
         val type = getAttachmentType(uri)
         val content = uriToByteArray(uri)
+        var thumbnail: ImageBitmap? = null
+        var durationSeconds: Long? = null
+        when (type) {
+            AttachmentType.VIDEO -> {
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(this, uri)
+                thumbnail = retriever.getFrameAtTime(0)?.asImageBitmap()
+                durationSeconds = retriever
+                    .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    ?.toLong()?.div(1000L)
+                retriever.release()
+            }
+            else -> {}
+        }
 
         ComposerAttachment(
             fileName = fileName,
@@ -27,18 +42,10 @@ internal fun Context.uriToComposerAttachment(uri: Uri): ComposerAttachment {
             content = content,
             thumbnail = when (type) {
                 AttachmentType.IMAGE -> content.asImageBitmap()
-                AttachmentType.VIDEO -> {
-                    val retriever = MediaMetadataRetriever()
-                    retriever.setDataSource(
-                        this,
-                        uri
-                    )
-                    val thumbnail = retriever.getFrameAtTime(0) // Get frame at 0 microsecond
-                    retriever.release()
-                    thumbnail?.asImageBitmap()
-                }
+                AttachmentType.VIDEO -> thumbnail
                 else -> null
-            }
+            },
+            durationSeconds = durationSeconds
         )
     } catch (e: AttachmentNameException) {
         e.printStackTrace()
