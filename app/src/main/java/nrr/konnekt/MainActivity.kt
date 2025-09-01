@@ -28,6 +28,9 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.DESTROYED) {
                 userPresenceManager.markUserInactive()
             }
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                userPresenceManager.markUserActive()
+            }
         }
     }
 }
