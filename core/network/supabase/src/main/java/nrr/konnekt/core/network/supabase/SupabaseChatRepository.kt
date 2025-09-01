@@ -278,13 +278,6 @@ internal class SupabaseChatRepository @Inject constructor(
         }
     }
 
-    private fun List<String>.toInValues(): String =
-        joinToString(
-            separator = ",",
-            prefix = "(",
-            postfix = ")"
-        )
-
     private fun <T> Flow<T>.share() = shareIn(
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
         started = SharingStarted.WhileSubscribed(5_000),

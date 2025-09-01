@@ -70,4 +70,10 @@ internal abstract class SupabaseService(
     protected suspend fun <R> attachments(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(ATTACHMENTS, operation)
 
+    protected fun List<String>.toInValues(): String =
+        joinToString(
+            separator = ",",
+            prefix = "(",
+            postfix = ")"
+        )
 }

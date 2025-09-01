@@ -11,6 +11,8 @@ internal data class SupabaseAttachment(
     val id: String,
     @SerialName("message_id")
     val messageId: String,
+    @SerialName("chat_id")
+    val chatId: String,
     val type: String,
     val path: String,
     val name: String,

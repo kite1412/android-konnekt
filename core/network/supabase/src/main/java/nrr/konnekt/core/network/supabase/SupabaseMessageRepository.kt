@@ -5,7 +5,9 @@ import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -28,6 +30,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
+import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
@@ -37,10 +40,10 @@ import javax.inject.Inject
 internal class SupabaseMessageRepository @Inject constructor(
     authentication: Authentication
 ) : MessageRepository, SupabaseService(authentication) {
-    @OptIn(SupabaseExperimental::class)
+    @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     override fun observeMessages(chatId: String): Flow<List<Message>> =
         performOperation(MESSAGES) {
-            selectAsFlow(
+            val messages = selectAsFlow(
                 primaryKey = SupabaseMessage::id,
                 filter = FilterOperation(
                     column = "chat_id",
@@ -49,14 +52,6 @@ internal class SupabaseMessageRepository @Inject constructor(
                 )
             )
                 .map { m ->
-                    val attachments = attachments {
-                        select {
-                            filter {
-                                SupabaseAttachment::messageId isIn m.map { it.id }
-                            }
-                        }
-                            .decodeList<SupabaseAttachment>()
-                    }
                     val senders = users {
                         select {
                             filter {
@@ -69,15 +64,32 @@ internal class SupabaseMessageRepository @Inject constructor(
                     m.mapNotNull {
                         senders
                             .firstOrNull { s -> s.id == it.senderId }
-                            ?.let { s ->
-                                it.toMessage(s).copy(
-                                    attachments = attachments.filter { a ->
-                                        a.messageId == it.id
-                                    }.map(SupabaseAttachment::toAttachment)
-                                )
-                            }
+                            ?.let(it::toMessage)
                     }
                 }
+            val attachments = performOperation(ATTACHMENTS) {
+                selectAsFlow(
+                    primaryKey = SupabaseAttachment::id,
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.EQ,
+                        value = chatId
+                    )
+                )
+            }
+
+            combine(
+                flow = messages,
+                flow2 = attachments
+            ) { messages, attachments ->
+                messages.map {
+                    it.copy(
+                        attachments = attachments
+                            .filter { a -> a.messageId == it.id }
+                            .map(SupabaseAttachment::toAttachment)
+                    )
+                }
+            }
         }
 
     private data class FileInfo(
