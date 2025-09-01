@@ -1,5 +1,12 @@
 package nrr.konnekt.core.domain.dto
 
+/**
+ * Represents a file to be uploaded.
+ *
+ * @param fileName The name of the file, file extension is optional.
+ * @param fileExtension The extension of the file.
+ * @param content The content of the file.
+ */
 data class FileUpload(
     val fileName: String,
     val fileExtension: String,

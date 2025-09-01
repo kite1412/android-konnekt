@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
-import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
@@ -34,6 +33,7 @@ import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
+import nrr.konnekt.feature.conversation.util.toFileUpload
 import javax.inject.Inject
 import kotlin.time.Instant
 
@@ -119,16 +119,18 @@ class ConversationViewModel @Inject constructor(
     }
 
     internal fun sendMessage(
-        content: String,
-        attachments: List<FileUpload>? = null
+        content: String
     ) {
         viewModelScope.launch {
             sendingMessage = true
             val res = sendMessageUseCase(
                 chatId = chatId,
                 content = content,
-                attachment = attachments
+                attachment = composerAttachments
+                    .takeIf { it.isNotEmpty() }
+                    ?.map(ComposerAttachment::toFileUpload)
             )
+            composerAttachments.clear()
             if (res is Result.Error) {
                 _events.emit(
                     value = UiEvent.ShowSnackbar(

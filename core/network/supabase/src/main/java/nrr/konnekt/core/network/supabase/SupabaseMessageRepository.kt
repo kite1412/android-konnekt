@@ -1,5 +1,6 @@
 package nrr.konnekt.core.network.supabase
 
+import android.util.Log
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -26,6 +27,7 @@ import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.util.Bucket
+import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
@@ -118,7 +120,11 @@ internal class SupabaseMessageRepository @Inject constructor(
 
                                 perform {
                                     allowed.forEach {
-                                        val fileName = "${it.fileName}_${now()}.${it.fileExtension}"
+                                        val fileName = "${now()}_${it.fileName}${
+                                            if (it.fileName.substringAfterLast('.') != it.fileExtension)
+                                                ".${it.fileExtension}"
+                                            else ""
+                                        }"
                                         val path = createPath(
                                             fileName = fileName,
                                             rootFolder = chatId
@@ -158,10 +164,12 @@ internal class SupabaseMessageRepository @Inject constructor(
                                         .map(SupabaseAttachment::toAttachment)
                                 }
 
+                                val data = message.toMessage(u).copy(
+                                    attachments = attachments
+                                )
+                                Log.d(LOG_TAG, "Message sent with attachments: $data")
                                 return@result Success(
-                                    data = message.toMessage(u).copy(
-                                        attachments = attachments
-                                    )
+                                    data = data
                                 )
                             } catch (e: Exception) {
                                 e.printStackTrace()

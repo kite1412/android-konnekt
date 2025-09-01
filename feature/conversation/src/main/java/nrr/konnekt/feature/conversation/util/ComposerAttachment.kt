@@ -1,6 +1,7 @@
 package nrr.konnekt.feature.conversation.util
 
 import androidx.compose.ui.graphics.ImageBitmap
+import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.model.AttachmentType
 
 internal data class ComposerAttachment(
@@ -29,3 +30,10 @@ internal data class ComposerAttachment(
         return result
     }
 }
+
+internal fun ComposerAttachment.toFileUpload(): FileUpload =
+    FileUpload(
+        fileName = fileName,
+        fileExtension = fileName.substringAfterLast('.'),
+        content = content
+    )
