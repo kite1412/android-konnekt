@@ -5,8 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data class SupabaseCreateAttachment(
-    @SerialName("message_id")
-    val messageId: String,
     val type: String,
     val path: String,
     val name: String,

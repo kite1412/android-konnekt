@@ -1,6 +1,5 @@
 package nrr.konnekt.core.network.supabase
 
-import android.util.Log
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -24,12 +23,10 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
-import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateMessage
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.util.Bucket
-import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.createPath
@@ -92,107 +89,75 @@ internal class SupabaseMessageRepository @Inject constructor(
             }
         }
 
-    private data class FileInfo(
-        val fileName: String,
-        val fullPath: String,
-        val extension: String
-    )
-
     override suspend fun sendMessage(
         chatId: String,
         content: String,
         attachments: List<FileUpload>?
-    ): MessageResult<Message> = performSuspendingAuthenticatedAction { u ->
-        messages result@{
-            insert(
-                value = SupabaseCreateMessage(
-                    chatId = chatId,
-                    senderId = u.id,
-                    content = content
-                )
-            ) {
-                select()
-            }
-                .decodeSingleOrNull<SupabaseMessage>()
-                ?.let { message ->
-                    attachments?.let { uploads ->
-                        with(Bucket.CHAT_MEDIA) {
-                            val (allowed, disallowed) = attachments.partition {
-                                allowedExtensions.contains(it.fileExtension)
-                            }
-                            if (disallowed.isNotEmpty()) {
-                                return@result Error(
-                                    MessageError.DisallowedFileType(
-                                        disallowed.map { it.fileExtension }
-                                    )
-                                )
-                            }
-                            try {
-                                val attachmentPaths = mutableListOf<FileInfo>()
+    ): MessageResult<Message> = performSuspendingAuthenticatedAction result@{ u ->
+        val createAttachments = mutableListOf<SupabaseCreateAttachment>()
 
-                                perform {
-                                    allowed.forEach {
-                                        val fileName = "${now()}_${it.fileName}${
-                                            if (it.fileName.substringAfterLast('.') != it.fileExtension)
-                                                ".${it.fileExtension}"
-                                            else ""
-                                        }"
-                                        val path = createPath(
-                                            fileName = fileName,
-                                            rootFolder = chatId
-                                        )
-                                        upload(
-                                            path = path.pathInBucket,
-                                            data = it.content
-                                        ) {
-                                            userMetadata = buildJsonObject {
-                                                put("user_id", u.id)
-                                                put("email", u.email)
-                                            }
-                                        }
-                                        attachmentPaths.add(
-                                            FileInfo(
-                                                fileName = fileName,
-                                                fullPath = path.fullPath,
-                                                extension = it.fileExtension
-                                            )
-                                        )
-                                    }
+        if (attachments != null && attachments.isNotEmpty()) {
+            with(Bucket.CHAT_MEDIA) {
+                val (allowed, disallowed) = attachments.partition {
+                    allowedExtensions.contains(it.fileExtension)
+                }
+                if (disallowed.isNotEmpty()) {
+                    return@result Error(
+                        MessageError.DisallowedFileType(
+                            disallowed.map { it.fileExtension }
+                        )
+                    )
+                }
+                try {
+                    perform {
+                        allowed.forEach {
+                            val fileName = "${now()}_${it.fileName}${
+                                if (it.fileName.substringAfterLast('.') != it.fileExtension)
+                                    ".${it.fileExtension}"
+                                else ""
+                            }"
+                            val path = createPath(
+                                fileName = fileName,
+                                rootFolder = chatId
+                            )
+                            upload(
+                                path = path.pathInBucket,
+                                data = it.content
+                            ) {
+                                userMetadata = buildJsonObject {
+                                    put("user_id", u.id)
+                                    put("email", u.email)
                                 }
-                                val attachments = attachments {
-                                    insert(
-                                        values = attachmentPaths.map {
-                                            SupabaseCreateAttachment(
-                                                messageId = message.id,
-                                                type = resolveFileType(it.extension),
-                                                path = it.fullPath,
-                                                name = it.fileName
-                                            )
-                                        }
-                                    ) {
-                                        select()
-                                    }
-                                        .decodeList<SupabaseAttachment>()
-                                        .map(SupabaseAttachment::toAttachment)
-                                }
-
-                                val data = message.toMessage(u).copy(
-                                    attachments = attachments
-                                )
-                                Log.d(LOG_TAG, "Message sent with attachments: $data")
-                                return@result Success(
-                                    data = data
-                                )
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                return@result Error(MessageError.FileUploadError)
                             }
+                            createAttachments.add(
+                                SupabaseCreateAttachment(
+                                    type = resolveFileType(it.fileExtension),
+                                    path = path.fullPath,
+                                    name = it.fileName
+                                )
+                            )
                         }
                     }
-
-                    Success(message.toMessage(u))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    return@result Error(MessageError.FileUploadError)
                 }
-        } ?: Error(MessageError.Unknown)
+            }
+        }
+
+        rpc.sendMessageWithAttachments(
+            chatId = chatId,
+            content = content,
+            attachments = createAttachments
+        )
+            ?.let {
+                Success(
+                    it.message.toMessage(u).copy(
+                        attachments = it.attachments
+                            .map(SupabaseAttachment::toAttachment)
+                    )
+                )
+            } ?: Error(MessageError.Unknown)
     }
 
     override suspend fun editMessage(
