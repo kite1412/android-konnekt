@@ -25,10 +25,10 @@ begin
     select
       new_message.id,
       _chat_id,
-      att->>'type',
+      (att->>'type')::attachment_type,
       att->>'path',
       att->>'name',
-      att->>'size'
+      nullif(att->>'size', 'null')::bigint
     from jsonb_array_elements(_attachments) as att;
 
     select coalesce(jsonb_agg(row_to_json(a)), '[]'::jsonb)
@@ -39,8 +39,10 @@ begin
     new_attachments := '[]'::jsonb;
   end if;
 
-  return row_to_json(new_message)::jsonb
-    || jsonb_build_object('attachments', new_attachments);
+  return jsonb_build_object(
+    'message', row_to_json(new_message),
+    'attachments', coalesce(to_json(new_attachments), '[]'::json)
+  );
 end;
 $$;
 ```
