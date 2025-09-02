@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.conversation
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
+import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.toFileUpload
@@ -57,6 +59,12 @@ class ConversationViewModel @Inject constructor(
             initialValue = null
         )
     internal val messages = observeMessagesUseCase(chatId)
+        .onEach {
+            Log.d(LOG_TAG, "10 last message: ")
+            it.takeLast(10).forEach { m ->
+                Log.d(LOG_TAG, m.toString())
+            }
+        }
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)

@@ -6,7 +6,6 @@ import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -27,7 +26,6 @@ import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.util.Bucket
-import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
@@ -40,7 +38,7 @@ internal class SupabaseMessageRepository @Inject constructor(
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     override fun observeMessages(chatId: String): Flow<List<Message>> =
         performOperation(MESSAGES) {
-            val messages = selectAsFlow(
+            selectAsFlow(
                 primaryKey = SupabaseMessage::id,
                 filter = FilterOperation(
                     column = "chat_id",
@@ -57,36 +55,28 @@ internal class SupabaseMessageRepository @Inject constructor(
                         }
                             .decodeList<User>()
                     }
+                    val attachments = attachments {
+                        select {
+                            filter {
+                                SupabaseAttachment::chatId eq chatId
+                            }
+                        }
+                            .decodeList<SupabaseAttachment>()
+                    }
 
                     m.mapNotNull {
                         senders
                             .firstOrNull { s -> s.id == it.senderId }
                             ?.let(it::toMessage)
+                            ?.copy(
+                                attachments = attachments
+                                    .filter { m ->
+                                        m.messageId == it.id
+                                    }
+                                    .map(SupabaseAttachment::toAttachment)
+                            )
                     }
                 }
-            val attachments = performOperation(ATTACHMENTS) {
-                selectAsFlow(
-                    primaryKey = SupabaseAttachment::id,
-                    filter = FilterOperation(
-                        column = "chat_id",
-                        operator = FilterOperator.EQ,
-                        value = chatId
-                    )
-                )
-            }
-
-            combine(
-                flow = messages,
-                flow2 = attachments
-            ) { messages, attachments ->
-                messages.map {
-                    it.copy(
-                        attachments = attachments
-                            .filter { a -> a.messageId == it.id }
-                            .map(SupabaseAttachment::toAttachment)
-                    )
-                }
-            }
         }
 
     override suspend fun sendMessage(

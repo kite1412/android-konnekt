@@ -666,15 +666,17 @@ private fun MessageComposer(
                     AnimatedContent(
                         targetState = message.isNotEmpty()
                     ) {
+                        val enableSendMessage = it || attachments.isNotEmpty()
+
                         if (!sendingMessage) Icon(
                             painter = painterResource(
-                                id = if (it) KonnektIcon.send else KonnektIcon.mic
+                                id = if (enableSendMessage) KonnektIcon.send else KonnektIcon.mic
                             ),
                             contentDescription = "attachments",
                             modifier = iconModifier(
-                                clickEnabled = message.isNotBlank()
+                                clickEnabled = message.isNotBlank() || attachments.isNotEmpty()
                             ) {
-                                if (it) onSend(message)
+                                if (enableSendMessage) onSend(message)
                             }
                         ) else CircularProgressIndicator(
                             modifier = Modifier.size(iconSize),
