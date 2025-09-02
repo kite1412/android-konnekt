@@ -2,6 +2,7 @@ package nrr.konnekt.core.ui.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,10 +14,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
@@ -358,7 +361,13 @@ private fun ColumnScope.MessageAttachments(
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(8.dp)
+                            .offset((-8).dp, (-8).dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(0.7f))
+                            .padding(
+                                horizontal = 8.dp,
+                                vertical = 4.dp
+                            )
                             .height(IntrinsicSize.Max),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
