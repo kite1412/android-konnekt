@@ -19,6 +19,7 @@ import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
@@ -27,6 +28,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toMessage
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
+import nrr.konnekt.core.network.supabase.util.Tables.USER_READ_MARKERS
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.resolveFileType
@@ -77,6 +79,27 @@ internal class SupabaseMessageRepository @Inject constructor(
                             )
                     }
                 }
+        }
+
+    @OptIn(SupabaseExperimental::class)
+    override fun observeUserReadMarkers(chatId: String): Flow<List<UserReadMarker>> =
+        performAuthenticatedAction { u ->
+            performOperation(USER_READ_MARKERS) {
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        UserReadMarker::userId,
+                        UserReadMarker::chatId
+                    ),
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.EQ,
+                        value = chatId
+                    )
+                )
+                    .map {
+                        it.filter { m -> m.userId != u.id }
+                    }
+            }
         }
 
     override suspend fun sendMessage(
@@ -161,9 +184,22 @@ internal class SupabaseMessageRepository @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun markMessageAsRead(messageId: String): MessageResult<MessageStatus> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun updateUserReadMarker(chatId: String): MessageResult<UserReadMarker> =
+        performSuspendingAuthenticatedAction { u ->
+            userReadMarkers {
+                upsert(
+                    value = UserReadMarker(
+                        userId = u.id,
+                        chatId = chatId,
+                        lastReadAt = now()
+                    )
+                ) {
+                    select()
+                }
+            }
+                .decodeSingleOrNull<UserReadMarker>()
+                ?.let(::Success) ?: Error(MessageError.Unknown)
+        }
 
     override suspend fun hideMessage(messageId: String): MessageResult<MessageStatus> {
         TODO("Not yet implemented")

@@ -6,6 +6,7 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
+import nrr.konnekt.core.model.UserReadMarker
 
 typealias MessageResult<T> = Result<T, MessageRepository.MessageError>
 
@@ -20,6 +21,14 @@ interface MessageRepository {
      * @return A flow of the messages in the chat.
      */
     fun observeMessages(chatId: String): Flow<List<Message>>
+
+    /**
+     * Observe user read markers for a chat, excluding current user's read marker.
+     *
+     * @param chatId The ID of the chat to get the user read markers for.
+     * @return The user read markers.
+     */
+    fun observeUserReadMarkers(chatId: String): Flow<List<UserReadMarker>>
 
     /**
      * Send a message to a chat.
@@ -55,10 +64,10 @@ interface MessageRepository {
     /**
      * Mark a message as read.
      *
-     * @param messageId The ID of the message to mark as read.
-     * @return The updated message status.
+     * @param chatId The ID of the chat to mark the message as read for.
+     * @return The updated user read marker.
      */
-    suspend fun markMessageAsRead(messageId: String): MessageResult<MessageStatus>
+    suspend fun updateUserReadMarker(chatId: String): MessageResult<UserReadMarker>
 
     /**
      * Hide a message for the logged in user.
