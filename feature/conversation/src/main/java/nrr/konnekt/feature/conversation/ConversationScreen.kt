@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -71,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
+import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
@@ -664,16 +666,21 @@ private fun MessageComposer(
                     AnimatedContent(
                         targetState = message.isNotEmpty()
                     ) {
-                        Icon(
+                        if (!sendingMessage) Icon(
                             painter = painterResource(
                                 id = if (it) KonnektIcon.send else KonnektIcon.mic
                             ),
                             contentDescription = "attachments",
                             modifier = iconModifier(
-                                clickEnabled = !sendingMessage && message.isNotBlank()
+                                clickEnabled = message.isNotBlank()
                             ) {
                                 if (it) onSend(message)
                             }
+                        ) else CircularProgressIndicator(
+                            modifier = Modifier.size(iconSize),
+                            color = Gray,
+                            trackColor = DarkGray,
+                            strokeWidth = 2.dp
                         )
                     }
                 }
