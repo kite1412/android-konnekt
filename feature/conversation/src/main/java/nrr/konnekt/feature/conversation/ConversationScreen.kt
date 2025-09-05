@@ -84,6 +84,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
@@ -140,6 +141,7 @@ internal fun ConversationScreen(
                     currentUser = u,
                     chat = c,
                     messages = m,
+                    readMarkers = readMarkers,
                     messageInput = messageInput,
                     onMessageInputChange = { viewModel.messageInput = it },
                     composerAttachments = viewModel.composerAttachments,
@@ -172,6 +174,7 @@ private fun ConversationScreen(
     chat: Chat,
     totalActiveParticipants: Int,
     messages: List<Message>,
+    readMarkers: List<UserReadMarker>?,
     messageInput: String,
     onMessageInputChange: (String) -> Unit,
     composerAttachments: List<ComposerAttachment>,
@@ -256,6 +259,7 @@ private fun ConversationScreen(
                 }
                 Conversation(
                     items = conversationItems,
+                    readMarkers = readMarkers,
                     chatType = chat.type,
                     sentByCurrentUser = { m -> m.sender.id == currentUser.id },
                     deletedByCurrentUser = { m ->
@@ -448,6 +452,7 @@ private fun Header(
 @Composable
 private fun Conversation(
     items: List<ConversationItem>,
+    readMarkers: List<UserReadMarker>?,
     chatType: ChatType,
     sentByCurrentUser: (Message) -> Boolean,
     deletedByCurrentUser: (Message) -> Boolean,
@@ -476,6 +481,21 @@ private fun Conversation(
         reverseLayout = true,
         verticalArrangement = Arrangement.Top
     ) {
+        val myLatestReadMessage = items
+            .filter {
+                it is ConversationItem.MessageItem
+                        && sentByCurrentUser(it.message)
+            }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                if (readMarkers != null && readMarkers.isNotEmpty()) {
+                    it.firstOrNull { m ->
+                        (m as ConversationItem.MessageItem).message.sentAt <=
+                                readMarkers.maxBy { m -> m.lastReadAt }.lastReadAt
+                    }
+                } else null
+            }
+
         items(
             count = items.size,
             key = { i -> items[i].key }
@@ -493,13 +513,20 @@ private fun Conversation(
                         && items[it + 1] is ConversationItem.MessageItem
 
                     when (chatType) {
-                        ChatType.PERSONAL -> AdjustedMessageBubble(
-                            message = item.message,
-                            sentByCurrentUser = sentByCurrentUser(item.message),
-                            wasSentByPreviousUser = item.wasSentByPreviousUser,
-                            deletedByCurrentUser = deletedByCurrentUser(item.message),
-                            applyTopPadding = applyTopPadding
-                        )
+                        ChatType.PERSONAL -> {
+                            AdjustedMessageBubble(
+                                message = item.message,
+                                sentByCurrentUser = sentByCurrentUser(item.message),
+                                wasSentByPreviousUser = item.wasSentByPreviousUser,
+                                deletedByCurrentUser = deletedByCurrentUser(item.message),
+                                applyTopPadding = applyTopPadding,
+                                seenContent = if (myLatestReadMessage == item) {
+                                    {
+                                        PersonalSeenIndicator()
+                                    }
+                                } else null
+                            )
+                        }
                         else -> {
                             val sentByCurrentUser = sentByCurrentUser(item.message)
 
@@ -964,6 +991,7 @@ private fun ConversationScreenPreview(
                 currentUser = user,
                 chat = conversation.chat,
                 messages = conversation.messages,
+                readMarkers = null,
                 messageInput = messageInput,
                 onMessageInputChange = { v -> messageInput = v },
                 composerAttachments = emptyList(),

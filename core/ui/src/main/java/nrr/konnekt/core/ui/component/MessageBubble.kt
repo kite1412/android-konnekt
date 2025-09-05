@@ -118,55 +118,56 @@ fun MessageBubble(
                 color = tailColor,
                 reverse = true
             )
-            Column(
-                modifier = Modifier.sizeIn(maxWidth = maxContentWidth),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ShadowedBox(
+                reverse = !sentByCurrentUser,
+                style = shadowedBoxStyle
             ) {
-                ShadowedBox(
-                    reverse = !sentByCurrentUser,
-                    style = shadowedBoxStyle
-                ) {
-                    with(message) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            Text(
-                                text = if (isHidden) "Message has been deleted" else if (deletedByCurrentUser)
-                                    "You deleted this message" else content,
-                                style = LocalTextStyle.current.copy(
-                                    color = if (isHidden || deletedByCurrentUser) DarkGray else shadowedBoxStyle.contentColor,
-                                    fontStyle = if (isHidden || deletedByCurrentUser) FontStyle.Italic else FontStyle.Normal
-                                )
+                with(message) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = if (isHidden) "Message has been deleted" else if (deletedByCurrentUser)
+                                "You deleted this message" else content,
+                            style = LocalTextStyle.current.copy(
+                                color = if (isHidden || deletedByCurrentUser) DarkGray else shadowedBoxStyle.contentColor,
+                                fontStyle = if (isHidden || deletedByCurrentUser) FontStyle.Italic else FontStyle.Normal
                             )
-                            CompositionLocalProvider(
-                                LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
-                                    color = DarkGray
-                                )
+                        )
+                        CompositionLocalProvider(
+                            LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+                                color = DarkGray
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    if (sentAt != editedAt) Text(
-                                        text = "Edited",
-                                        style = LocalTextStyle.current.copy(
-                                            fontStyle = FontStyle.Italic
-                                        )
+                                if (sentAt != editedAt) Text(
+                                    text = "Edited",
+                                    style = LocalTextStyle.current.copy(
+                                        fontStyle = FontStyle.Italic
                                     )
-                                    Text(sentAt.toTimeString())
-                                }
+                                )
+                                Text(sentAt.toTimeString())
                             }
                         }
                     }
                 }
-                if (sentByCurrentUser && seenContent != null) seenContent(MessageSeenIndicator)
             }
             if (withTail && sentByCurrentUser) Tail(
                 size = tailSize,
                 color = tailColor,
                 reverse = false
             )
+        }
+        if (sentByCurrentUser && seenContent != null) Box(
+            modifier = Modifier
+                .align(Alignment.Start)
+                .padding(start = tailSize / 2)
+        ) {
+            seenContent(MessageSeenIndicator)
         }
     }
 }

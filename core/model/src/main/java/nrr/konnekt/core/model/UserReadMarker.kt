@@ -5,5 +5,5 @@ import kotlin.time.Instant
 data class UserReadMarker(
     val user: User,
     val chatId: String,
-    val lastReadAt: Instant? = null
+    val lastReadAt: Instant
 )

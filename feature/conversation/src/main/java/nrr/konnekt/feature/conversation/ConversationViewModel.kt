@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.conversation
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
+import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.toFileUpload
@@ -61,7 +63,16 @@ class ConversationViewModel @Inject constructor(
             initialValue = null
         )
     internal val messages = observeMessagesUseCase(chatId)
+        .onEach { l ->
+            currentUser.first()?.id?.let {
+                if (l.first().sender.id != it)
+                    updateReadMarkerUseCase(chatId, l.first().sentAt)
+            }
+        }
     internal val readMarkers = observeReadMarkersUseCase(chatId)
+        .onEach {
+            Log.d(LOG_TAG, "read markers: $it")
+        }
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
@@ -82,9 +93,6 @@ class ConversationViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val res = chatRepository.getChatById(chatId)
-            launch {
-                updateReadMarkerUseCase(chatId)
-            }
             when (res) {
                 is Result.Success -> _chat.value = res.data
                 is Result.Error -> {

@@ -7,6 +7,7 @@ import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.UserReadMarker
+import kotlin.time.Instant
 
 typealias MessageResult<T> = Result<T, MessageRepository.MessageError>
 
@@ -15,7 +16,7 @@ typealias MessageResult<T> = Result<T, MessageRepository.MessageError>
  */
 interface MessageRepository {
     /**
-     * Observe messages in a chat, should be ordered based on [Message.sentAt].
+     * Observe messages in a chat, should be ordered based on [Message.sentAt] in descending order.
      *
      * @param chatId The ID of the chat to observe messages for.
      * @return A flow of the messages in the chat.
@@ -65,9 +66,10 @@ interface MessageRepository {
      * Mark a message as read.
      *
      * @param chatId The ID of the chat to mark the message as read for.
+     * @param instant The instant to mark the message as read at.
      * @return The updated user read marker.
      */
-    suspend fun updateUserReadMarker(chatId: String): MessageResult<UserReadMarker>
+    suspend fun updateUserReadMarker(chatId: String, instant: Instant? = null): MessageResult<UserReadMarker>
 
     /**
      * Hide a message for the logged in user.

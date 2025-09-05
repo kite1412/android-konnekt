@@ -13,5 +13,5 @@ data class SupabaseUserReadMarker(
     val chatId: String,
     @SerialName("last_read_at")
     @Contextual
-    val lastReadAt: Instant? = null
+    val lastReadAt: Instant
 )

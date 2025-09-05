@@ -34,6 +34,7 @@ import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.resolveFileType
 import javax.inject.Inject
+import kotlin.time.Instant
 
 internal class SupabaseMessageRepository @Inject constructor(
     authentication: Authentication
@@ -67,18 +68,20 @@ internal class SupabaseMessageRepository @Inject constructor(
                             .decodeList<SupabaseAttachment>()
                     }
 
-                    m.mapNotNull {
-                        senders
-                            .firstOrNull { s -> s.id == it.senderId }
-                            ?.let(it::toMessage)
-                            ?.copy(
-                                attachments = attachments
-                                    .filter { m ->
-                                        m.messageId == it.id
-                                    }
-                                    .map(SupabaseAttachment::toAttachment)
-                            )
-                    }
+                    m
+                        .mapNotNull {
+                            senders
+                                .firstOrNull { s -> s.id == it.senderId }
+                                ?.let(it::toMessage)
+                                ?.copy(
+                                    attachments = attachments
+                                        .filter { m ->
+                                            m.messageId == it.id
+                                        }
+                                        .map(SupabaseAttachment::toAttachment)
+                                )
+                        }
+                        .sortedByDescending { it.sentAt }
                 }
         }
 
@@ -112,13 +115,16 @@ internal class SupabaseMessageRepository @Inject constructor(
                                         .decodeList<User>()
                                 }
                                 markers.addAll(
-                                    users.map { u ->
-                                        UserReadMarker(
-                                            user = u,
-                                            chatId = chatId,
-                                            lastReadAt = l.firstOrNull { m -> m.userId == u.id }
-                                                ?.lastReadAt
-                                        )
+                                    users.mapNotNull { u ->
+                                        l.firstOrNull { m -> m.userId == u.id }
+                                            ?.lastReadAt
+                                            ?.let { lastReadAt ->
+                                                UserReadMarker(
+                                                    user = u,
+                                                    chatId = chatId,
+                                                    lastReadAt = lastReadAt
+                                                )
+                                            }
                                     }
                                 )
                             }
@@ -210,14 +216,17 @@ internal class SupabaseMessageRepository @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun updateUserReadMarker(chatId: String): MessageResult<UserReadMarker> =
+    override suspend fun updateUserReadMarker(
+        chatId: String,
+        instant: Instant?
+    ): MessageResult<UserReadMarker> =
         performSuspendingAuthenticatedAction { u ->
             userReadMarkers {
                 upsert(
                     value = SupabaseUserReadMarker(
                         userId = u.id,
                         chatId = chatId,
-                        lastReadAt = now()
+                        lastReadAt = instant ?: now()
                     )
                 ) {
                     select()
