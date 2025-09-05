@@ -1,6 +1,5 @@
 package nrr.konnekt.feature.conversation
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -26,13 +25,14 @@ import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
+import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
+import nrr.konnekt.core.domain.usecase.UpdateReadMarkerUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
-import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.toFileUpload
@@ -46,7 +46,9 @@ class ConversationViewModel @Inject constructor(
     private val authentication: Authentication,
     private val chatRepository: ChatRepository,
     private val userPresenceManager: UserPresenceManager,
-    private val sendMessageUseCase: SendMessageUseCase
+    private val sendMessageUseCase: SendMessageUseCase,
+    private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
+    private val observeReadMarkersUseCase: ObserveReadMarkersUseCase
 ) : ViewModel() {
     private val chatId: String = checkNotNull(
         savedStateHandle.toRoute<ConversationRoute>().chatId
@@ -59,12 +61,7 @@ class ConversationViewModel @Inject constructor(
             initialValue = null
         )
     internal val messages = observeMessagesUseCase(chatId)
-        .onEach {
-            Log.d(LOG_TAG, "10 last message: ")
-            it.takeLast(10).forEach { m ->
-                Log.d(LOG_TAG, m.toString())
-            }
-        }
+    internal val readMarkers = observeReadMarkersUseCase(chatId)
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
@@ -85,6 +82,9 @@ class ConversationViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val res = chatRepository.getChatById(chatId)
+            launch {
+                updateReadMarkerUseCase(chatId)
+            }
             when (res) {
                 is Result.Success -> _chat.value = res.data
                 is Result.Error -> {

@@ -88,6 +88,7 @@ import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
+import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
@@ -117,6 +118,7 @@ internal fun ConversationScreen(
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
     val chat by viewModel.chat.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle(null)
+    val readMarkers by viewModel.readMarkers.collectAsStateWithLifecycle(null)
     val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
@@ -525,7 +527,8 @@ private fun AdjustedMessageBubble(
     deletedByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
     sender: User? = null,
-    applyTopPadding: Boolean = true
+    applyTopPadding: Boolean = true,
+    seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -543,7 +546,8 @@ private fun AdjustedMessageBubble(
             sentByCurrentUser = sentByCurrentUser,
             withTail = !wasSentByPreviousUser,
             deletedByCurrentUser = deletedByCurrentUser,
-            maxContentWidth = this.maxWidth * 0.9f
+            maxContentWidth = this.maxWidth * 0.9f,
+            seenContent = seenContent
         ) else MessageBubble(
             sender = sender,
             message = message,
@@ -551,7 +555,8 @@ private fun AdjustedMessageBubble(
             withTail = !wasSentByPreviousUser,
             withAvatar = !wasSentByPreviousUser,
             deletedByCurrentUser = deletedByCurrentUser,
-            maxContentWidth = this.maxWidth * 0.9f
+            maxContentWidth = this.maxWidth * 0.9f,
+            seenContent = seenContent
         )
     }
 }

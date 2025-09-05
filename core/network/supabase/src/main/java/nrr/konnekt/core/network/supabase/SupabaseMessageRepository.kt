@@ -22,6 +22,7 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
+import nrr.konnekt.core.network.supabase.dto.SupabaseUserReadMarker
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
@@ -87,8 +88,8 @@ internal class SupabaseMessageRepository @Inject constructor(
             performOperation(USER_READ_MARKERS) {
                 selectAsFlow(
                     primaryKeys = listOf(
-                        UserReadMarker::userId,
-                        UserReadMarker::chatId
+                        SupabaseUserReadMarker::userId,
+                        SupabaseUserReadMarker::chatId
                     ),
                     filter = FilterOperation(
                         column = "chat_id",
@@ -97,7 +98,32 @@ internal class SupabaseMessageRepository @Inject constructor(
                     )
                 )
                     .map {
-                        it.filter { m -> m.userId != u.id }
+                        val filtered = it.filter { m -> m.userId != u.id }
+                        val markers = mutableListOf<UserReadMarker>()
+                        filtered
+                            .chunked(10)
+                            .forEach { l ->
+                                val users = users {
+                                    select {
+                                        filter {
+                                            User::id isIn l.map { m -> m.userId }
+                                        }
+                                    }
+                                        .decodeList<User>()
+                                }
+                                markers.addAll(
+                                    users.map { u ->
+                                        UserReadMarker(
+                                            user = u,
+                                            chatId = chatId,
+                                            lastReadAt = l.firstOrNull { m -> m.userId == u.id }
+                                                ?.lastReadAt
+                                        )
+                                    }
+                                )
+                            }
+
+                        markers
                     }
             }
         }
@@ -188,7 +214,7 @@ internal class SupabaseMessageRepository @Inject constructor(
         performSuspendingAuthenticatedAction { u ->
             userReadMarkers {
                 upsert(
-                    value = UserReadMarker(
+                    value = SupabaseUserReadMarker(
                         userId = u.id,
                         chatId = chatId,
                         lastReadAt = now()
@@ -197,8 +223,16 @@ internal class SupabaseMessageRepository @Inject constructor(
                     select()
                 }
             }
-                .decodeSingleOrNull<UserReadMarker>()
-                ?.let(::Success) ?: Error(MessageError.Unknown)
+                .decodeSingleOrNull<SupabaseUserReadMarker>()
+                ?.let {
+                    Success(
+                        UserReadMarker(
+                            user = u,
+                            chatId = chatId,
+                            lastReadAt = it.lastReadAt
+                        )
+                    )
+                } ?: Error(MessageError.Unknown)
         }
 
     override suspend fun hideMessage(messageId: String): MessageResult<MessageStatus> {
