@@ -536,7 +536,21 @@ private fun Conversation(
                                 wasSentByPreviousUser = item.wasSentByPreviousUser,
                                 deletedByCurrentUser = deletedByCurrentUser(item.message),
                                 applyTopPadding = applyTopPadding,
-                                sender = if (sentByCurrentUser) null else item.message.sender
+                                sender = if (sentByCurrentUser) null else item.message.sender,
+                                seenContent = if (myLatestReadMessage == item) {
+                                    readMarkers?.let { l ->
+                                        {
+                                            GroupSeenIndicator(
+                                                seenBy = l
+                                                    .filter { m ->
+                                                        m.lastReadAt >= item.message.sentAt
+                                                    }
+                                                    .sortedByDescending { m -> m.lastReadAt }
+                                                    .map(UserReadMarker::user)
+                                            )
+                                        }
+                                    }
+                                } else null
                             )
                         }
                     }
