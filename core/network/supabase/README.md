@@ -22,7 +22,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE attachment_type AS ENUM ('file', 'image', 'video', 'audio');
+    CREATE TYPE attachment_type AS ENUM ('document', 'image', 'video', 'audio');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
