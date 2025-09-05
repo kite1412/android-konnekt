@@ -1,5 +1,11 @@
 # Setup
 
+## \<root folder\>/local.properties file
+```properties
+SUPABASE_URL=<your Supabase project url>
+SUPABASE_KEY=<your publishable key>
+```
+
 ## Tables
 ```sql
 -- Enums
