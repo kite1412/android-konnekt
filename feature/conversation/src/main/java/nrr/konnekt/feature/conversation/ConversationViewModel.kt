@@ -64,9 +64,13 @@ class ConversationViewModel @Inject constructor(
         )
     internal val messages = observeMessagesUseCase(chatId)
         .onEach { l ->
-            currentUser.first()?.id?.let {
-                if (l.first().sender.id != it)
-                    updateReadMarkerUseCase(chatId, l.first().sentAt)
+            currentUser.first()?.id?.let { id ->
+                l.firstOrNull()
+                    ?.sender
+                    ?.id
+                    ?.let {
+                        if (id != it) updateReadMarkerUseCase(chatId, l.first().sentAt)
+                    }
             }
         }
     internal val readMarkers = observeReadMarkersUseCase(chatId)
