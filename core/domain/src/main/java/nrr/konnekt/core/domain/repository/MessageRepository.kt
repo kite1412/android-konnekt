@@ -32,6 +32,13 @@ interface MessageRepository {
     fun observeUserReadMarkers(chatId: String): Flow<List<UserReadMarker>>
 
     /**
+     * Observe current user read markers.
+     *
+     * @return Current user read markers.
+     */
+    fun observeCurrentUserReadMarkers(): Flow<List<UserReadMarker>>
+
+    /**
      * Send a message to a chat.
      *
      * @param chatId The ID of the chat to send the message to.
@@ -65,8 +72,8 @@ interface MessageRepository {
     /**
      * Mark a message as read.
      *
-     * @param chatId The ID of the chat to mark the message as read for.
-     * @param instant The instant to mark the message as read at.
+     * @param chatId The ID of the chat to update the read marker for.
+     * @param instant The instant used to update the chat's read marker.
      * @return The updated user read marker.
      */
     suspend fun updateUserReadMarker(chatId: String, instant: Instant? = null): MessageResult<UserReadMarker>

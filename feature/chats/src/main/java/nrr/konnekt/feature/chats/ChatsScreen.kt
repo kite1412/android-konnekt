@@ -97,6 +97,7 @@ internal fun ChatsScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val chats by viewModel.chats.collectAsStateWithLifecycle(emptyList())
+    val myReadMarkers by viewModel.myReadMarkers.collectAsStateWithLifecycle()
 
     currentUser?.let {
         ChatsScreen(
@@ -106,6 +107,17 @@ internal fun ChatsScreen(
             createChatType = viewModel.createChatType,
             usersByIdentifier = viewModel.usersByIdentifier,
             contentPadding = contentPadding,
+            messageUnreadByCurrentUser = { latestChatMessage ->
+                latestChatMessage.message?.let { message ->
+                    if (message.sender.id != it.id || message.isHidden)
+                        myReadMarkers
+                            .firstOrNull { m -> m.chatId ==  latestChatMessage.chat.id }
+                            ?.let { m ->
+                                m.lastReadAt < message.sentAt
+                            } ?: true
+                    else false
+                } ?: false
+            },
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
             onChatClick = navigateToConversation,
@@ -147,6 +159,7 @@ private fun ChatsScreen(
     createChatType: ChatType?,
     usersByIdentifier: List<User>?,
     contentPadding: PaddingValues,
+    messageUnreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -194,6 +207,7 @@ private fun ChatsScreen(
                 chats = chats,
                 searchValue = searchValue,
                 chatFilter = chatFilter,
+                unreadByCurrentUser = messageUnreadByCurrentUser,
                 onChatClick = onChatClick,
                 onArchiveChat = onArchiveChat,
                 onClearChat = onClearChat,
@@ -382,6 +396,7 @@ private fun Chats(
     chats: List<LatestChatMessage>,
     searchValue: String,
     chatFilter: ChatFilter,
+    unreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onFilterChange: (ChatFilter) -> Unit,
     onSearchValueChange: (String) -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -446,19 +461,7 @@ private fun Chats(
                     sentByCurrentUser = {
                         user.id == it.message?.sender?.id
                     },
-                    unreadByCurrentUser = {
-                        it.message != null
-                                && user.id != it.message?.sender?.id
-                                && with(
-                                    it.message
-                                        ?.messageStatuses
-                                        ?.firstOrNull { s ->
-                                            s.userId == user.id
-                                        }
-                                ) {
-                                    (this == null || readAt == null)
-                                }
-                    },
+                    unreadByCurrentUser = unreadByCurrentUser,
                     deletedByCurrentUser = {
                         it.message
                             ?.messageStatuses
@@ -745,6 +748,7 @@ private fun ChatsScreenPreview(
                     }
                 }.toList(),
                 contentPadding = PaddingValues(16.dp),
+                messageUnreadByCurrentUser = { false },
                 onSearchValueChange = {},
                 onCreateChatClick = { t ->
                     createChatType = t

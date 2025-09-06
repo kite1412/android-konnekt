@@ -27,6 +27,7 @@ import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toMessage
+import nrr.konnekt.core.network.supabase.dto.toUserReadMarker
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.USER_READ_MARKERS
@@ -130,6 +131,26 @@ internal class SupabaseMessageRepository @Inject constructor(
                             }
 
                         markers
+                    }
+            }
+        }
+
+    @OptIn(SupabaseExperimental::class)
+    override fun observeCurrentUserReadMarkers(): Flow<List<UserReadMarker>> =
+        performAuthenticatedAction {  u ->
+            performOperation(USER_READ_MARKERS) {
+                selectAsFlow(
+                    primaryKey = SupabaseUserReadMarker::chatId,
+                    filter = FilterOperation(
+                        column = "user_id",
+                        operator = FilterOperator.EQ,
+                        value = u.id
+                    )
+                )
+                    .map {
+                        it.map { m ->
+                            m.toUserReadMarker(u)
+                        }
                     }
             }
         }

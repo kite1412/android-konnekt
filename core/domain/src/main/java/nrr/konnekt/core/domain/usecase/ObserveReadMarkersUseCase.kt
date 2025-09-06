@@ -8,4 +8,6 @@ class ObserveReadMarkersUseCase @Inject constructor(
 ) {
     operator fun invoke(chatId: String) =
         messageRepository.observeUserReadMarkers(chatId)
+
+    fun currentUser() = messageRepository.observeCurrentUserReadMarkers()
 }
