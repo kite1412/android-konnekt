@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -53,6 +55,7 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.util.info
 import nrr.konnekt.core.model.util.toStringFormatted
@@ -155,49 +158,95 @@ private fun ChatCard(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = buildAnnotatedString {
-                                    message?.let {
-                                        val deletedStyle = { block: AnnotatedString.Builder.() -> Unit ->
-                                            withStyle(
-                                                style = SpanStyle(
-                                                    fontStyle = FontStyle.Italic,
-                                                    color = DarkGray
-                                                ),
-                                                block = block
-                                            )
-                                        }
-
-                                        if (sentByCurrentUser) withStyle(
-                                            style = SpanStyle(
-                                                fontStyle = FontStyle.Italic
-                                            )
-                                        ) {
-                                            append("You: ")
-                                        } else append("${it.sender.username}: ")
-                                        if (!it.isHidden) {
-                                            if (!deletedByCurrentUser) withStyle(
-                                                style = SpanStyle(
-                                                    color = Color.White
-                                                )
-                                            ) {
-                                                append(it.content)
-                                            } else deletedStyle {
-                                                append("You deleted this message")
-                                            }
-                                        } else deletedStyle {
-                                            append("Message has been deleted")
-                                        }
-                                    } ?: withStyle(
-                                        style = SpanStyle(fontStyle = FontStyle.Italic)
+                            CompositionLocalProvider(
+                                LocalTextStyle provides MaterialTheme.typography.bodySmall
+                            ) {
+                                message?.let { m ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        append("Start a message...")
+                                        Text(
+                                            text = buildAnnotatedString {
+                                                if (sentByCurrentUser) withStyle(
+                                                    style = SpanStyle(
+                                                        fontStyle = FontStyle.Italic
+                                                    )
+                                                ) {
+                                                    append("You: ")
+                                                } else append("${m.sender.username}: ")
+                                            }
+                                        )
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            m.attachments
+                                                .takeIf { m.content.isBlank() }
+                                                ?.firstOrNull()
+                                                ?.let { a ->
+                                                    Icon(
+                                                        painter = painterResource(
+                                                            when (a.type) {
+                                                                AttachmentType.IMAGE -> KonnektIcon.image
+                                                                AttachmentType.VIDEO -> KonnektIcon.video
+                                                                AttachmentType.AUDIO -> KonnektIcon.audio
+                                                                AttachmentType.DOCUMENT -> KonnektIcon.file
+                                                            }
+                                                        ),
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(14.dp),
+                                                        tint = DarkGray
+                                                    )
+                                                }
+                                            Text(
+                                                text = buildAnnotatedString {
+                                                    val nonContentStyle = { block: AnnotatedString.Builder.() -> Unit ->
+                                                        withStyle(
+                                                            style = SpanStyle(
+                                                                fontStyle = FontStyle.Italic,
+                                                                color = DarkGray
+                                                            ),
+                                                            block = block
+                                                        )
+                                                    }
+
+                                                    if (m.content.isNotBlank()) {
+                                                        if (!m.isHidden) {
+                                                            if (!deletedByCurrentUser) withStyle(
+                                                                style = SpanStyle(
+                                                                    color = Color.White
+                                                                )
+                                                            ) {
+                                                                append(m.content)
+                                                            } else nonContentStyle {
+                                                                append("You deleted this message")
+                                                            }
+                                                        } else nonContentStyle {
+                                                            append("Message has been deleted")
+                                                        }
+                                                    } else if (m.attachments.isNotEmpty()) nonContentStyle {
+                                                        append(
+                                                            when (m.attachments.first().type) {
+                                                                AttachmentType.IMAGE -> "Image"
+                                                                AttachmentType.VIDEO -> "Video"
+                                                                AttachmentType.AUDIO -> "Audio"
+                                                                AttachmentType.DOCUMENT -> "Document"
+                                                            }
+                                                        )
+                                                    }
+                                                },
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
-                                },
-                                maxLines = 1,
-                                style = MaterialTheme.typography.bodySmall,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                                } ?: Text(
+                                    text = "Start a message...",
+                                    style = LocalTextStyle.current.copy(
+                                        fontStyle = FontStyle.Italic
+                                    )
+                                )
+                            }
                         }
                     }
                     Row(

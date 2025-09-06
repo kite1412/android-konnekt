@@ -52,7 +52,7 @@ class PreviewParameterDataProvider
                     imagePath = "/images/alice.png",
                     createdAt = Instant.parse("2024-07-01T09:00:00Z")
                 ),
-                content = "Hey Bob, how’s your day?",
+                content = "",
                 sentAt = now(),
                 editedAt = Instant.parse("2025-07-10T15:00:00Z"),
                 isHidden = false,
@@ -63,9 +63,9 @@ class PreviewParameterDataProvider
                 attachments = listOf(
                     Attachment(
                         id = "a1",
-                        type = AttachmentType.IMAGE,
-                        path = "/attachments/meeting.png",
-                        name = "meeting.png",
+                        type = AttachmentType.VIDEO,
+                        path = "/attachments/meeting.mp4",
+                        name = "meeting.mp4",
                         size = 2048,
                         metadata = null
                     )
