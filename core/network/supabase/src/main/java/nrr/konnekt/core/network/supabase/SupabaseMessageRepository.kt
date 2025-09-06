@@ -177,8 +177,9 @@ internal class SupabaseMessageRepository @Inject constructor(
                 try {
                     perform {
                         allowed.forEach {
-                            val fileName = "${now()}_${it.fileName}${
-                                if (it.fileName.substringAfterLast('.') != it.fileExtension)
+                            val rawName = "${now()}_${it.fileName.take(100)}"
+                            val fileName = "$rawName${
+                                if (rawName.substringAfterLast('.') != it.fileExtension)
                                     ".${it.fileExtension}"
                                 else ""
                             }"
