@@ -47,6 +47,8 @@ import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
+import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toChat
 import nrr.konnekt.core.network.supabase.dto.toChatParticipant
 import nrr.konnekt.core.network.supabase.dto.toChatPermissionSettings
@@ -240,6 +242,8 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         }
     }
+
+    private var messageAttachments = emptyList<SupabaseAttachment>()
     @OptIn(ExperimentalCoroutinesApi::class, SupabaseExperimental::class)
     private val messages by lazy {
         chats.flatMapLatest { c ->
@@ -253,12 +257,32 @@ internal class SupabaseChatRepository @Inject constructor(
                     )
                 )
                     .map {
-                        it.sortedByDescending { m -> m.sentAt }
+                        val messages = it
+                            .sortedByDescending { m -> m.sentAt }
+                            .distinctBy { m -> m.chatId }
+
+                        messageAttachments = messages
+                            .chunked(10)
+                            .map { l ->
+                                attachments {
+                                    select {
+                                        filter {
+                                            SupabaseAttachment::messageId isIn l.map { m -> m.id }
+                                        }
+                                    }
+                                }
+                                    .decodeList<SupabaseAttachment>()
+                                    .distinctBy { l -> l.messageId }
+                            }
+                            .flatMap { l -> l }
+
+                        messages
                     }
                     .share()
             }
         }
     }
+
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     private val messageStatuses by lazy {
         messages.flatMapLatest { messages ->
@@ -284,10 +308,6 @@ internal class SupabaseChatRepository @Inject constructor(
         replay = 1
     )
 
-    /*
-        TODO:
-         - resolve messages' attachments
-     */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> =
         performAuthenticatedAction { u ->
@@ -321,7 +341,10 @@ internal class SupabaseChatRepository @Inject constructor(
                                         ?.let { s ->
                                             m.toMessage(s).copy(
                                                 messageStatuses = messageStatuses
-                                                    .filter { ms -> ms.messageId == m.id }
+                                                    .filter { ms -> ms.messageId == m.id },
+                                                attachments = messageAttachments.filter { a ->
+                                                    a.messageId == m.id
+                                                }.map(SupabaseAttachment::toAttachment)
                                             )
                                         }
                                 }
@@ -403,7 +426,7 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
-   private suspend fun getPersonalChatSetting(chatId: String) =
+    private suspend fun getPersonalChatSetting(chatId: String) =
         performSuspendingAuthenticatedAction { u ->
             chatParticipants {
                 select {

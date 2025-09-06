@@ -30,11 +30,11 @@ android {
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.quote())
         buildConfigField("String", "SUPABASE_KEY", supabaseKey.quote())
     }
+}
 
-    kotlin {
-        sourceSets.all {
-            languageSettings.optIn("kotlin.time.ExperimentalTime")
-        }
+kotlin {
+    sourceSets.all {
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
     }
 }
 
