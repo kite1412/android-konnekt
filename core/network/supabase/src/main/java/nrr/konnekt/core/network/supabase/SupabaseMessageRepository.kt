@@ -225,6 +225,17 @@ internal class SupabaseMessageRepository @Inject constructor(
                     )
                 )
             } ?: Error(MessageError.Unknown)
+            .also {
+                Bucket.CHAT_MEDIA.perform {
+                    try {
+                        delete(
+                            paths = createAttachments.map { a -> a.path }
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
     }
 
     override suspend fun editMessage(
