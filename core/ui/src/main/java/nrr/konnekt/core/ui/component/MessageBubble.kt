@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -35,10 +36,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,6 +55,7 @@ import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
+import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedBoxStyle
 import nrr.konnekt.core.model.Attachment
@@ -61,6 +66,7 @@ import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
+import nrr.konnekt.core.ui.util.getVideoThumbnail
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.toTimeString
 import kotlin.time.Instant
@@ -342,8 +348,8 @@ private fun ColumnScope.MessageAttachments(
                         shape = shape
                     )
             ) {
-                if (a.type == AttachmentType.IMAGE)
-                    with(attachmentContent!!.asImageBitmap()) {
+                when (a.type) {
+                    AttachmentType.IMAGE -> with(attachmentContent!!.asImageBitmap()) {
                         val ratio = this.width.toFloat() / this.height
 
                         Image(
@@ -354,6 +360,34 @@ private fun ColumnScope.MessageAttachments(
                             contentScale = ContentScale.FillWidth
                         )
                     }
+                    AttachmentType.VIDEO -> attachmentContent?.let { c ->
+                        val thumbnail = LocalContext.current.getVideoThumbnail(bytes = c)
+
+                        thumbnail?.let { t ->
+                            Box {
+                                Image(
+                                    bitmap = t,
+                                    contentDescription = "video",
+                                    modifier = Modifier
+                                        .blur(4.dp),
+                                    contentScale = ContentScale.FillWidth
+                                )
+                                Icon(
+                                    painter = painterResource(KonnektIcon.play),
+                                    contentDescription = "play video",
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .padding(16.dp)
+                                        .align(Alignment.Center),
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+                    AttachmentType.AUDIO -> Unit
+                    AttachmentType.DOCUMENT -> Unit
+                }
                 CompositionLocalProvider(
                     LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.Bold

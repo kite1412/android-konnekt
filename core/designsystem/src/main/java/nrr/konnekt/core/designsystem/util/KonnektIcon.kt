@@ -29,4 +29,5 @@ object KonnektIcon {
     val video = R.drawable.video
     val file = R.drawable.file
     val audio = R.drawable.audio
+    val play = R.drawable.play
 }
