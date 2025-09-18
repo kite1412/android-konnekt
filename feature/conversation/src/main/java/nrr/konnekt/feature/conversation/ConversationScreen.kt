@@ -222,7 +222,9 @@ private fun ConversationScreen(
                 modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val conversationItems = messages.mapToConversationItem()
+                val conversationItems = remember(messages) {
+                    messages.mapToConversationItem()
+                }
                 val state = rememberLazyListState()
                 val scrollInProgress by remember {
                     derivedStateOf(
@@ -459,6 +461,23 @@ private fun Conversation(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState()
 ) {
+    val myLatestReadMessage = remember(items, readMarkers) {
+        items
+            .filter {
+                it is ConversationItem.MessageItem
+                        && sentByCurrentUser(it.message)
+            }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                if (readMarkers != null && readMarkers.isNotEmpty()) {
+                    it.firstOrNull { m ->
+                        (m as ConversationItem.MessageItem).message.sentAt <=
+                                readMarkers.maxBy { m -> m.lastReadAt }.lastReadAt
+                    }
+                } else null
+            }
+    }
+
     LaunchedEffect(items.size) {
         if (items.size >= 2) {
             val index = state.firstVisibleItemIndex
@@ -481,21 +500,6 @@ private fun Conversation(
         reverseLayout = true,
         verticalArrangement = Arrangement.Top
     ) {
-        val myLatestReadMessage = items
-            .filter {
-                it is ConversationItem.MessageItem
-                        && sentByCurrentUser(it.message)
-            }
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                if (readMarkers != null && readMarkers.isNotEmpty()) {
-                    it.firstOrNull { m ->
-                        (m as ConversationItem.MessageItem).message.sentAt <=
-                                readMarkers.maxBy { m -> m.lastReadAt }.lastReadAt
-                    }
-                } else null
-            }
-
         items(
             count = items.size,
             key = { i -> items[i].key }

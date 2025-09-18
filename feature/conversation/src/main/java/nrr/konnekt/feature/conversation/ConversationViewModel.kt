@@ -44,13 +44,13 @@ import kotlin.time.Instant
 @HiltViewModel
 class ConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    authentication: Authentication,
     observeMessagesUseCase: ObserveMessagesUseCase,
-    private val authentication: Authentication,
+    observeReadMarkersUseCase: ObserveReadMarkersUseCase,
     private val chatRepository: ChatRepository,
     private val userPresenceManager: UserPresenceManager,
     private val sendMessageUseCase: SendMessageUseCase,
-    private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
-    private val observeReadMarkersUseCase: ObserveReadMarkersUseCase
+    private val updateReadMarkerUseCase: UpdateReadMarkerUseCase
 ) : ViewModel() {
     private val chatId: String = checkNotNull(
         savedStateHandle.toRoute<ConversationRoute>().chatId

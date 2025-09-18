@@ -5,10 +5,10 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.util.AllowedFileType
 import nrr.konnekt.core.ui.util.asImageBitmap
+import nrr.konnekt.core.ui.util.getVideoThumbnail
 import nrr.konnekt.feature.conversation.exception.AttachmentContentException
 import nrr.konnekt.feature.conversation.exception.AttachmentNameException
 import nrr.konnekt.feature.conversation.exception.AttachmentTypeException
@@ -27,7 +27,7 @@ internal fun Context.uriToComposerAttachment(uri: Uri): ComposerAttachment {
             AttachmentType.VIDEO -> {
                 val retriever = MediaMetadataRetriever()
                 retriever.setDataSource(this, uri)
-                thumbnail = retriever.getFrameAtTime(0)?.asImageBitmap()
+                thumbnail = getVideoThumbnail(uri)
                 durationSeconds = retriever
                     .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                     ?.toLong()?.div(1000L)
