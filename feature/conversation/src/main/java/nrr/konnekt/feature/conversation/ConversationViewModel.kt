@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
@@ -47,6 +48,7 @@ class ConversationViewModel @Inject constructor(
     authentication: Authentication,
     observeMessagesUseCase: ObserveMessagesUseCase,
     observeReadMarkersUseCase: ObserveReadMarkersUseCase,
+    internal val fileUploadConstraints: FileUploadConstraints,
     private val chatRepository: ChatRepository,
     private val userPresenceManager: UserPresenceManager,
     private val sendMessageUseCase: SendMessageUseCase,

@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.FileResolver
+import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.annotation.DelegateResolver
 import nrr.konnekt.core.domain.repository.ChatRepository
@@ -14,6 +15,7 @@ import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.network.supabase.SupabaseAuthentication
 import nrr.konnekt.core.network.supabase.SupabaseChatRepository
 import nrr.konnekt.core.network.supabase.SupabaseFileResolver
+import nrr.konnekt.core.network.supabase.SupabaseFileUploadConstraints
 import nrr.konnekt.core.network.supabase.SupabaseMessageRepository
 import nrr.konnekt.core.network.supabase.SupabaseUserPresenceManager
 import nrr.konnekt.core.network.supabase.SupabaseUserRepository
@@ -54,4 +56,9 @@ internal interface SupabaseModule {
     fun bindSupabaseFileResolver(
         supabaseFileResolver: SupabaseFileResolver
     ): FileResolver
+
+    @Binds
+    fun bindFileUploadConstraints(
+        supabaseFileUploadConstraints: SupabaseFileUploadConstraints
+    ): FileUploadConstraints
 }

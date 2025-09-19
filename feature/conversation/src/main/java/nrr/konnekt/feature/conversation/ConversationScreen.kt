@@ -79,12 +79,14 @@ import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
+import nrr.konnekt.core.model.util.FileType
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
@@ -159,6 +161,7 @@ internal fun ConversationScreen(
                     totalActiveParticipants = totalActiveParticipants ?: 0,
                     onNavigateBack = navigateBack,
                     onChatClick = navigateToChatDetail,
+                    fileUploadConstraints = viewModel.fileUploadConstraints,
                     contentPadding = contentPadding,
                     modifier = modifier,
                     peerLastActive = peerLastActive
@@ -185,6 +188,7 @@ private fun ConversationScreen(
     sendingMessage: Boolean,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
+    fileUploadConstraints: FileUploadConstraints,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -280,7 +284,8 @@ private fun ConversationScreen(
                     action = composerAction,
                     onActionChange = onComposerActionChange,
                     onSend = onSend,
-                    sendingMessage = sendingMessage
+                    sendingMessage = sendingMessage,
+                    fileUploadConstraints = fileUploadConstraints
                 )
             }
             if (messages.isNotEmpty() && lastVisibleDate.isNotBlank())
@@ -616,6 +621,7 @@ private fun MessageComposer(
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     sendingMessage: Boolean,
+    fileUploadConstraints: FileUploadConstraints,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
@@ -626,7 +632,7 @@ private fun MessageComposer(
     ) { res ->
         res.forEach {
             try {
-                val attachment = context.uriToComposerAttachment(it)
+                val attachment = context.uriToComposerAttachment(it, fileUploadConstraints)
                 Log.d(
                     LOG_TAG,
                     "Add attachment: ${attachment.fileName}, " +
@@ -1021,6 +1027,17 @@ private fun ConversationScreenPreview(
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 onChatClick = {},
+                fileUploadConstraints = object: FileUploadConstraints {
+                    override val maxSizeBytes: Long = 0L
+                    override val allowedImageTypes: List<FileType> = listOf()
+                    override val allowedVideoTypes: List<FileType> = listOf()
+                    override val allowedAudioTypes: List<FileType> = listOf()
+                    override val allowedDocumentTypes: List<FileType> = listOf()
+
+                    override fun isMimeTypeAllowed(mimeType: String): AttachmentType? = null
+
+                    override fun isExtensionAllowed(extension: String): AttachmentType? = null
+                },
                 contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()

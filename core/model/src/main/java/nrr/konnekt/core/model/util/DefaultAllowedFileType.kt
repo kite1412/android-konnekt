@@ -2,7 +2,7 @@ package nrr.konnekt.core.model.util
 
 import nrr.konnekt.core.model.AttachmentType
 
-object AllowedFileType {
+object DefaultAllowedFileType {
     val imageTypes = listOf(
         FileType("image/jpeg", "jpg"),
         FileType("image/jpeg", "jpeg"),

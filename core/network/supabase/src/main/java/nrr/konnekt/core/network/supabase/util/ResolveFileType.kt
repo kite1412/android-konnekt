@@ -1,9 +1,9 @@
 package nrr.konnekt.core.network.supabase.util
 
-import nrr.konnekt.core.model.util.AllowedFileType
+import nrr.konnekt.core.model.util.DefaultAllowedFileType
 
 internal fun resolveFileType(fileExtension: String) =
-    AllowedFileType.isExtensionAllowed(fileExtension)
+    DefaultAllowedFileType.isExtensionAllowed(fileExtension)
         ?.toString()
         ?.lowercase()
         ?: throw IllegalArgumentException("Invalid file extension: $fileExtension")

@@ -3,10 +3,10 @@ package nrr.konnekt.core.network.supabase.util
 import io.github.jan.supabase.storage.BucketApi
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
-import nrr.konnekt.core.model.util.AllowedFileType.audioTypes
-import nrr.konnekt.core.model.util.AllowedFileType.documentTypes
-import nrr.konnekt.core.model.util.AllowedFileType.imageTypes
-import nrr.konnekt.core.model.util.AllowedFileType.videoTypes
+import nrr.konnekt.core.model.util.DefaultAllowedFileType.audioTypes
+import nrr.konnekt.core.model.util.DefaultAllowedFileType.documentTypes
+import nrr.konnekt.core.model.util.DefaultAllowedFileType.imageTypes
+import nrr.konnekt.core.model.util.DefaultAllowedFileType.videoTypes
 import nrr.konnekt.core.network.supabase.supabaseClient
 
 internal enum class Bucket(
