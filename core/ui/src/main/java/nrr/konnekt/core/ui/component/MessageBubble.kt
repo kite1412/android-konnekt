@@ -1,9 +1,11 @@
 package nrr.konnekt.core.ui.component
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -22,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -66,7 +71,9 @@ import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
+import nrr.konnekt.core.ui.util.getAudioDurationMs
 import nrr.konnekt.core.ui.util.getVideoThumbnail
+import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.toTimeString
 import kotlin.time.Instant
@@ -342,12 +349,15 @@ private fun ColumnScope.MessageAttachments(
                         maxHeight = maxWidth
                     )
                     .clip(shape)
-                    .border(
+            ) {
+                val applyBorder: Modifier.() -> Modifier = {
+                    border(
                         width = 1.dp,
                         color = borderColor,
                         shape = shape
                     )
-            ) {
+                }
+
                 when (a.type) {
                     AttachmentType.IMAGE -> with(attachmentContent!!.asImageBitmap()) {
                         val ratio = this.width.toFloat() / this.height
@@ -356,74 +366,52 @@ private fun ColumnScope.MessageAttachments(
                             bitmap = this,
                             contentDescription = null,
                             modifier = Modifier
-                                .aspectRatio(ratio),
+                                .aspectRatio(ratio)
+                                .applyBorder(),
                             contentScale = ContentScale.FillWidth
                         )
                     }
                     AttachmentType.VIDEO -> attachmentContent?.let { c ->
-                        val thumbnail = LocalContext.current.getVideoThumbnail(bytes = c)
+                        val thumbnail = LocalContext.current.getVideoThumbnail(c)
 
                         thumbnail?.let { t ->
-                            Box {
-                                Image(
-                                    bitmap = t,
-                                    contentDescription = "video",
-                                    modifier = Modifier
-                                        .blur(4.dp),
-                                    contentScale = ContentScale.FillWidth
-                                )
-                                Icon(
-                                    painter = painterResource(KonnektIcon.play),
-                                    contentDescription = "play video",
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(Color.Black.copy(alpha = 0.6f))
-                                        .padding(16.dp)
-                                        .align(Alignment.Center),
-                                    tint = Color.White
-                                )
-                            }
+                            VideoPreview(
+                                thumbnail = t,
+                                modifier = Modifier.applyBorder()
+                            )
                         }
                     }
-                    AttachmentType.AUDIO -> Unit
+                    AttachmentType.AUDIO -> attachmentContent?.let { c ->
+                        val duration = LocalContext.current.getAudioDurationMs(c)
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            AudioAttachment(
+                                play = false,
+                                onPlayChange = {},
+                                progressMs = 0L,
+                                durationMs = duration,
+                                background = borderColor,
+                                modifier = Modifier.clip(shape)
+                            )
+                            AttachmentsInfo(
+                                attachmentsSize = attachments.size,
+                                messageSentAt = messageSentAt
+                            )
+                        }
+                    }
                     AttachmentType.DOCUMENT -> Unit
                 }
-                CompositionLocalProvider(
-                    LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
-                        fontWeight = FontWeight.Bold
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset((-8).dp, (-8).dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(0.7f))
-                            .padding(
-                                horizontal = 8.dp,
-                                vertical = 4.dp
-                            )
-                            .height(IntrinsicSize.Max),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (attachments.size > 1) {
-                            Text(
-                                text = "${attachments.size - 1}+",
-                                style = LocalTextStyle.current.copy(
-                                    fontStyle = FontStyle.Italic
-                                )
-                            )
-                            VerticalDivider(
-                                color = LocalContentColor.current,
-                                modifier = Modifier.fillMaxHeight()
-                            )
-                        }
-                        Text(
-                            text = messageSentAt.toTimeString()
-                        )
-                    }
-                }
+                if (a.type == AttachmentType.VIDEO || a.type == AttachmentType.IMAGE) AttachmentsInfo(
+                    attachmentsSize = attachments.size,
+                    messageSentAt = messageSentAt,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset((-8).dp, (-8).dp)
+                        .height(IntrinsicSize.Max)
+                )
             }
         } else {
             var loadingText by remember { mutableStateOf("Loading media") }
@@ -448,6 +436,139 @@ private fun ColumnScope.MessageAttachments(
                     fontStyle = FontStyle.Italic
                 )
             )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentsInfo(
+    attachmentsSize: Int,
+    messageSentAt: Instant,
+    modifier: Modifier = Modifier
+) {
+    CompositionLocalProvider(
+        LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+            fontWeight = FontWeight.Bold
+        )
+    ) {
+        Row(
+            modifier = modifier
+                .clip(CircleShape)
+                .background(Color.Black.copy(0.7f))
+                .padding(
+                    horizontal = 8.dp,
+                    vertical = 4.dp
+                ),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (attachmentsSize > 1) {
+                Text(
+                    text = "${attachmentsSize - 1}+",
+                    style = LocalTextStyle.current.copy(
+                        fontStyle = FontStyle.Italic
+                    )
+                )
+                VerticalDivider(
+                    color = LocalContentColor.current,
+                    modifier = Modifier.fillMaxHeight()
+                )
+            }
+            Text(
+                text = messageSentAt.toTimeString()
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoPreview(
+    thumbnail: ImageBitmap,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier) {
+        Image(
+            bitmap = thumbnail,
+            contentDescription = "video",
+            modifier = Modifier
+                .blur(4.dp),
+            contentScale = ContentScale.FillWidth
+        )
+        Icon(
+            painter = painterResource(KonnektIcon.play),
+            contentDescription = "play video",
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.6f))
+                .padding(16.dp)
+                .align(Alignment.Center),
+            tint = Color.White
+        )
+    }
+}
+
+@Composable
+private fun AudioAttachment(
+    play: Boolean,
+    onPlayChange: (Boolean) -> Unit,
+    progressMs: Long,
+    durationMs: Long,
+    background: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .background(background)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AnimatedContent(play) {
+            Icon(
+                painter = painterResource(
+                    if (it) KonnektIcon.pause
+                    else KonnektIcon.play
+                ),
+                contentDescription = "play audio",
+                modifier = Modifier
+                    .size(32.dp)
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) {
+                        onPlayChange(!it)
+                    },
+                tint = Color.Black
+            )
+        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .width(IntrinsicSize.Max)
+                // arbitrary value
+                .padding(top = 4.dp)
+        ) {
+            LinearProgressIndicator(
+                progress = { progressMs.toFloat() / durationMs },
+                modifier = Modifier.height(8.dp),
+                color = Color.White,
+                trackColor = Color.White.copy(alpha = 0.5f)
+            ) {}
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
+                        color = Color.Black
+                    )
+                ) {
+                    Text(msToString(progressMs))
+                    Text(msToString(durationMs))
+                }
+            }
         }
     }
 }
