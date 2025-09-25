@@ -34,7 +34,9 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -391,7 +393,17 @@ private fun ColumnScope.MessageAttachments(
                             horizontalAlignment = Alignment.End
                         ) {
                             val context = LocalContext.current
+                            val mediaKey by MediaPlayerManager.currentKey.collectAsState()
                             var playAudio by rememberSaveable { mutableStateOf(false) }
+                            var progressMs by rememberSaveable { mutableLongStateOf(0L) }
+
+                            LaunchedEffect(mediaKey) {
+                                if (mediaKey == a.path) {
+                                    MediaPlayerManager.currentPositionMs.collect {
+                                        progressMs = it
+                                    }
+                                }
+                            }
 
                             AudioAttachment(
                                 play = playAudio,
@@ -401,12 +413,13 @@ private fun ColumnScope.MessageAttachments(
                                         with(MediaPlayerManager) {
                                             if (play) resumeOrPlayMedia(
                                                 context = context,
-                                                mediaBytes = it
+                                                mediaBytes = it,
+                                                key = a.path
                                             ) else pause()
                                         }
                                     }
                                 },
-                                progressMs = 0L,
+                                progressMs = progressMs,
                                 durationMs = duration,
                                 background = borderColor,
                                 modifier = Modifier.clip(shape)
