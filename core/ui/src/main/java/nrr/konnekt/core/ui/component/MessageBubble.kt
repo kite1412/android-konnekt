@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +69,7 @@ import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
@@ -388,9 +390,22 @@ private fun ColumnScope.MessageAttachments(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalAlignment = Alignment.End
                         ) {
+                            val context = LocalContext.current
+                            var playAudio by rememberSaveable { mutableStateOf(false) }
+
                             AudioAttachment(
-                                play = false,
-                                onPlayChange = {},
+                                play = playAudio,
+                                onPlayChange = { play ->
+                                    attachmentContent?.let {
+                                        playAudio = play
+                                        with(MediaPlayerManager) {
+                                            if (play) resumeOrPlayMedia(
+                                                context = context,
+                                                mediaBytes = it
+                                            ) else pause()
+                                        }
+                                    }
+                                },
                                 progressMs = 0L,
                                 durationMs = duration,
                                 background = borderColor,
