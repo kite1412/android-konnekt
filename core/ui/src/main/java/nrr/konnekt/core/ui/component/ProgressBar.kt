@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,11 +42,18 @@ fun ProgressBar(
         BoxWithConstraints(
             modifier = modifier
         ) {
-            var progressDp by remember(progress) {
+            var progressDp by remember {
                 mutableStateOf(this.maxWidth * progress)
             }
+            var isDragged by remember { mutableStateOf(false) }
             val animatedProgress by animateDpAsState(progressDp)
 
+            LaunchedEffect(progress, isDragged) {
+                if (!isDragged) {
+                    progressDp = maxWidth * progress
+                        .coerceIn(0f, 1f)
+                }
+            }
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -57,7 +65,13 @@ fun ProgressBar(
                         detectDragGestures(
                             onDrag = { change, _ ->
                                 change.consume()
-                                onProgressChange(change.position.x / size.width)
+                                isDragged = true
+                                progressDp = maxWidth * (change.position.x / size.width)
+                                    .coerceIn(0f, 1f)
+                            },
+                            onDragEnd = {
+                                onProgressChange(progressDp.toPx() / size.width)
+                                isDragged = false
                             }
                         )
                     }

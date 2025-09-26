@@ -65,6 +65,7 @@ object MediaPlayerManager {
     fun seekTo(ms: Long) {
         if (player?.playbackState == Player.STATE_READY) {
             player?.seekTo(ms)
+            _currentPositionMs.value = ms
         }
     }
 
