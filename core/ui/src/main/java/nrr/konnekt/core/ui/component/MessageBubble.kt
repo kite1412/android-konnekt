@@ -22,10 +22,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +74,7 @@ import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.ProgressBarDefaults
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.getAudioDurationMs
 import nrr.konnekt.core.ui.util.getVideoThumbnail
@@ -420,6 +421,7 @@ private fun ColumnScope.MessageAttachments(
                                     }
                                 },
                                 progressMs = progressMs,
+                                onProgressChange = MediaPlayerManager::seekTo,
                                 durationMs = duration,
                                 background = borderColor,
                                 modifier = Modifier.clip(shape)
@@ -540,6 +542,7 @@ private fun AudioAttachment(
     play: Boolean,
     onPlayChange: (Boolean) -> Unit,
     progressMs: Long,
+    onProgressChange: (Long) -> Unit,
     durationMs: Long,
     background: Color,
     modifier: Modifier = Modifier
@@ -572,16 +575,23 @@ private fun AudioAttachment(
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
-                .width(IntrinsicSize.Max)
                 // arbitrary value
                 .padding(top = 4.dp)
         ) {
-            LinearProgressIndicator(
-                progress = { progressMs.toFloat() / durationMs },
-                modifier = Modifier.height(8.dp),
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.5f)
-            ) {}
+            ProgressBar(
+                progress = progressMs.toFloat() / durationMs,
+                onProgressChange = {
+                    onProgressChange((durationMs * it).toLong())
+                },
+                modifier = Modifier
+                    .widthIn(max = 400.dp)
+                    .fillMaxWidth(),
+                style = ProgressBarDefaults.defaultStyle(
+                    color = Color.White,
+                    thumbColor = Color.White,
+                    thumbSize = 8.dp
+                )
+            )
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
