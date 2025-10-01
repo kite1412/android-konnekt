@@ -4,10 +4,14 @@ plugins {
 
 android {
     namespace = "nrr.konnekt.feature.conversation"
+}
 
-    kotlin {
-        sourceSets.all {
-            languageSettings.optIn("kotlin.time.ExperimentalTime")
-        }
+kotlin {
+    sourceSets.all {
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
     }
+}
+
+dependencies {
+    implementation(projects.core.player)
 }

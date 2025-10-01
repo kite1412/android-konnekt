@@ -33,6 +33,7 @@ import nrr.konnekt.core.domain.usecase.UpdateReadMarkerUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.LOG_TAG
@@ -173,4 +174,6 @@ class ConversationViewModel @Inject constructor(
             sendingMessage = false
         }
     }
+
+    internal fun stopPlayingMedia() = MediaPlayerManager.clearPlayback()
 }

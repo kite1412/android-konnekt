@@ -69,6 +69,12 @@ object MediaPlayerManager {
         }
     }
 
+    fun clearPlayback() {
+        player?.stop()
+        cleanupTempFile()
+        restartStates()
+    }
+
     internal fun release() {
         player?.release()
         cleanupTempFile()
