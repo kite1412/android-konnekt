@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,6 +30,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -52,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +72,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -84,6 +91,7 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.FileUploadConstraints
+import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -92,6 +100,7 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.FileType
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
@@ -99,13 +108,17 @@ import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
+import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.conversation.exception.UriConversionException
+import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ActiveStatus
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.ConversationItem
 import nrr.konnekt.feature.conversation.util.LOG_TAG
+import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.attachments
@@ -131,6 +144,7 @@ internal fun ConversationScreen(
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
     val messageInput = viewModel.messageInput
+    val messageAction by viewModel.messageAction.collectAsStateWithLifecycle()
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -160,6 +174,7 @@ internal fun ConversationScreen(
                     messages = m,
                     readMarkers = readMarkers,
                     messageInput = messageInput,
+                    messageAction = messageAction,
                     onMessageInputChange = { viewModel.messageInput = it },
                     composerAttachments = viewModel.composerAttachments,
                     onAddComposerAttachment = {
@@ -176,6 +191,8 @@ internal fun ConversationScreen(
                     totalActiveParticipants = totalActiveParticipants ?: 0,
                     onNavigateBack = navigateBack,
                     onChatClick = navigateToChatDetail,
+                    onMessageAction = viewModel::setMessageAction,
+                    onDismissMessageAction = viewModel::dismissMessageAction,
                     fileUploadConstraints = viewModel.fileUploadConstraints,
                     contentPadding = contentPadding,
                     modifier = modifier,
@@ -194,6 +211,7 @@ private fun ConversationScreen(
     messages: List<Message>,
     readMarkers: List<UserReadMarker>?,
     messageInput: String,
+    messageAction: MessageAction?,
     onMessageInputChange: (String) -> Unit,
     composerAttachments: List<ComposerAttachment>,
     onAddComposerAttachment: (ComposerAttachment) -> Unit,
@@ -203,6 +221,8 @@ private fun ConversationScreen(
     sendingMessage: Boolean,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
+    onMessageAction: (MessageAction) -> Unit,
+    onDismissMessageAction: () -> Unit,
     fileUploadConstraints: FileUploadConstraints,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -288,6 +308,7 @@ private fun ConversationScreen(
                             .firstOrNull { it.userId == currentUser.id }
                             ?.isDeleted == true
                     },
+                    onMessageAction = onMessageAction,
                     modifier = Modifier.weight(1f),
                     state = state
                 )
@@ -315,6 +336,15 @@ private fun ConversationScreen(
                     )
                 }
         }
+    }
+    when (messageAction?.type) {
+        ActionType.FOCUS_ATTACHMENTS -> MessageAttachmentsFocused(
+            sender = messageAction.message.sender,
+            sentAt = messageAction.message.sentAt,
+            attachments = messageAction.message.attachments,
+            onBackClick = { onDismissMessageAction() }
+        )
+        else -> Unit
     }
 }
 
@@ -478,6 +508,7 @@ private fun Conversation(
     chatType: ChatType,
     sentByCurrentUser: (Message) -> Boolean,
     deletedByCurrentUser: (Message) -> Boolean,
+    onMessageAction: (MessageAction) -> Unit,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState()
 ) {
@@ -543,6 +574,7 @@ private fun Conversation(
                                 sentByCurrentUser = sentByCurrentUser(item.message),
                                 wasSentByPreviousUser = item.wasSentByPreviousUser,
                                 deletedByCurrentUser = deletedByCurrentUser(item.message),
+                                onAction = onMessageAction,
                                 applyTopPadding = applyTopPadding,
                                 seenContent = if (myLatestReadMessage == item) {
                                     {
@@ -559,6 +591,7 @@ private fun Conversation(
                                 sentByCurrentUser = sentByCurrentUser,
                                 wasSentByPreviousUser = item.wasSentByPreviousUser,
                                 deletedByCurrentUser = deletedByCurrentUser(item.message),
+                                onAction = onMessageAction,
                                 applyTopPadding = applyTopPadding,
                                 sender = if (sentByCurrentUser) null else item.message.sender,
                                 seenContent = if (myLatestReadMessage == item) {
@@ -590,6 +623,7 @@ private fun AdjustedMessageBubble(
     sentByCurrentUser: Boolean,
     wasSentByPreviousUser: Boolean,
     deletedByCurrentUser: Boolean,
+    onAction: (MessageAction) -> Unit,
     modifier: Modifier = Modifier,
     sender: User? = null,
     applyTopPadding: Boolean = true,
@@ -602,6 +636,27 @@ private fun AdjustedMessageBubble(
                 top = if (applyTopPadding)
                     if (!wasSentByPreviousUser) 16.dp else 4.dp
                 else 0.dp
+            )
+            .combinedClickable(
+                onClick = {
+                    val visualAttachments = message.attachments.filter {
+                        it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO
+                    }
+                    if (visualAttachments.isNotEmpty()) onAction(
+                        MessageAction(
+                            message = message.copy(
+                                attachments = visualAttachments,
+                                sender = message.sender.copy(
+                                    username = if (sentByCurrentUser) "Me" else message.sender.username
+                                )
+                            ),
+                            type = ActionType.FOCUS_ATTACHMENTS
+                        )
+                    )
+                },
+                onLongClick = {
+                    onAction(MessageAction(message, ActionType.SHOW_ACTIONS))
+                }
             ),
         contentAlignment = if (sentByCurrentUser) Alignment.CenterEnd
             else Alignment.CenterStart
@@ -685,13 +740,13 @@ private fun MessageComposer(
                         clickEnabled: Boolean = true,
                         onClick: () -> Unit
                     ) = Modifier
-                            .size(iconSize)
-                            .clickable(
-                                enabled = clickEnabled,
-                                indication = null,
-                                interactionSource = null,
-                                onClick = onClick
-                            )
+                        .size(iconSize)
+                        .clickable(
+                            enabled = clickEnabled,
+                            indication = null,
+                            interactionSource = null,
+                            onClick = onClick
+                        )
 
                     Box {
                         Icon(
@@ -979,6 +1034,100 @@ private fun DateHeader(
 }
 
 @Composable
+private fun MessageAttachmentsFocused(
+    sender: User,
+    sentAt: Instant,
+    attachments: List<Attachment>,
+    onBackClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val pagerState = rememberPagerState {
+        attachments.size
+    }
+
+    Dialog(
+        onDismissRequest = onBackClick,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .clickable(
+                    indication = null,
+                    interactionSource = null
+                ) {
+                    onBackClick()
+                }
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                val a = attachments[it]
+
+                when (a.type) {
+                    AttachmentType.IMAGE -> {
+                        val content by rememberResolvedFile(a.path)
+
+                        content?.let { bytes ->
+                            Image(
+                                bitmap = bytes.asImageBitmap(),
+                                contentDescription = null
+                            )
+                        }
+                    }
+                    else -> Unit
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                IconButton(
+                    onClick = onBackClick) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.chevronLeft),
+                        contentDescription = "back",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = sender.username,
+                        style = LocalTextStyle.current.copy(
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Text(
+                        text = sentAt.toDateAndTimeString(),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontStyle = FontStyle.Italic
+                        )
+                    )
+                }
+            }
+            Text(
+                text = "${pagerState.currentPage + 1}/${attachments.size}",
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black)
+                    .padding(
+                        vertical = 8.dp,
+                        horizontal = 16.dp
+                    )
+            )
+        }
+    }
+}
+
+@Composable
 private fun FloatingDateHeader(
     date: String,
     modifier: Modifier = Modifier
@@ -1032,6 +1181,7 @@ private fun ConversationScreenPreview(
                 messages = conversation.messages,
                 readMarkers = null,
                 messageInput = messageInput,
+                messageAction = null,
                 onMessageInputChange = { v -> messageInput = v },
                 composerAttachments = emptyList(),
                 onAddComposerAttachment = {},
@@ -1042,7 +1192,9 @@ private fun ConversationScreenPreview(
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 onChatClick = {},
-                fileUploadConstraints = object: FileUploadConstraints {
+                onMessageAction = {},
+                onDismissMessageAction = {},
+                fileUploadConstraints = object : FileUploadConstraints {
                     override val maxSizeBytes: Long = 0L
                     override val allowedImageTypes: List<FileType> = listOf()
                     override val allowedVideoTypes: List<FileType> = listOf()

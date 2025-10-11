@@ -37,6 +37,7 @@ import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.LOG_TAG
+import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.toFileUpload
@@ -96,6 +97,9 @@ class ConversationViewModel @Inject constructor(
 
     private val _peerLastActive = MutableStateFlow<Instant?>(null)
     internal val peerLastActive = _peerLastActive.asStateFlow()
+
+    private val _messageAction = MutableStateFlow<MessageAction?>(null)
+    internal val messageAction = _messageAction.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -176,4 +180,12 @@ class ConversationViewModel @Inject constructor(
     }
 
     internal fun stopPlayingMedia() = MediaPlayerManager.clearPlayback()
+
+    internal fun setMessageAction(messageAction: MessageAction) {
+        _messageAction.value = messageAction
+    }
+
+    internal fun dismissMessageAction() {
+        _messageAction.value = null
+    }
 }

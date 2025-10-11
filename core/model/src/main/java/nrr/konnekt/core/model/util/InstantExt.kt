@@ -25,6 +25,11 @@ fun Instant.info() =
         )
     }
 
+fun Instant.toDateAndTimeString() =
+    with(currentLocalDateTime()) {
+        "${date.toStringFormatted()} ${time.toStringIgnoreSecond()}"
+    }
+
 fun LocalTime.toStringIgnoreSecond() =
     "%02d:%02d".format(hour, minute)
 
