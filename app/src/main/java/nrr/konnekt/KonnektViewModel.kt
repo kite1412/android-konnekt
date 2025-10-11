@@ -3,6 +3,7 @@ package nrr.konnekt
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.FileResolver
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.util.AuthStatus
+import nrr.konnekt.core.ui.util.ValueManager
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +25,8 @@ internal class KonnektViewModel @Inject constructor(
     internal val userPresenceManager: UserPresenceManager
 ) : ViewModel() {
     var showSplashOnce by mutableStateOf(false)
+    var statusBarColor by mutableStateOf(Color.Transparent)
+        private set
 
     val isSignedIn = combine(
         flow = authentication.authStatus,
@@ -39,4 +43,16 @@ internal class KonnektViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
         )
+
+    val statusBarColorUpdater = object : ValueManager<Color> {
+        override fun update(newValue: Color): Color {
+            statusBarColor = newValue
+            return statusBarColor
+        }
+
+        override fun reset(): Color {
+            statusBarColor = Color.Transparent
+            return statusBarColor
+        }
+    }
 }

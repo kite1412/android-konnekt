@@ -25,9 +25,9 @@ fun Instant.info() =
         )
     }
 
-fun Instant.toDateAndTimeString() =
+fun Instant.toDateAndTimeString(dateFormat: String = "dd MMM yy") =
     with(currentLocalDateTime()) {
-        "${date.toStringFormatted()} ${time.toStringIgnoreSecond()}"
+        "${date.toStringFormatted(dateFormat)} ${time.toStringIgnoreSecond()}"
     }
 
 fun LocalTime.toStringIgnoreSecond() =

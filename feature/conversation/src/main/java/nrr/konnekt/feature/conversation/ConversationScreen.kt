@@ -106,6 +106,7 @@ import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
+import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
@@ -642,17 +643,19 @@ private fun AdjustedMessageBubble(
                     val visualAttachments = message.attachments.filter {
                         it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO
                     }
-                    if (visualAttachments.isNotEmpty()) onAction(
-                        MessageAction(
-                            message = message.copy(
-                                attachments = visualAttachments,
-                                sender = message.sender.copy(
-                                    username = if (sentByCurrentUser) "Me" else message.sender.username
-                                )
-                            ),
-                            type = ActionType.FOCUS_ATTACHMENTS
+                    if (visualAttachments.isNotEmpty()) {
+                        onAction(
+                            MessageAction(
+                                message = message.copy(
+                                    attachments = visualAttachments,
+                                    sender = message.sender.copy(
+                                        username = if (sentByCurrentUser) "Me" else message.sender.username
+                                    )
+                                ),
+                                type = ActionType.FOCUS_ATTACHMENTS
+                            )
                         )
-                    )
+                    }
                 },
                 onLongClick = {
                     onAction(MessageAction(message, ActionType.SHOW_ACTIONS))
@@ -1044,26 +1047,31 @@ private fun MessageAttachmentsFocused(
     val pagerState = rememberPagerState {
         attachments.size
     }
+    val statusBarColorManager = LocalStatusBarColorManager.current
+    val headerColor = Color.Black.copy(alpha = 0.5f)
 
+    DisposableEffect(Unit) {
+        statusBarColorManager.update(headerColor)
+
+        onDispose {
+            statusBarColorManager.reset()
+        }
+    }
     Dialog(
         onDismissRequest = onBackClick,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false
         )
     ) {
         Box(
-            modifier = modifier
-                .fillMaxSize()
-                .clickable(
-                    indication = null,
-                    interactionSource = null
-                ) {
-                    onBackClick()
-                }
+            modifier = modifier.fillMaxSize()
         ) {
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.align(Alignment.Center)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .align(Alignment.Center)
             ) {
                 val a = attachments[it]
 
@@ -1074,7 +1082,8 @@ private fun MessageAttachmentsFocused(
                         content?.let { bytes ->
                             Image(
                                 bitmap = bytes.asImageBitmap(),
-                                contentDescription = null
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
@@ -1084,6 +1093,7 @@ private fun MessageAttachmentsFocused(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(headerColor)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -1104,7 +1114,7 @@ private fun MessageAttachmentsFocused(
                         )
                     )
                     Text(
-                        text = sentAt.toDateAndTimeString(),
+                        text = sentAt.toDateAndTimeString("dd MMMM yyyy"),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontStyle = FontStyle.Italic
                         )
