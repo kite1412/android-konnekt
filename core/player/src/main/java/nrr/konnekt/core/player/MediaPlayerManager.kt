@@ -1,15 +1,18 @@
 package nrr.konnekt.core.player
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import java.io.File
 
 object MediaPlayerManager {
@@ -77,6 +80,7 @@ object MediaPlayerManager {
 
     internal fun release() {
         player?.release()
+        player = null
         cleanupTempFile()
     }
 
@@ -102,14 +106,7 @@ object MediaPlayerManager {
     }
 
     private class PlayerListener : Player.Listener {
-        private val handler = Handler(Looper.getMainLooper())
-        private val updatePositionRunnable = object : Runnable {
-            override fun run() {
-                val currentPositionMs = player?.currentPosition ?: 0L
-                _currentPositionMs.value = currentPositionMs
-                handler.postDelayed(this, 1000L)
-            }
-        }
+        private var positionJob: Job? = null
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
@@ -125,8 +122,18 @@ object MediaPlayerManager {
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             super.onIsPlayingChanged(isPlaying)
-            if (isPlaying) handler.post(updatePositionRunnable)
-            else handler.removeCallbacks(updatePositionRunnable)
+            if (isPlaying) {
+                positionJob = CoroutineScope(Dispatchers.Main).launch {
+                    while (true) {
+                        val currentPositionMs = player?.currentPosition ?: 0L
+                        _currentPositionMs.value = currentPositionMs
+                        delay(250)
+                    }
+                }
+            } else {
+                positionJob?.cancel()
+                positionJob = null
+            }
         }
     }
 }
