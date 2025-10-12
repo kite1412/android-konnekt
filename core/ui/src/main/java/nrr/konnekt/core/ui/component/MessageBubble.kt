@@ -395,14 +395,20 @@ private fun ColumnScope.MessageAttachments(
                         ) {
                             val context = LocalContext.current
                             val mediaKey by MediaPlayerManager.currentKey.collectAsState()
-                            var playAudio by rememberSaveable { mutableStateOf(false) }
+                            var playAudio by rememberSaveable {
+                                mutableStateOf(false)
+                            }
+                            val key = a.path
                             var progressMs by rememberSaveable { mutableLongStateOf(0L) }
 
                             LaunchedEffect(mediaKey) {
-                                if (mediaKey == a.path) {
+                                if (mediaKey == key) {
                                     MediaPlayerManager.currentPositionMs.collect {
                                         progressMs = it
                                     }
+                                } else {
+                                    playAudio = false
+                                    progressMs = 0L
                                 }
                             }
 
@@ -415,7 +421,7 @@ private fun ColumnScope.MessageAttachments(
                                             if (play) resumeOrPlayMedia(
                                                 context = context,
                                                 mediaBytes = it,
-                                                key = a.path
+                                                key = key
                                             ) else pause()
                                         }
                                     }
@@ -424,7 +430,8 @@ private fun ColumnScope.MessageAttachments(
                                 onProgressChange = MediaPlayerManager::seekTo,
                                 durationMs = duration,
                                 background = borderColor,
-                                modifier = Modifier.clip(shape)
+                                modifier = Modifier.clip(shape),
+                                seekEnabled = key == mediaKey
                             )
                             AttachmentsInfo(
                                 attachmentsSize = attachments.size,
@@ -483,6 +490,7 @@ private fun AttachmentsInfo(
     ) {
         Row(
             modifier = modifier
+                .height(IntrinsicSize.Max)
                 .clip(CircleShape)
                 .background(Color.Black.copy(0.7f))
                 .padding(
@@ -545,7 +553,8 @@ private fun AudioAttachment(
     onProgressChange: (Long) -> Unit,
     durationMs: Long,
     background: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    seekEnabled: Boolean = true
 ) {
     Row(
         modifier = modifier
@@ -586,6 +595,7 @@ private fun AudioAttachment(
                 modifier = Modifier
                     .widthIn(max = 400.dp)
                     .fillMaxWidth(),
+                enabled = seekEnabled,
                 style = ProgressBarDefaults.defaultStyle(
                     color = Color.White,
                     thumbColor = Color.White,

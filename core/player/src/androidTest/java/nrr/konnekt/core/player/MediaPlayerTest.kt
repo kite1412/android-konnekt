@@ -25,12 +25,12 @@ class MediaPlayerTest {
         inputStream.close()
 
         runOnMainThread {
-            MediaPlayerManager.resumeOrPlayMedia(context, mediaBytes)
+            MediaPlayerManager.resumeOrPlayMedia(context, mediaBytes, "key")
         }
         assert(MediaPlayerManager.playbackState.value == PlaybackState.PLAYING)
         Thread.sleep(5000)
         runOnMainThread {
-            MediaPlayerManager.resumeOrPlayMedia(context, mediaBytes)
+            MediaPlayerManager.resumeOrPlayMedia(context, mediaBytes, "key")
         }
     }
 

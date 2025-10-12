@@ -36,6 +36,7 @@ fun ProgressBar(
     progress: Float,
     onProgressChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     style: ProgressBarStyle = ProgressBarDefaults.defaultStyle()
 ) {
     with(style) {
@@ -61,8 +62,8 @@ fun ProgressBar(
                     .height(4.dp)
                     .clip(shape)
                     .background(trackColor)
-                    .pointerInput(null) {
-                        detectDragGestures(
+                    .pointerInput(enabled) {
+                        if (enabled) detectDragGestures(
                             onDrag = { change, _ ->
                                 change.consume()
                                 isDragged = true

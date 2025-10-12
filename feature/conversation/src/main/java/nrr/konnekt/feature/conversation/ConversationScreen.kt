@@ -659,7 +659,9 @@ private fun AdjustedMessageBubble(
                 },
                 onLongClick = {
                     onAction(MessageAction(message, ActionType.SHOW_ACTIONS))
-                }
+                },
+                indication = null,
+                interactionSource = null
             ),
         contentAlignment = if (sentByCurrentUser) Alignment.CenterEnd
             else Alignment.CenterStart
@@ -1166,6 +1168,13 @@ private fun FloatingDateHeader(
             )
         )
     }
+}
+
+@Composable
+private fun VideoPlayer(
+    modifier: Modifier = Modifier
+) {
+
 }
 
 @Preview

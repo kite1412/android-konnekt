@@ -28,12 +28,12 @@ object MediaPlayerManager {
     fun resumeOrPlayMedia(
         context: Context,
         mediaBytes: ByteArray,
-        playerView: PlayerView? = null,
-        key: String? = null
+        key: String,
+        playerView: PlayerView? = null
     ) {
         if (player == null) create(context)
         when (_playbackState.value) {
-            PlaybackState.PAUSED -> {
+            PlaybackState.PAUSED if _currentKey.value == key -> {
                 player?.play()
             }
             else -> {
