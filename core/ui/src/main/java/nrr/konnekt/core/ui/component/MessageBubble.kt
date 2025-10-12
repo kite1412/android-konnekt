@@ -107,6 +107,8 @@ fun MessageBubble(
     maxContentWidth: Dp = 350.dp,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
+    val verticalSpace = 4.dp
+
     Column(
         modifier = modifier
             .then(
@@ -115,7 +117,7 @@ fun MessageBubble(
                     else Modifier.padding(start = tailSize)
                 else Modifier
             ),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(verticalSpace),
         horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
     ) {
         if (message.attachments.isNotEmpty())
@@ -124,6 +126,7 @@ fun MessageBubble(
                 messageSentAt = message.sentAt,
                 maxWidth = maxContentWidth,
                 borderColor = shadowedBoxStyle.borderColor,
+                parentVerticalSpace = verticalSpace,
                 modifier = Modifier
                     .padding(
                         start = if (!sentByCurrentUser && withTail) tailSize else 0.dp,
@@ -333,137 +336,143 @@ private fun Tail(
 }
 
 @Composable
-private fun ColumnScope.MessageAttachments(
+private fun MessageAttachments(
     attachments: List<Attachment>,
     messageSentAt: Instant,
     maxWidth: Dp,
     borderColor: Color,
+    parentVerticalSpace: Dp,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(8.dp)
-    val (visualAttachments, nonVisualAttachments) = remember(attachments) {
-        attachments.partition { it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO }
-    }
-    val maxWidth = min(maxWidth, 400.dp)
-
-    nonVisualAttachments.forEachIndexed { i, a ->
-        when (a.type) {
-            AttachmentType.AUDIO -> {
-                val attachmentContent by rememberResolvedFile(a.path)
-
-                attachmentContent?.let { c ->
-                    val duration = LocalContext.current.getAudioDurationMs(c)
-
-                    val context = LocalContext.current
-                    val mediaKey by MediaPlayerManager.currentKey.collectAsState()
-                    var playAudio by rememberSaveable {
-                        mutableStateOf(false)
-                    }
-                    val key = a.path
-                    var progressMs by rememberSaveable { mutableLongStateOf(0L) }
-
-                    LaunchedEffect(mediaKey) {
-                        if (mediaKey == key) {
-                            MediaPlayerManager.currentPositionMs.collect {
-                                progressMs = it
-                            }
-                        } else {
-                            playAudio = false
-                            progressMs = 0L
-                        }
-                    }
-
-                    AudioAttachment(
-                        play = playAudio,
-                        onPlayChange = { play ->
-                            attachmentContent?.let {
-                                playAudio = play
-                                with(MediaPlayerManager) {
-                                    if (play) resumeOrPlayMedia(
-                                        context = context,
-                                        mediaBytes = it,
-                                        key = key
-                                    ) else pause()
-                                }
-                            }
-                        },
-                        progressMs = progressMs,
-                        onProgressChange = MediaPlayerManager::seekTo,
-                        durationMs = duration,
-                        background = borderColor,
-                        modifier = Modifier
-                            .sizeIn(maxWidth = maxWidth)
-                            .clip(shape),
-                        seekEnabled = key == mediaKey
-                    )
-                    if (i == nonVisualAttachments.lastIndex && visualAttachments.isEmpty()) AttachmentsInfo(
-                        attachmentsSize = 0,
-                        messageSentAt = messageSentAt
-                    )
-                } ?: LoadingText()
-            }
-            AttachmentType.DOCUMENT -> Unit
-            else -> Unit
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(parentVerticalSpace)
+    ) {
+        val shape = RoundedCornerShape(8.dp)
+        val (visualAttachments, nonVisualAttachments) = remember(attachments) {
+            attachments.partition { it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO }
         }
-    }
+        val maxWidth = min(maxWidth, 400.dp)
 
-    visualAttachments.firstOrNull()?.let { a ->
-        val attachmentContent by rememberResolvedFile(a.path)
+        nonVisualAttachments.forEachIndexed { i, a ->
+            when (a.type) {
+                AttachmentType.AUDIO -> {
+                    val attachmentContent by rememberResolvedFile(a.path)
 
-        attachmentContent?.let { c ->
-            Box(
-                modifier = modifier
-                    .sizeIn(
-                        maxWidth = maxWidth,
-                        maxHeight = maxWidth
-                    )
-                    .clip(shape)
-            ) {
-                val applyBorder: Modifier.() -> Modifier = remember(borderColor, shape) {
-                    {
-                        border(
-                            width = 1.dp,
-                            color = borderColor,
-                            shape = shape
-                        )
-                    }
-                }
+                    attachmentContent?.let { c ->
+                        val duration = LocalContext.current.getAudioDurationMs(c)
 
-                when (a.type) {
-                    AttachmentType.IMAGE -> with(attachmentContent!!.asImageBitmap()) {
-                        val ratio = this.width.toFloat() / this.height
+                        val context = LocalContext.current
+                        val mediaKey by MediaPlayerManager.currentKey.collectAsState()
+                        var playAudio by rememberSaveable {
+                            mutableStateOf(false)
+                        }
+                        val key = a.path
+                        var progressMs by rememberSaveable { mutableLongStateOf(0L) }
 
-                        Image(
-                            bitmap = this,
-                            contentDescription = null,
+                        LaunchedEffect(mediaKey) {
+                            if (mediaKey == key) {
+                                MediaPlayerManager.currentPositionMs.collect {
+                                    progressMs = it
+                                }
+                            } else {
+                                playAudio = false
+                                progressMs = 0L
+                            }
+                        }
+
+                        AudioAttachment(
+                            play = playAudio,
+                            onPlayChange = { play ->
+                                attachmentContent?.let {
+                                    playAudio = play
+                                    with(MediaPlayerManager) {
+                                        if (play) resumeOrPlayMedia(
+                                            context = context,
+                                            mediaBytes = it,
+                                            key = key
+                                        ) else pause()
+                                    }
+                                }
+                            },
+                            progressMs = progressMs,
+                            onProgressChange = MediaPlayerManager::seekTo,
+                            durationMs = duration,
+                            background = borderColor,
                             modifier = Modifier
-                                .aspectRatio(ratio)
-                                .applyBorder(),
-                            contentScale = ContentScale.FillWidth
+                                .sizeIn(maxWidth = maxWidth)
+                                .clip(shape),
+                            seekEnabled = key == mediaKey
                         )
-                    }
-                    AttachmentType.VIDEO -> attachmentContent?.let { c ->
-                        val thumbnail = LocalContext.current.getVideoThumbnail(c)
+                        if (i == nonVisualAttachments.lastIndex && visualAttachments.isEmpty()) AttachmentsInfo(
+                            attachmentsSize = 0,
+                            messageSentAt = messageSentAt
+                        )
+                    } ?: LoadingText()
+                }
+                AttachmentType.DOCUMENT -> Unit
+                else -> Unit
+            }
+        }
 
-                        thumbnail?.let { t ->
-                            VideoPreview(
-                                thumbnail = t,
-                                modifier = Modifier.applyBorder()
+        visualAttachments.firstOrNull()?.let { a ->
+            val attachmentContent by rememberResolvedFile(a.path)
+
+            attachmentContent?.let { c ->
+                Box(
+                    modifier = Modifier
+                        .sizeIn(
+                            maxWidth = maxWidth,
+                            maxHeight = maxWidth
+                        )
+                        .clip(shape)
+                ) {
+                    val applyBorder: Modifier.() -> Modifier = remember(borderColor, shape) {
+                        {
+                            border(
+                                width = 1.dp,
+                                color = borderColor,
+                                shape = shape
                             )
                         }
                     }
-                    else -> Unit
+
+                    when (a.type) {
+                        AttachmentType.IMAGE -> with(attachmentContent!!.asImageBitmap()) {
+                            val ratio = this.width.toFloat() / this.height
+
+                            Image(
+                                bitmap = this,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .aspectRatio(ratio)
+                                    .applyBorder(),
+                                contentScale = ContentScale.FillWidth
+                            )
+                        }
+                        AttachmentType.VIDEO -> attachmentContent?.let { c ->
+                            val thumbnail = LocalContext.current.getVideoThumbnail(c)
+
+                            thumbnail?.let { t ->
+                                VideoPreview(
+                                    thumbnail = t,
+                                    modifier = Modifier.applyBorder()
+                                )
+                            }
+                        }
+                        else -> Unit
+                    }
+                    AttachmentsInfo(
+                        attachmentsSize = visualAttachments.size,
+                        messageSentAt = messageSentAt,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset((-8).dp, (-8).dp)
+                            .height(IntrinsicSize.Max)
+                    )
                 }
-                AttachmentsInfo(
-                    attachmentsSize = visualAttachments.size,
-                    messageSentAt = messageSentAt,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset((-8).dp, (-8).dp)
-                        .height(IntrinsicSize.Max)
-                )
-            }
-        } ?: LoadingText()
+            } ?: LoadingText()
+        }
     }
 }
 
