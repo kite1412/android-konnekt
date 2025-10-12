@@ -340,13 +340,77 @@ private fun ColumnScope.MessageAttachments(
     borderColor: Color,
     modifier: Modifier = Modifier
 ) {
-    attachments.firstOrNull()?.let { a ->
+    val shape = RoundedCornerShape(8.dp)
+    val (visualAttachments, nonVisualAttachments) = remember(attachments) {
+        attachments.partition { it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO }
+    }
+    val maxWidth = min(maxWidth, 400.dp)
+
+    nonVisualAttachments.forEachIndexed { i, a ->
+        when (a.type) {
+            AttachmentType.AUDIO -> {
+                val attachmentContent by rememberResolvedFile(a.path)
+
+                attachmentContent?.let { c ->
+                    val duration = LocalContext.current.getAudioDurationMs(c)
+
+                    val context = LocalContext.current
+                    val mediaKey by MediaPlayerManager.currentKey.collectAsState()
+                    var playAudio by rememberSaveable {
+                        mutableStateOf(false)
+                    }
+                    val key = a.path
+                    var progressMs by rememberSaveable { mutableLongStateOf(0L) }
+
+                    LaunchedEffect(mediaKey) {
+                        if (mediaKey == key) {
+                            MediaPlayerManager.currentPositionMs.collect {
+                                progressMs = it
+                            }
+                        } else {
+                            playAudio = false
+                            progressMs = 0L
+                        }
+                    }
+
+                    AudioAttachment(
+                        play = playAudio,
+                        onPlayChange = { play ->
+                            attachmentContent?.let {
+                                playAudio = play
+                                with(MediaPlayerManager) {
+                                    if (play) resumeOrPlayMedia(
+                                        context = context,
+                                        mediaBytes = it,
+                                        key = key
+                                    ) else pause()
+                                }
+                            }
+                        },
+                        progressMs = progressMs,
+                        onProgressChange = MediaPlayerManager::seekTo,
+                        durationMs = duration,
+                        background = borderColor,
+                        modifier = Modifier
+                            .sizeIn(maxWidth = maxWidth)
+                            .clip(shape),
+                        seekEnabled = key == mediaKey
+                    )
+                    if (i == nonVisualAttachments.lastIndex && visualAttachments.isEmpty()) AttachmentsInfo(
+                        attachmentsSize = 0,
+                        messageSentAt = messageSentAt
+                    )
+                } ?: LoadingText()
+            }
+            AttachmentType.DOCUMENT -> Unit
+            else -> Unit
+        }
+    }
+
+    visualAttachments.firstOrNull()?.let { a ->
         val attachmentContent by rememberResolvedFile(a.path)
-        val maxWidth = min(maxWidth, 400.dp)
 
-        if (attachmentContent != null) {
-            val shape = RoundedCornerShape(8.dp)
-
+        attachmentContent?.let { c ->
             Box(
                 modifier = modifier
                     .sizeIn(
@@ -355,12 +419,14 @@ private fun ColumnScope.MessageAttachments(
                     )
                     .clip(shape)
             ) {
-                val applyBorder: Modifier.() -> Modifier = {
-                    border(
-                        width = 1.dp,
-                        color = borderColor,
-                        shape = shape
-                    )
+                val applyBorder: Modifier.() -> Modifier = remember(borderColor, shape) {
+                    {
+                        border(
+                            width = 1.dp,
+                            color = borderColor,
+                            shape = shape
+                        )
+                    }
                 }
 
                 when (a.type) {
@@ -386,63 +452,10 @@ private fun ColumnScope.MessageAttachments(
                             )
                         }
                     }
-                    AttachmentType.AUDIO -> attachmentContent?.let { c ->
-                        val duration = LocalContext.current.getAudioDurationMs(c)
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            val context = LocalContext.current
-                            val mediaKey by MediaPlayerManager.currentKey.collectAsState()
-                            var playAudio by rememberSaveable {
-                                mutableStateOf(false)
-                            }
-                            val key = a.path
-                            var progressMs by rememberSaveable { mutableLongStateOf(0L) }
-
-                            LaunchedEffect(mediaKey) {
-                                if (mediaKey == key) {
-                                    MediaPlayerManager.currentPositionMs.collect {
-                                        progressMs = it
-                                    }
-                                } else {
-                                    playAudio = false
-                                    progressMs = 0L
-                                }
-                            }
-
-                            AudioAttachment(
-                                play = playAudio,
-                                onPlayChange = { play ->
-                                    attachmentContent?.let {
-                                        playAudio = play
-                                        with(MediaPlayerManager) {
-                                            if (play) resumeOrPlayMedia(
-                                                context = context,
-                                                mediaBytes = it,
-                                                key = key
-                                            ) else pause()
-                                        }
-                                    }
-                                },
-                                progressMs = progressMs,
-                                onProgressChange = MediaPlayerManager::seekTo,
-                                durationMs = duration,
-                                background = borderColor,
-                                modifier = Modifier.clip(shape),
-                                seekEnabled = key == mediaKey
-                            )
-                            AttachmentsInfo(
-                                attachmentsSize = attachments.size,
-                                messageSentAt = messageSentAt
-                            )
-                        }
-                    }
-                    AttachmentType.DOCUMENT -> Unit
+                    else -> Unit
                 }
-                if (a.type == AttachmentType.VIDEO || a.type == AttachmentType.IMAGE) AttachmentsInfo(
-                    attachmentsSize = attachments.size,
+                AttachmentsInfo(
+                    attachmentsSize = visualAttachments.size,
                     messageSentAt = messageSentAt,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -450,31 +463,34 @@ private fun ColumnScope.MessageAttachments(
                         .height(IntrinsicSize.Max)
                 )
             }
-        } else {
-            var loadingText by remember { mutableStateOf("Loading media") }
+        } ?: LoadingText()
+    }
+}
 
-            LaunchedEffect(Unit) {
-                var i = 0
-                while (true) {
-                    if (i in 0..2) {
-                        loadingText += "."
-                        i++
-                    } else {
-                        loadingText = "Loading media"
-                        i = 0
-                    }
-                    delay(500)
-                }
+@Composable
+private fun ColumnScope.LoadingText(modifier: Modifier = Modifier) {
+    var loadingText by remember { mutableStateOf("Loading media") }
+
+    LaunchedEffect(Unit) {
+        var i = 0
+        while (true) {
+            if (i in 0..2) {
+                loadingText += "."
+                i++
+            } else {
+                loadingText = "Loading media"
+                i = 0
             }
-            Text(
-                text = loadingText,
-                modifier = modifier.align(Alignment.Start),
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontStyle = FontStyle.Italic
-                )
-            )
+            delay(500)
         }
     }
+    Text(
+        text = loadingText,
+        modifier = modifier.align(Alignment.Start),
+        style = MaterialTheme.typography.bodySmall.copy(
+            fontStyle = FontStyle.Italic
+        )
+    )
 }
 
 @Composable
