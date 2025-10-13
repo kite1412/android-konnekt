@@ -1,6 +1,8 @@
 package nrr.konnekt.feature.conversation
 
 import android.util.Log
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -72,6 +74,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
@@ -80,6 +83,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
@@ -101,6 +105,7 @@ import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.FileType
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
+import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
@@ -1049,6 +1054,11 @@ private fun MessageAttachmentsFocused(
     val pagerState = rememberPagerState {
         attachments.size
     }
+    val currentPage by remember {
+        derivedStateOf {
+            pagerState.settledPage
+        }
+    }
     val statusBarColorManager = LocalStatusBarColorManager.current
     val headerColor = Color.Black.copy(alpha = 0.5f)
 
@@ -1057,7 +1067,14 @@ private fun MessageAttachmentsFocused(
 
         onDispose {
             statusBarColorManager.reset()
+            MediaPlayerManager.clearPlayback()
         }
+    }
+    // manually clear playback
+    LaunchedEffect(currentPage) {
+        Log.d(LOG_TAG, "cur page: $currentPage")
+        if (attachments[currentPage].type != AttachmentType.VIDEO)
+            MediaPlayerManager.clearPlayback()
     }
     Dialog(
         onDismissRequest = onBackClick,
@@ -1086,6 +1103,29 @@ private fun MessageAttachmentsFocused(
                                 bitmap = bytes.asImageBitmap(),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    AttachmentType.VIDEO -> {
+                        val content by rememberResolvedFile(a.path)
+                        val context = LocalContext.current
+
+                        content?.let { bytes ->
+                            val key = a.path
+
+                            VideoPlayer(
+                                onViewUpdate = { view ->
+                                    if (currentPage == it) {
+                                        Log.d(LOG_TAG, "video player updated: $key")
+                                        MediaPlayerManager.clearPlayback()
+                                        MediaPlayerManager.resumeOrPlayMedia(
+                                            context = context,
+                                            mediaBytes = bytes,
+                                            key = key,
+                                            playerView = view
+                                        )
+                                    }
+                                }
                             )
                         }
                     }
@@ -1172,9 +1212,22 @@ private fun FloatingDateHeader(
 
 @Composable
 private fun VideoPlayer(
+    onViewUpdate: (PlayerView) -> Unit,
     modifier: Modifier = Modifier
 ) {
-
+    AndroidView(
+        factory = {
+            PlayerView(it).apply {
+                useController = true
+                layoutParams = FrameLayout.LayoutParams(
+                    /*width=*/ViewGroup.LayoutParams.MATCH_PARENT,
+                    /*height=*/ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+            }
+        },
+        modifier = modifier,
+        update = onViewUpdate
+    )
 }
 
 @Preview

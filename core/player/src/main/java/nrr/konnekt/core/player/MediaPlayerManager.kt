@@ -16,7 +16,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 object MediaPlayerManager {
-    private var player: ExoPlayer? = null
+    var player: ExoPlayer? = null
+        private set
     private var currentTempFile: File? = null
 
     private val _playbackState = MutableStateFlow(PlaybackState.IDLE)

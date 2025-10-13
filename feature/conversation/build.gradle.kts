@@ -14,4 +14,7 @@ kotlin {
 
 dependencies {
     implementation(projects.core.player)
+
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
 }
