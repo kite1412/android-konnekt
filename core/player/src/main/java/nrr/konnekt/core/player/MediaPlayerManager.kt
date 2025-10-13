@@ -1,6 +1,7 @@
 package nrr.konnekt.core.player
 
 import android.content.Context
+import android.util.Log
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -13,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.player.util.LOG_TAG
 import java.io.File
 
 object MediaPlayerManager {
@@ -42,6 +44,7 @@ object MediaPlayerManager {
             }
             else -> {
                 cleanupTempFile()
+                restartStates()
                 _currentKey.value = key
                 player?.let { player ->
                     val tempFile = File.createTempFile("media_", ".tmp", context.cacheDir)
@@ -83,6 +86,7 @@ object MediaPlayerManager {
         player?.release()
         player = null
         cleanupTempFile()
+        restartStates()
     }
 
     private fun create(context: Context) {
@@ -96,7 +100,6 @@ object MediaPlayerManager {
         currentTempFile?.let {
             if (it.exists()) it.delete()
             currentTempFile = null
-            restartStates()
         }
     }
 
@@ -111,6 +114,13 @@ object MediaPlayerManager {
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
+            _playbackState.value = when (playbackState) {
+                Player.STATE_IDLE -> PlaybackState.IDLE
+                Player.STATE_READY -> PlaybackState.PLAYING
+                Player.STATE_ENDED -> PlaybackState.ENDED
+                else -> PlaybackState.IDLE
+            }
+            Log.d(LOG_TAG, "Playback state: ${_playbackState.value}")
             if (playbackState == Player.STATE_ENDED) {
                 cleanupTempFile()
             }
@@ -119,6 +129,7 @@ object MediaPlayerManager {
         override fun onPlayerError(error: PlaybackException) {
             super.onPlayerError(error)
             cleanupTempFile()
+            restartStates()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {

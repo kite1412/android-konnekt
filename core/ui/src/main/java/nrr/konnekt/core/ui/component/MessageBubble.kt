@@ -372,6 +372,7 @@ private fun MessageAttachments(
 
                         LaunchedEffect(mediaKey) {
                             if (mediaKey == key) {
+                                playAudio = true
                                 MediaPlayerManager.currentPositionMs.collect {
                                     progressMs = it
                                 }

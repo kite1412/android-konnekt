@@ -37,7 +37,8 @@ fun ProgressBar(
     onProgressChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    style: ProgressBarStyle = ProgressBarDefaults.defaultStyle()
+    style: ProgressBarStyle = ProgressBarDefaults.defaultStyle(),
+    onDraggingChange: ((Boolean) -> Unit)? = null
 ) {
     with(style) {
         BoxWithConstraints(
@@ -46,11 +47,11 @@ fun ProgressBar(
             var progressDp by remember {
                 mutableStateOf(this.maxWidth * progress)
             }
-            var isDragged by remember { mutableStateOf(false) }
+            var isDragging by remember { mutableStateOf(false) }
             val animatedProgress by animateDpAsState(progressDp)
 
-            LaunchedEffect(progress, isDragged) {
-                if (!isDragged) {
+            LaunchedEffect(progress, isDragging) {
+                if (!isDragging) {
                     progressDp = maxWidth * progress
                         .coerceIn(0f, 1f)
                 }
@@ -66,13 +67,15 @@ fun ProgressBar(
                         if (enabled) detectDragGestures(
                             onDrag = { change, _ ->
                                 change.consume()
-                                isDragged = true
+                                isDragging = true
+                                onDraggingChange?.invoke(true)
                                 progressDp = maxWidth * (change.position.x / size.width)
                                     .coerceIn(0f, 1f)
                             },
                             onDragEnd = {
                                 onProgressChange(progressDp.toPx() / size.width)
-                                isDragged = false
+                                isDragging = false
+                                onDraggingChange?.invoke(false)
                             }
                         )
                     }

@@ -7,6 +7,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -48,10 +52,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,16 +113,20 @@ import nrr.konnekt.core.model.util.FileType
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.player.MediaPlayerManager
+import nrr.konnekt.core.player.PlaybackState
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
+import nrr.konnekt.core.ui.component.ProgressBar
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.getAudioDurationMs
+import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.conversation.exception.UriConversionException
@@ -1108,24 +1119,13 @@ private fun MessageAttachmentsFocused(
                     }
                     AttachmentType.VIDEO -> {
                         val content by rememberResolvedFile(a.path)
-                        val context = LocalContext.current
 
                         content?.let { bytes ->
-                            val key = a.path
-
                             VideoPlayer(
-                                onViewUpdate = { view ->
-                                    if (currentPage == it) {
-                                        Log.d(LOG_TAG, "video player updated: $key")
-                                        MediaPlayerManager.clearPlayback()
-                                        MediaPlayerManager.resumeOrPlayMedia(
-                                            context = context,
-                                            mediaBytes = bytes,
-                                            key = key,
-                                            playerView = view
-                                        )
-                                    }
-                                }
+                                bytes = bytes,
+                                key = a.path,
+                                controllerBackground = headerColor,
+                                autoPlay = currentPage == it
                             )
                         }
                     }
@@ -1212,22 +1212,183 @@ private fun FloatingDateHeader(
 
 @Composable
 private fun VideoPlayer(
-    onViewUpdate: (PlayerView) -> Unit,
-    modifier: Modifier = Modifier
+    bytes: ByteArray,
+    key: String,
+    controllerBackground: Color,
+    modifier: Modifier = Modifier,
+    autoPlay: Boolean = true
 ) {
-    AndroidView(
-        factory = {
-            PlayerView(it).apply {
-                useController = true
-                layoutParams = FrameLayout.LayoutParams(
-                    /*width=*/ViewGroup.LayoutParams.MATCH_PARENT,
-                    /*height=*/ViewGroup.LayoutParams.MATCH_PARENT,
+    var showController by remember {
+        mutableStateOf(true)
+    }
+    var progressMs by rememberSaveable {
+        mutableLongStateOf(0L)
+    }
+    var isProgressDragging by remember {
+        mutableStateOf(false)
+    }
+    val playbackState by MediaPlayerManager.playbackState.collectAsState()
+    var isPlaying by rememberSaveable {
+        mutableStateOf(true)
+    }
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        MediaPlayerManager.currentPositionMs.collect {
+            progressMs = it
+        }
+    }
+    LaunchedEffect(showController, isProgressDragging, isPlaying) {
+        if (
+            showController &&
+            !isProgressDragging &&
+            isPlaying &&
+            playbackState != PlaybackState.ENDED
+        ) {
+            delay(2000)
+            showController = false
+        }
+    }
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            MediaPlayerManager.resumeOrPlayMedia(
+                context = context,
+                mediaBytes = bytes,
+                key = key
+            )
+            showController = false
+        } else {
+            if (playbackState != PlaybackState.ENDED) {
+                showController = true
+                MediaPlayerManager.pause()
+            }
+        }
+    }
+    LaunchedEffect(playbackState) {
+        if (playbackState == PlaybackState.ENDED) {
+            isPlaying = false
+            showController = true
+        }
+    }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                indication = null,
+                interactionSource = null
+            ) {
+                showController = !showController
+            }
+    ) {
+        AndroidView(
+            factory = {
+                PlayerView(it).apply {
+                    useController = false
+                    layoutParams = FrameLayout.LayoutParams(
+                        /*width=*/ViewGroup.LayoutParams.MATCH_PARENT,
+                        /*height=*/ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                }
+            },
+            modifier = Modifier.align(Alignment.Center),
+            update = { view ->
+                if (autoPlay) {
+                    Log.d(LOG_TAG, "video player updated: $key")
+                    MediaPlayerManager.clearPlayback()
+                    MediaPlayerManager.resumeOrPlayMedia(
+                        context = context,
+                        mediaBytes = bytes,
+                        key = key,
+                        playerView = view
+                    )
+                }
+            }
+        )
+        AnimatedVisibility(
+            visible = showController,
+            modifier = Modifier.align(Alignment.Center),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            AnimatedContent(
+                targetState = isPlaying
+            ) {
+                Icon(
+                    painter = painterResource(
+                        id = if (it) KonnektIcon.pause else KonnektIcon.play
+                    ),
+                    contentDescription = if (it) "pause" else "play",
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.8f))
+                        .clickable {
+                            isPlaying = !isPlaying
+                        }
+                        .padding(16.dp)
                 )
             }
-        },
-        modifier = modifier,
-        update = onViewUpdate
-    )
+        }
+        AnimatedVisibility(
+            visible = showController,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it }
+        ) {
+            VideoPlayerController(
+                progressMs = progressMs,
+                onProgressChange = MediaPlayerManager::seekTo,
+                durationMs = context.getAudioDurationMs(bytes),
+                background = controllerBackground,
+                onDraggingChange = { isProgressDragging = it }
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoPlayerController(
+    progressMs: Long,
+    durationMs: Long,
+    onProgressChange: (Long) -> Unit,
+    background: Color,
+    onDraggingChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(background)
+                .padding(16.dp)
+            ,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ProgressBar(
+                progress = progressMs.toFloat() / durationMs,
+                onProgressChange = {
+                    onProgressChange((it * durationMs).toLong())
+                },
+                modifier = Modifier.fillMaxWidth(),
+                onDraggingChange = onDraggingChange
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompositionLocalProvider(
+                    LocalTextStyle provides MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                ) {
+                    Text(msToString(progressMs))
+                    Text(msToString(durationMs))
+                }
+            }
+        }
+    }
 }
 
 @Preview
