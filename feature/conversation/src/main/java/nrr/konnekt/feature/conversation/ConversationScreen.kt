@@ -119,6 +119,7 @@ import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
+import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
 import nrr.konnekt.core.ui.previewparameter.Conversation
@@ -1071,13 +1072,16 @@ private fun MessageAttachmentsFocused(
         }
     }
     val statusBarColorManager = LocalStatusBarColorManager.current
-    val headerColor = Color.Black.copy(alpha = 0.5f)
+    val navigationBarColorManager = LocalNavigationBarColorManager.current
+    val systemBarsColor = Color.Black.copy(alpha = 0.5f)
 
     DisposableEffect(Unit) {
-        statusBarColorManager.update(headerColor)
+        statusBarColorManager.update(systemBarsColor)
+        navigationBarColorManager.update(systemBarsColor)
 
         onDispose {
             statusBarColorManager.reset()
+            navigationBarColorManager.reset()
             MediaPlayerManager.clearPlayback()
         }
     }
@@ -1124,7 +1128,7 @@ private fun MessageAttachmentsFocused(
                             VideoPlayer(
                                 bytes = bytes,
                                 key = a.path,
-                                controllerBackground = headerColor,
+                                controllerBackground = systemBarsColor,
                                 autoPlay = currentPage == it
                             )
                         }
@@ -1135,7 +1139,7 @@ private fun MessageAttachmentsFocused(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(headerColor)
+                    .background(systemBarsColor)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)

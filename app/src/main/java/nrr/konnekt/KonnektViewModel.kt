@@ -27,6 +27,8 @@ internal class KonnektViewModel @Inject constructor(
     var showSplashOnce by mutableStateOf(false)
     var statusBarColor by mutableStateOf(Color.Transparent)
         private set
+    var navigationBarColor by mutableStateOf(Color.Transparent)
+        private set
 
     val isSignedIn = combine(
         flow = authentication.authStatus,
@@ -44,7 +46,7 @@ internal class KonnektViewModel @Inject constructor(
             initialValue = null
         )
 
-    val statusBarColorUpdater = object : ValueManager<Color> {
+    val statusBarColorManager = object : ValueManager<Color> {
         override fun update(newValue: Color): Color {
             statusBarColor = newValue
             return statusBarColor
@@ -53,6 +55,18 @@ internal class KonnektViewModel @Inject constructor(
         override fun reset(): Color {
             statusBarColor = Color.Transparent
             return statusBarColor
+        }
+    }
+
+    val navigationBarColorManager = object : ValueManager<Color> {
+        override fun update(newValue: Color): Color {
+            navigationBarColor = newValue
+            return navigationBarColor
+        }
+
+        override fun reset(): Color {
+            navigationBarColor = Color.Transparent
+            return navigationBarColor
         }
     }
 }
