@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS message_statuses (
 CREATE TABLE IF NOT EXISTS attachments (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     message_id uuid NOT NULL REFERENCES messages(id),
+    chat_id uuid NOT NULL REFERENCES chats(id),
     type attachment_type NOT NULL,
     path varchar(200) NOT NULL,
     name text,
