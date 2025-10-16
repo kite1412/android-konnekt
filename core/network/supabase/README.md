@@ -1,11 +1,13 @@
 # Setup
 
+# Project
 ## \<root folder\>/local.properties file
 ```properties
 SUPABASE_URL=<your Supabase project url>
 SUPABASE_KEY=<your publishable key>
 ```
 
+# Supabase
 ## Tables
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -128,8 +130,17 @@ CREATE TABLE IF NOT EXISTS events (
 );
 ```
 
+## Enable realtime for tables:
+- users
+- chat_settings
+- chat_permission_settings
+- chat_participants
+- messages
+- user_read_markers
+- message_statuses
+
 ## RPCs
-#### send_message_with_attachments
+### send_message_with_attachments
 ```sql
 create or replace function send_message_with_attachments(
   _chat_id uuid,
@@ -174,3 +185,9 @@ begin
 end;
 $$;
 ```
+
+## Buckets
+- icon
+- chat-media
+
+***note:*** you need to configure policies for each bucket
