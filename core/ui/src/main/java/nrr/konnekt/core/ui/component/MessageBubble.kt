@@ -125,7 +125,7 @@ fun MessageBubble(
                 attachments = message.attachments,
                 messageSentAt = message.sentAt,
                 maxWidth = maxContentWidth,
-                borderColor = shadowedBoxStyle.borderColor,
+                highlightColor = shadowedBoxStyle.borderColor,
                 parentVerticalSpace = verticalSpace,
                 modifier = Modifier
                     .padding(
@@ -185,7 +185,7 @@ fun MessageBubble(
         }
         if (sentByCurrentUser && seenContent != null) Box(
             modifier = Modifier
-                .align(Alignment.Start)
+                .align(Alignment.End)
                 .padding(start = tailSize / 2)
         ) {
             seenContent(MessageSeenIndicator)
@@ -340,12 +340,13 @@ private fun MessageAttachments(
     attachments: List<Attachment>,
     messageSentAt: Instant,
     maxWidth: Dp,
-    borderColor: Color,
+    highlightColor: Color,
     parentVerticalSpace: Dp,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
+        horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(parentVerticalSpace)
     ) {
         val shape = RoundedCornerShape(8.dp)
@@ -399,7 +400,7 @@ private fun MessageAttachments(
                             progressMs = progressMs,
                             onProgressChange = MediaPlayerManager::seekTo,
                             durationMs = duration,
-                            background = borderColor,
+                            background = highlightColor,
                             modifier = Modifier
                                 .sizeIn(maxWidth = maxWidth)
                                 .clip(shape),
@@ -411,7 +412,21 @@ private fun MessageAttachments(
                         )
                     } ?: LoadingText()
                 }
-                AttachmentType.DOCUMENT -> Unit
+                AttachmentType.DOCUMENT -> {
+                    DocumentAttachment(
+                        fileName = a.name ?: "File",
+                        messageSentAt = messageSentAt,
+                        highlightColor = highlightColor,
+                        modifier = Modifier
+                            .sizeIn(maxWidth = maxWidth)
+                            .border(
+                                width = 1.dp,
+                                color = highlightColor,
+                                shape = shape
+                            )
+                            .clip(shape)
+                    )
+                }
                 else -> Unit
             }
         }
@@ -428,11 +443,11 @@ private fun MessageAttachments(
                         )
                         .clip(shape)
                 ) {
-                    val applyBorder: Modifier.() -> Modifier = remember(borderColor, shape) {
+                    val applyBorder: Modifier.() -> Modifier = remember(highlightColor, shape) {
                         {
                             border(
                                 width = 1.dp,
-                                color = borderColor,
+                                color = highlightColor,
                                 shape = shape
                             )
                         }
@@ -631,8 +646,7 @@ private fun AudioAttachment(
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             ) {
                 CompositionLocalProvider(
                     LocalTextStyle provides MaterialTheme.typography.bodySmall.copy(
@@ -642,6 +656,50 @@ private fun AudioAttachment(
                     Text(msToString(progressMs))
                     Text(msToString(durationMs))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DocumentAttachment(
+    // expect to include extension
+    fileName: String,
+    messageSentAt: Instant,
+    highlightColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val ext = fileName.substringAfterLast('.')
+    val fileMaxLength = 30
+
+    Row(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        CompositionLocalProvider(
+            LocalContentColor provides highlightColor
+        ) {
+            Icon(
+                painter = painterResource(KonnektIcon.file),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp)
+            )
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = if (fileName.length - ext.length <= fileMaxLength) fileName
+                    else "${fileName.take(fileMaxLength - ext.length - 3)}...$ext"
+                )
+                Text(
+                    text = messageSentAt.toTimeString(),
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                )
             }
         }
     }

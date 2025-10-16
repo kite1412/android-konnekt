@@ -139,7 +139,7 @@ object MediaPlayerManager {
                     while (true) {
                         val currentPositionMs = player?.currentPosition ?: 0L
                         _currentPositionMs.value = currentPositionMs
-                        delay(250)
+                        delay(100L)
                     }
                 }
             } else {

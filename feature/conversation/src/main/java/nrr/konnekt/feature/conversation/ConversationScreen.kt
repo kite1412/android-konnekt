@@ -2,7 +2,6 @@ package nrr.konnekt.feature.conversation
 
 import android.util.Log
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -1073,11 +1072,11 @@ private fun MessageAttachmentsFocused(
     }
     val statusBarColorManager = LocalStatusBarColorManager.current
     val navigationBarColorManager = LocalNavigationBarColorManager.current
-    val systemBarsColor = Color.Black.copy(alpha = 0.5f)
+    val systemBarColor = Color.Black.copy(alpha = 0.5f)
 
     DisposableEffect(Unit) {
-        statusBarColorManager.update(systemBarsColor)
-        navigationBarColorManager.update(systemBarsColor)
+        statusBarColorManager.update(systemBarColor)
+        navigationBarColorManager.update(systemBarColor)
 
         onDispose {
             statusBarColorManager.reset()
@@ -1128,7 +1127,7 @@ private fun MessageAttachmentsFocused(
                             VideoPlayer(
                                 bytes = bytes,
                                 key = a.path,
-                                controllerBackground = systemBarsColor,
+                                controllerBackground = systemBarColor,
                                 autoPlay = currentPage == it
                             )
                         }
@@ -1139,7 +1138,7 @@ private fun MessageAttachmentsFocused(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(systemBarsColor)
+                    .background(systemBarColor)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -1288,7 +1287,7 @@ private fun VideoPlayer(
             factory = {
                 PlayerView(it).apply {
                     useController = false
-                    layoutParams = FrameLayout.LayoutParams(
+                    layoutParams = ViewGroup.LayoutParams(
                         /*width=*/ViewGroup.LayoutParams.MATCH_PARENT,
                         /*height=*/ViewGroup.LayoutParams.WRAP_CONTENT
                     )
