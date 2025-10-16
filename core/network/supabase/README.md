@@ -8,6 +8,8 @@ SUPABASE_KEY=<your publishable key>
 
 ## Tables
 ```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Enums
 DO $$ BEGIN
     CREATE TYPE chat_type AS ENUM ('personal', 'group', 'chat_room');
@@ -29,7 +31,7 @@ END $$;
 
 -- Tables
 CREATE TABLE IF NOT EXISTS users (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     username varchar(30) NOT NULL,
     email varchar(100) NOT NULL,
     bio varchar(100),
@@ -43,7 +45,7 @@ CREATE TABLE IF NOT EXISTS user_statuses (
 );
 
 CREATE TABLE IF NOT EXISTS chats (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     type chat_type NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -64,8 +66,8 @@ CREATE TABLE IF NOT EXISTS chat_permission_settings (
 );
 
 CREATE TABLE IF NOT EXISTS chat_participants (
-    chat_id uuid NOT NULL REFERENCES chat_settings(chat_id),
-    user_id uuid REFERENCES users(id),
+    chat_id uuid NOT NULL REFERENCES chats(id),
+    user_id uuid NOT NULL REFERENCES users(id),
     role participant_role NOT NULL,
     joined_at timestamptz NOT NULL DEFAULT now(),
     left_at timestamptz,
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS chat_participants (
 );
 
 CREATE TABLE IF NOT EXISTS messages (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     sender_id uuid NOT NULL REFERENCES users(id),
     chat_id uuid NOT NULL REFERENCES chats(id),
     content text NOT NULL,
@@ -97,7 +99,7 @@ CREATE TABLE IF NOT EXISTS message_statuses (
 );
 
 CREATE TABLE IF NOT EXISTS attachments (
-    id uuid PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     message_id uuid NOT NULL REFERENCES messages(id),
     type attachment_type NOT NULL,
     path varchar(200) NOT NULL,
@@ -114,8 +116,8 @@ CREATE TABLE IF NOT EXISTS attachment_metadata (
 );
 
 CREATE TABLE IF NOT EXISTS events (
-    id uuid PRIMARY KEY,
-    createdBy uuid REFERENCES users(id),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_by uuid REFERENCES users(id),
     chat_id uuid NOT NULL REFERENCES chats(id),
     title varchar(50) NOT NULL,
     description varchar(200),
