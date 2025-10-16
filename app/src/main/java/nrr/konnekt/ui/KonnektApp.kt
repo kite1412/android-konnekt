@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import nrr.konnekt.KonnektViewModel
 import nrr.konnekt.SplashScreen
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
 import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.SnackbarHostStateWrapper
@@ -47,7 +48,8 @@ internal fun KonnektApp(
     KonnektTheme {
         CompositionLocalProvider(
             LocalSnackbarHostState provides snackbarHostState,
-            LocalFileResolver provides viewModel.fileResolver
+            LocalFileResolver provides viewModel.fileResolver,
+            LocalFileNameFormatter provides viewModel.fileNameFormatter
         ) {
             AnimatedContent(
                 targetState = viewModel.showSplashOnce,

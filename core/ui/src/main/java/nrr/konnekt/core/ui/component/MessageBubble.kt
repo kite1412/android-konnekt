@@ -72,6 +72,7 @@ import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.player.MediaPlayerManager
+import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.ProgressBarDefaults
@@ -413,8 +414,10 @@ private fun MessageAttachments(
                     } ?: LoadingText()
                 }
                 AttachmentType.DOCUMENT -> {
+                    val formatter = LocalFileNameFormatter.current
+
                     DocumentAttachment(
-                        fileName = a.name ?: "File",
+                        fileName = a.name?.let(formatter::restore) ?: "File",
                         messageSentAt = messageSentAt,
                         highlightColor = highlightColor,
                         modifier = Modifier

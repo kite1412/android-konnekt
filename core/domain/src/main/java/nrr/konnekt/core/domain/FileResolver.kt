@@ -1,7 +1,7 @@
 package nrr.konnekt.core.domain
 
 /**
- * Resolves a file from a given storage path into raw bytes.
+ * Contract for resolving files from a given storage path into raw bytes.
  */
 fun interface FileResolver {
     /**

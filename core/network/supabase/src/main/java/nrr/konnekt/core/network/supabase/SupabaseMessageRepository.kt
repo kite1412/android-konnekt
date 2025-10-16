@@ -38,7 +38,8 @@ import javax.inject.Inject
 import kotlin.time.Instant
 
 internal class SupabaseMessageRepository @Inject constructor(
-    authentication: Authentication
+    authentication: Authentication,
+    private val fileNameFormatter: SupabaseFileNameFormatter
 ) : MessageRepository, SupabaseService(authentication) {
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     override fun observeMessages(chatId: String): Flow<List<Message>> =
@@ -177,12 +178,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                 try {
                     perform {
                         allowed.forEach {
-                            val rawName = "${now()}_${it.fileName.take(100)}"
-                            val fileName = "$rawName${
-                                if (rawName.substringAfterLast('.') != it.fileExtension)
-                                    ".${it.fileExtension}"
-                                else ""
-                            }"
+                            val fileName = fileNameFormatter.format(it.fileName)
                             val path = createPath(
                                 fileName = fileName,
                                 rootFolder = chatId
