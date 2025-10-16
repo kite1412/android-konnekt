@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS attachment_metadata (
 
 CREATE TABLE IF NOT EXISTS events (
     id uuid PRIMARY KEY,
-    createdBy uuid REFERENCES chat_participants(user_id),
+    createdBy uuid REFERENCES users(id),
     chat_id uuid NOT NULL REFERENCES chats(id),
     title varchar(50) NOT NULL,
     description varchar(200),
