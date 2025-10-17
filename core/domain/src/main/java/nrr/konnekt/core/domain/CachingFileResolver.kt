@@ -1,9 +1,9 @@
 package nrr.konnekt.core.domain
 
 class CachingFileResolver(
-     private val delegate: FileResolver
+    private val delegate: FileResolver,
+    private val cache: FileCache
 ) : FileResolver {
-    private val cache = mutableMapOf<String, ByteArray>()
 
     override suspend fun resolveFile(path: String): ByteArray? {
         if (path in cache) return cache[path]
