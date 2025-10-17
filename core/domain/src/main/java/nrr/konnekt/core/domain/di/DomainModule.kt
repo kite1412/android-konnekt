@@ -5,9 +5,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import nrr.konnekt.core.domain.CachingFileResolver
+import nrr.konnekt.core.domain.FileCache
 import nrr.konnekt.core.domain.FileResolver
 import nrr.konnekt.core.domain.annotation.DelegateResolver
-import nrr.konnekt.core.domain.util.MapFileCache
 import javax.inject.Singleton
 
 @Module
@@ -16,6 +16,7 @@ internal object DomainModule {
     @Provides
     @Singleton
     fun provideCachingFileResolver(
-        @DelegateResolver delegate: FileResolver
-    ): FileResolver = CachingFileResolver(delegate, MapFileCache())
+        @DelegateResolver delegate: FileResolver,
+        fileCache: FileCache
+    ): FileResolver = CachingFileResolver(delegate, fileCache)
 }
