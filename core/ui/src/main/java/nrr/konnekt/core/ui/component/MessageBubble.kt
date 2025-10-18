@@ -765,7 +765,7 @@ private fun DownloadProgress(
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box {
@@ -809,8 +809,15 @@ private fun DownloadProgress(
         }
 
         val fontSize = (iconSize.value * 0.6f).sp
+        val context = LocalContext.current
         Text(
-            text = "$fileSizeMB MB",
+            text = "${
+                String.format(
+                    locale = context.resources.configuration.locales[0],
+                    format = "%.2f",
+                    fileSizeMB
+                )
+            } MB",
             style = LocalTextStyle.current.copy(
                 color = animatedColor,
                 fontSize = fontSize,

@@ -196,7 +196,8 @@ internal class SupabaseMessageRepository @Inject constructor(
                                 SupabaseCreateAttachment(
                                     type = resolveFileType(it.fileExtension),
                                     path = path.fullPath,
-                                    name = fileName
+                                    name = fileName,
+                                    size = it.size
                                 )
                             )
                         }

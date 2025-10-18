@@ -10,7 +10,8 @@ package nrr.konnekt.core.domain.dto
 data class FileUpload(
     val fileName: String,
     val fileExtension: String,
-    val content: ByteArray
+    val content: ByteArray,
+    val size: Long = content.size.toLong()
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
