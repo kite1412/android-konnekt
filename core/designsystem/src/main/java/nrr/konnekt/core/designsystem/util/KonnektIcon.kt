@@ -31,4 +31,5 @@ object KonnektIcon {
     val audio = R.drawable.audio
     val play = R.drawable.play
     val pause = R.drawable.pause
+    val arrowDown = R.drawable.arrow_down
 }

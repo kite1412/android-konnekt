@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.FileCache
 import nrr.konnekt.core.domain.FileNameFormatter
 import nrr.konnekt.core.domain.FileResolver
 import nrr.konnekt.core.domain.UserPresenceManager
@@ -24,7 +25,8 @@ internal class KonnektViewModel @Inject constructor(
     authentication: Authentication,
     internal val fileResolver: FileResolver,
     internal val userPresenceManager: UserPresenceManager,
-    internal val fileNameFormatter: FileNameFormatter
+    internal val fileNameFormatter: FileNameFormatter,
+    internal val fileCache: FileCache
 ) : ViewModel() {
     var showSplashOnce by mutableStateOf(false)
     var statusBarColor by mutableStateOf(Color.Transparent)

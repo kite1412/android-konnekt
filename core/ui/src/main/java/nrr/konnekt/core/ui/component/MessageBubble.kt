@@ -1,6 +1,9 @@
 package nrr.konnekt.core.ui.component
 
+import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,6 +51,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -58,9 +63,11 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.theme.DarkGray
+import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.util.KonnektIcon
@@ -72,12 +79,14 @@ import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.player.MediaPlayerManager
+import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
 import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.ProgressBarDefaults
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.getAudioDurationMs
+import nrr.konnekt.core.ui.util.getSizeInMB
 import nrr.konnekt.core.ui.util.getVideoThumbnail
 import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
@@ -125,6 +134,7 @@ fun MessageBubble(
             MessageAttachments(
                 attachments = message.attachments,
                 messageSentAt = message.sentAt,
+                sentByCurrentUser = sentByCurrentUser,
                 maxWidth = maxContentWidth,
                 highlightColor = shadowedBoxStyle.borderColor,
                 parentVerticalSpace = verticalSpace,
@@ -340,6 +350,7 @@ private fun Tail(
 private fun MessageAttachments(
     attachments: List<Attachment>,
     messageSentAt: Instant,
+    sentByCurrentUser: Boolean,
     maxWidth: Dp,
     highlightColor: Color,
     parentVerticalSpace: Dp,
@@ -415,20 +426,47 @@ private fun MessageAttachments(
                 }
                 AttachmentType.DOCUMENT -> {
                     val formatter = LocalFileNameFormatter.current
+                    val fileCache = LocalFileCache.current
+                    var isCached by remember { mutableStateOf(true) }
 
-                    DocumentAttachment(
-                        fileName = a.name?.let(formatter::restore) ?: "File",
-                        messageSentAt = messageSentAt,
-                        highlightColor = highlightColor,
+                    LaunchedEffect(Unit) {
+                        isCached = a.path in fileCache
+                    }
+                    Row(
                         modifier = Modifier
-                            .sizeIn(maxWidth = maxWidth)
-                            .border(
-                                width = 1.dp,
-                                color = highlightColor,
-                                shape = shape
-                            )
-                            .clip(shape)
-                    )
+                            .clickable(
+                                interactionSource = null,
+                                indication = null
+                            ) {
+                                isCached = !isCached
+                            },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (sentByCurrentUser && !isCached) DownloadProgress(
+                            progress = 0.5f,
+                            isDownloading = true,
+                            fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0)
+                        )
+                        DocumentAttachment(
+                            fileName = a.name?.let(formatter::restore) ?: "File",
+                            messageSentAt = messageSentAt,
+                            highlightColor = highlightColor,
+                            modifier = Modifier
+                                .sizeIn(maxWidth = maxWidth)
+                                .border(
+                                    width = 1.dp,
+                                    color = highlightColor,
+                                    shape = shape
+                                )
+                                .clip(shape)
+                        )
+                        if (!sentByCurrentUser && !isCached) DownloadProgress(
+                            progress = 0f,
+                            isDownloading = false,
+                            fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0)
+                        )
+                    }
                 }
                 else -> Unit
             }
@@ -673,7 +711,7 @@ private fun DocumentAttachment(
     modifier: Modifier = Modifier
 ) {
     val ext = fileName.substringAfterLast('.')
-    val fileMaxLength = 30
+    val nameMaxLength = 30
 
     Row(
         modifier = modifier
@@ -687,15 +725,17 @@ private fun DocumentAttachment(
         ) {
             Icon(
                 painter = painterResource(KonnektIcon.file),
-                contentDescription = null,
-                modifier = Modifier.size(32.dp)
+                contentDescription = null
             )
             Column(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = if (fileName.length - ext.length <= fileMaxLength) fileName
-                    else "${fileName.take(fileMaxLength - ext.length - 3)}...$ext"
+                    text = if (fileName.length - ext.length <= nameMaxLength) fileName
+                    else "${fileName.take(nameMaxLength - ext.length - 3)}...$ext",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
                 Text(
                     text = messageSentAt.toTimeString(),
@@ -705,6 +745,79 @@ private fun DocumentAttachment(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun DownloadProgress(
+    @FloatRange(0.0, 1.0)
+    progress: Float,
+    isDownloading: Boolean,
+    fileSizeMB: Float,
+    modifier: Modifier = Modifier,
+    iconSize: Dp = 14.dp,
+    strokeWidth: Dp = 2.dp
+) {
+    val animatedProgress by animateFloatAsState(progress)
+    val animatedColor by animateColorAsState(
+        targetValue = if (isDownloading) MaterialTheme.colorScheme.primary else Gray
+    )
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box {
+            Canvas(
+                modifier = Modifier
+                    .size(iconSize * 1.5f)
+            ) {
+                val style = Stroke(
+                    width = strokeWidth.toPx(),
+                    cap = StrokeCap.Round
+                )
+
+                // track
+                drawArc(
+                    color = animatedColor.copy(
+                        alpha = if (!isDownloading) 1f else 0.5f
+                    ),
+                    startAngle = 0f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    style = style
+                )
+
+                // progress
+                drawArc(
+                    color = animatedColor,
+                    startAngle = -90f,
+                    sweepAngle = 360f * animatedProgress,
+                    useCenter = false,
+                    style = style
+                )
+            }
+            Icon(
+                painter = painterResource(KonnektIcon.arrowDown),
+                contentDescription = "download",
+                modifier = Modifier
+                    .size(iconSize)
+                    .align(Alignment.Center),
+                tint = animatedColor
+            )
+        }
+
+        val fontSize = (iconSize.value * 0.6f).sp
+        Text(
+            text = "$fileSizeMB MB",
+            style = LocalTextStyle.current.copy(
+                color = animatedColor,
+                fontSize = fontSize,
+                lineHeight = fontSize,
+                fontWeight = FontWeight.Bold
+            )
+        )
     }
 }
 
