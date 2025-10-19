@@ -12,6 +12,7 @@ import nrr.konnekt.feature.chats.navigation.ChatsRoute
 import nrr.konnekt.feature.chats.navigation.chatsScreen
 import nrr.konnekt.feature.conversation.navigation.conversationScreen
 import nrr.konnekt.feature.conversation.navigation.navigateToConversation
+import nrr.konnekt.feature.conversation.navigation.navigateToTempPersonalConversation
 
 @Composable
 internal fun KonnektNavHost(
@@ -30,9 +31,8 @@ internal fun KonnektNavHost(
         )
         chatsScreen(
             navigateToCreateGroupChat = {},
-            navigateToConversation = {
-                navController.navigateToConversation(it.id)
-            },
+            navigateToConversation = navController::navigateToConversation,
+            navigateToTempConversation = navController::navigateToTempPersonalConversation,
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         conversationScreen(

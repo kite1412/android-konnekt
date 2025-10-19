@@ -155,7 +155,7 @@ internal fun ConversationScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
     val chat by viewModel.chat.collectAsStateWithLifecycle()
-    val messages by viewModel.messages.collectAsStateWithLifecycle(null)
+    val messages by viewModel.messages.collectAsStateWithLifecycle(emptyList())
     val readMarkers by viewModel.readMarkers.collectAsStateWithLifecycle(null)
     val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
@@ -184,38 +184,36 @@ internal fun ConversationScreen(
     }
     currentUser?.let { u ->
         chat?.let { c ->
-            messages?.let { m ->
-                ConversationScreen(
-                    currentUser = u,
-                    chat = c,
-                    messages = m,
-                    readMarkers = readMarkers,
-                    messageInput = messageInput,
-                    messageAction = messageAction,
-                    onMessageInputChange = { viewModel.messageInput = it },
-                    composerAttachments = viewModel.composerAttachments,
-                    onAddComposerAttachment = {
-                        viewModel.composerAttachments.add(it)
-                    },
-                    composerAction = viewModel.composerAction,
-                    onComposerActionChange = {
-                        viewModel.composerAction = it
-                    },
-                    onSend = {
-                        viewModel.sendMessage(it)
-                    },
-                    sendingMessage = viewModel.sendingMessage,
-                    totalActiveParticipants = totalActiveParticipants ?: 0,
-                    onNavigateBack = navigateBack,
-                    onChatClick = navigateToChatDetail,
-                    onMessageAction = viewModel::setMessageAction,
-                    onDismissMessageAction = viewModel::dismissMessageAction,
-                    fileUploadConstraints = viewModel.fileUploadConstraints,
-                    contentPadding = contentPadding,
-                    modifier = modifier,
-                    peerLastActive = peerLastActive
-                )
-            }
+            ConversationScreen(
+                currentUser = u,
+                chat = c,
+                messages = messages,
+                readMarkers = readMarkers,
+                messageInput = messageInput,
+                messageAction = messageAction,
+                onMessageInputChange = { viewModel.messageInput = it },
+                composerAttachments = viewModel.composerAttachments,
+                onAddComposerAttachment = {
+                    viewModel.composerAttachments.add(it)
+                },
+                composerAction = viewModel.composerAction,
+                onComposerActionChange = {
+                    viewModel.composerAction = it
+                },
+                onSend = {
+                    viewModel.sendMessage(it)
+                },
+                sendingMessage = viewModel.sendingMessage,
+                totalActiveParticipants = totalActiveParticipants ?: 0,
+                onNavigateBack = navigateBack,
+                onChatClick = navigateToChatDetail,
+                onMessageAction = viewModel::setMessageAction,
+                onDismissMessageAction = viewModel::dismissMessageAction,
+                fileUploadConstraints = viewModel.fileUploadConstraints,
+                contentPadding = contentPadding,
+                modifier = modifier,
+                peerLastActive = peerLastActive
+            )
         }
     }
 }

@@ -15,10 +15,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.FileUploadConstraints
@@ -26,13 +28,19 @@ import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
+import nrr.konnekt.core.domain.repository.UserRepository
+import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.usecase.UpdateReadMarkerUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.UserReadMarker
+import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
@@ -48,17 +56,19 @@ import kotlin.time.Instant
 class ConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     authentication: Authentication,
-    observeMessagesUseCase: ObserveMessagesUseCase,
-    observeReadMarkersUseCase: ObserveReadMarkersUseCase,
     internal val fileUploadConstraints: FileUploadConstraints,
+    private val observeMessagesUseCase: ObserveMessagesUseCase,
+    private val observeReadMarkersUseCase: ObserveReadMarkersUseCase,
     private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository,
     private val userPresenceManager: UserPresenceManager,
     private val sendMessageUseCase: SendMessageUseCase,
-    private val updateReadMarkerUseCase: UpdateReadMarkerUseCase
+    private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
+    private val createChatUseCase: CreateChatUseCase
 ) : ViewModel() {
-    private val chatId: String = checkNotNull(
-        savedStateHandle.toRoute<ConversationRoute>().chatId
-    )
+    private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
+    private val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
+    private var fixedChatId: String? = null
     internal val currentUser = authentication
         .loggedInUser
         .stateIn(
@@ -66,21 +76,8 @@ class ConversationViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
-    internal val messages = observeMessagesUseCase(chatId)
-        .onEach { l ->
-            currentUser.first()?.id?.let { id ->
-                l.firstOrNull()
-                    ?.sender
-                    ?.id
-                    ?.let {
-                        if (id != it) updateReadMarkerUseCase(chatId, l.first().sentAt)
-                    }
-            }
-        }
-    internal val readMarkers = observeReadMarkersUseCase(chatId)
-        .onEach {
-            Log.d(LOG_TAG, "read markers: $it")
-        }
+    internal var messages = emptyFlow<List<Message>>()
+    internal var readMarkers = emptyFlow<List<UserReadMarker>>()
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
@@ -102,80 +99,147 @@ class ConversationViewModel @Inject constructor(
     internal val messageAction = _messageAction.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            val res = chatRepository.getChatById(chatId)
-            when (res) {
-                is Result.Success -> _chat.value = res.data
-                is Result.Error -> {
-                    _events.emit(
-                        UiEvent.ShowSnackbar(
-                            when (res) {
-                                ChatError.ChatNotFound -> "Chat not found"
-                                else -> "Fail to fetch chat data"
-                            }
+        viewModelScope.launch scope@{
+            if (!(chatId != null).xor(peerId != null)) {
+                _events.emit(UiEvent.NavigateBack)
+                return@scope
+            }
+            var peerId = peerId
+            if (chatId != null) {
+                fixedChatId = chatId
+                val res = chatRepository.getChatById(chatId)
+
+                when (res) {
+                    is Result.Success -> {
+                        _chat.value = res.data
+                        observeFlows(res.data.id)
+                        if (res.data.type == ChatType.PERSONAL) {
+                            peerId = res.data.participants.firstOrNull { p ->
+                                currentUser.first()?.id?.let {
+                                    p.userId != it
+                                } == true
+                            }?.userId
+                        }
+                    }
+                    is Result.Error -> {
+                        _events.emit(
+                            UiEvent.ShowSnackbar(
+                                when (res) {
+                                    ChatError.ChatNotFound -> "Chat not found"
+                                    else -> "Fail to fetch chat data"
+                                }
+                            )
+                        )
+                        _events.emit(UiEvent.NavigateBack)
+                    }
+                }
+            } else if (peerId != null) {
+                val res = userRepository.getUserById(peerId)
+
+                if (res is Result.Success) res.data.let {
+                    _chat.value = Chat(
+                        id = "",
+                        type = ChatType.PERSONAL,
+                        createdAt = now(),
+                        setting = ChatSetting(
+                            name = it.username,
+                            iconPath = it.imagePath
                         )
                     )
-                    _events.emit(UiEvent.NavigateBack)
                 }
             }
-            if (res is Result.Success) when (res.data.type) {
-                ChatType.PERSONAL -> {
-                    val data = res.data
-
-                    data.participants.firstOrNull { p ->
-                        currentUser.first()?.id?.let {
-                            p.userId != it
-                        } == true
-                    }
-                        ?.let { p ->
-                            userPresenceManager
-                                .observeUserPresence(p.userId)
-                                .onEach { np ->
-                                     np?.let { p ->
-                                         _totalActiveParticipants.value =
-                                             if (p.isActive) 1 else 0
-                                         _peerLastActive.value = p.status.lastActiveAt
-                                     }
-                                }
-                                .launchIn(viewModelScope)
+            if (
+                _chat.value != null &&
+                _chat.value?.type == ChatType.PERSONAL &&
+                peerId != null
+            ) {
+                userPresenceManager
+                    .observeUserPresence(peerId)
+                    .onEach { np ->
+                        np?.let { p ->
+                            _totalActiveParticipants.value =
+                                if (p.isActive) 1 else 0
+                            _peerLastActive.value = p.status.lastActiveAt
                         }
-                }
-                else -> {}
+                    }
+                    .launchIn(viewModelScope)
             }
         }
+    }
+
+    private fun observeFlows(chatId: String) {
+        messages = observeMessagesUseCase(chatId)
+            .onEach { l ->
+                currentUser.first()?.id?.let { id ->
+                    l.firstOrNull()
+                        ?.sender
+                        ?.id
+                        ?.let {
+                            if (id != it) updateReadMarkerUseCase(chatId, l.first().sentAt)
+                        }
+                }
+            }
+        readMarkers = observeReadMarkersUseCase(chatId)
+            .onEach {
+                Log.d(LOG_TAG, "read markers: $it")
+            }
     }
 
     internal fun sendMessage(
         content: String
     ) {
-        viewModelScope.launch {
-            sendingMessage = true
-            val res = sendMessageUseCase(
-                chatId = chatId,
-                content = content,
-                attachment = composerAttachments
-                    .takeIf { it.isNotEmpty() }
-                    ?.map(ComposerAttachment::toFileUpload)
-            )
-            composerAttachments.clear()
-            if (res is Result.Error) {
-                _events.emit(
-                    value = UiEvent.ShowSnackbar(
-                        when (res.error) {
-                            is MessageError.ChatNotFound -> "Chat not found"
-                            is MessageError.FileUploadError -> "File upload error"
-                            is MessageError.DisallowedFileType -> "Disallowed file type: " +
-                                    (res.error as MessageError.DisallowedFileType)
-                                        .fileTypes
-                                        .joinToString()
-                            is MessageError.MessageNotFound -> "Message not found"
-                            else -> "Fail to send message"
-                        }
-                    )
+        fixedChatId?.let {
+            viewModelScope.launch {
+                sendingMessage = true
+                val res = sendMessageUseCase(
+                    chatId = it,
+                    content = content,
+                    attachment = composerAttachments
+                        .takeIf { a -> a.isNotEmpty() }
+                        ?.map(ComposerAttachment::toFileUpload)
                 )
+                composerAttachments.clear()
+                if (res is Result.Error) {
+                    _events.emit(
+                        value = UiEvent.ShowSnackbar(
+                            when (res.error) {
+                                is MessageError.ChatNotFound -> "Chat not found"
+                                is MessageError.FileUploadError -> "File upload error"
+                                is MessageError.DisallowedFileType -> "Disallowed file type: " +
+                                        (res.error as MessageError.DisallowedFileType)
+                                            .fileTypes
+                                            .joinToString()
+                                is MessageError.MessageNotFound -> "Message not found"
+                                else -> "Fail to send message"
+                            }
+                        )
+                    )
+                }
+                messageInput = ""
+                sendingMessage = false
             }
-            messageInput = ""
-            sendingMessage = false
+        } ?: peerId?.let { peerId ->
+            _chat.value?.let { chat ->
+                viewModelScope.launch {
+                    createChatUseCase(
+                        type = chat.type,
+                        participantIds = listOf(peerId)
+                    )
+                        .let { r ->
+                            if (r is Result.Success) {
+                                fixedChatId = r.data.id
+                                _chat.update {
+                                    it?.copy(
+                                        id = r.data.id,
+                                        createdAt = r.data.createdAt
+                                    )
+                                }
+                                fixedChatId?.let { observeFlows(it) }
+                                sendMessage(content)
+                            }
+                        }
+                }
+            }
         }
     }
 

@@ -8,7 +8,6 @@ import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.navOptions
 import kotlinx.serialization.Serializable
-import nrr.konnekt.core.model.Chat
 import nrr.konnekt.feature.chats.ChatsScreen
 
 @Serializable
@@ -23,7 +22,8 @@ fun NavController.navigateToChats(
 
 fun NavGraphBuilder.chatsScreen(
     navigateToCreateGroupChat: () -> Unit,
-    navigateToConversation: (Chat) -> Unit,
+    navigateToConversation: (chatId: String) -> Unit,
+    navigateToTempConversation: (id: String) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -31,6 +31,7 @@ fun NavGraphBuilder.chatsScreen(
         ChatsScreen(
             navigateToCreateGroupChat = navigateToCreateGroupChat,
             navigateToConversation = navigateToConversation,
+            navigateToTempConversation = navigateToTempConversation,
             contentPadding = contentPadding,
             modifier = modifier
         )

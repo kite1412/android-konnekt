@@ -90,7 +90,8 @@ import nrr.konnekt.feature.chats.util.PersonDropdownItems
 @Composable
 internal fun ChatsScreen(
     navigateToCreateGroupChat: () -> Unit,
-    navigateToConversation: (Chat) -> Unit,
+    navigateToConversation: (id: String) -> Unit,
+    navigateToTempConversation: (id: String) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
@@ -120,7 +121,7 @@ internal fun ChatsScreen(
             },
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
-            onChatClick = navigateToConversation,
+            onChatClick = { c -> navigateToConversation(c.id) },
             onArchiveChat = {},
             onClearChat = {},
             onLeaveChat = {},
@@ -134,7 +135,10 @@ internal fun ChatsScreen(
             onUserClick = { u ->
                 viewModel.getPersonalChat(
                     otherUserId = u.id,
-                    complete = navigateToConversation
+                    complete = { id, exists ->
+                        if (exists) navigateToConversation(id)
+                        else navigateToTempConversation(id)
+                    }
                 )
             },
             onUserSearch = viewModel::findUsers,
@@ -142,7 +146,7 @@ internal fun ChatsScreen(
             onCreateChatRoom = { name ->
                 viewModel.createChatRoom(
                     name = name,
-                    complete = navigateToConversation
+                    complete = { c -> navigateToConversation(c.id) }
                 )
             },
             createActionEnabled = viewModel.createChatActionEnabled,

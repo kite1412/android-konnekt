@@ -10,11 +10,15 @@ import nrr.konnekt.feature.conversation.ConversationScreen
 
 @Serializable
 data class ConversationRoute(
-    val chatId: String
+    val chatId: String? = null,
+    val peerId: String? = null
 )
 
 fun NavController.navigateToConversation(chatId: String) =
-    navigate(ConversationRoute(chatId))
+    navigate(ConversationRoute(chatId = chatId))
+
+fun NavController.navigateToTempPersonalConversation(peerId: String) =
+    navigate(ConversationRoute(peerId = peerId))
 
 fun NavGraphBuilder.conversationScreen(
     navigateBack: () -> Unit,

@@ -24,7 +24,6 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chats.util.ChatFilter
-import nrr.konnekt.feature.chats.util.createTempPersonalChat
 import javax.inject.Inject
 
 @HiltViewModel
@@ -91,24 +90,24 @@ class ChatsViewModel @Inject constructor(
 
     internal fun getPersonalChat(
         otherUserId: String,
-        complete: (Chat) -> Unit
+        complete: (id: String, exists: Boolean) -> Unit
     ) {
         viewModelScope.launch {
             createChatActionEnabled = false
+            var exists = true
             _chats.firstOrNull()?.let { chats ->
                 chats.firstOrNull { c ->
                     c.chat.type == ChatType.PERSONAL
                             && c.chat.participants.firstOrNull { p ->
                         p.userId == otherUserId
                     } != null
-                }?.chat ?: run {
-                    val res = userRepository.getUserById(otherUserId)
-                    if (res is Result.Success) res.data.createTempPersonalChat()
-                    else null
+                }?.chat?.id ?: run {
+                    exists = false
+                    otherUserId
                 }
             }?.let {
                 createChatActionEnabled = true
-                complete(it)
+                complete(it, exists)
             }
         }
     }
