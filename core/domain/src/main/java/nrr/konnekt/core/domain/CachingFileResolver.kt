@@ -1,5 +1,9 @@
 package nrr.konnekt.core.domain
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import nrr.konnekt.core.domain.util.DownloadStatus
+
 class CachingFileResolver(
     private val delegate: FileResolver,
     private val cache: FileCache
@@ -11,6 +15,18 @@ class CachingFileResolver(
         return bytes?.let {
             cache[path] = it
             it
+        }
+    }
+
+    override fun resolveFileAsFlow(path: String): Flow<DownloadStatus> = flow {
+        if (path in cache) cache[path]?.let {
+            emit(DownloadStatus.Complete(it))
+            return@flow
+        }
+
+        delegate.resolveFileAsFlow(path).collect {
+            emit(it)
+            if (it is DownloadStatus.Complete) cache[path] = it.bytes
         }
     }
 }

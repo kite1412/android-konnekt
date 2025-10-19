@@ -16,4 +16,5 @@ dependencies {
     api(projects.core.designsystem)
     api(projects.core.domain)
     implementation(projects.core.player)
+    implementation(libs.androidx.core.ktx)
 }

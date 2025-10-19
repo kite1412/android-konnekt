@@ -1,9 +1,9 @@
 package nrr.konnekt.core.ui.component
 
+import android.util.Log
 import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +39,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.theme.DarkGray
@@ -73,6 +75,7 @@ import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedBoxStyle
+import nrr.konnekt.core.domain.util.DownloadStatus
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Message
@@ -81,6 +84,7 @@ import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
 import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
+import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.ProgressBarDefaults
@@ -89,6 +93,7 @@ import nrr.konnekt.core.ui.util.getAudioDurationMs
 import nrr.konnekt.core.ui.util.getSizeInMB
 import nrr.konnekt.core.ui.util.getVideoThumbnail
 import nrr.konnekt.core.ui.util.msToString
+import nrr.konnekt.core.ui.util.openCachedFileExternal
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.toTimeString
 import kotlin.time.Instant
@@ -346,6 +351,7 @@ private fun Tail(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun MessageAttachments(
     attachments: List<Attachment>,
@@ -427,10 +433,32 @@ private fun MessageAttachments(
                 AttachmentType.DOCUMENT -> {
                     val formatter = LocalFileNameFormatter.current
                     val fileCache = LocalFileCache.current
+                    val fileResolver = LocalFileResolver.current
                     var isCached by remember { mutableStateOf(true) }
+                    var isDownloading by remember { mutableStateOf(false) }
+                    var downloadStatus by remember {
+                        mutableStateOf<DownloadStatus?>(null)
+                    }
+                    val context = LocalContext.current
+                    var progress by remember { mutableFloatStateOf(0f) }
 
-                    LaunchedEffect(Unit) {
-                        isCached = a.path in fileCache
+                    LaunchedEffect(downloadStatus) {
+                        Log.d("core:ui", "status: $downloadStatus")
+                        if (downloadStatus == null || downloadStatus is DownloadStatus.Complete) {
+                            val cached = a.path in fileCache
+                            if (cached) delay(200L)
+                            isCached = cached
+                        }
+                    }
+                    LaunchedEffect(isDownloading) {
+                        if (isDownloading) {
+                            fileResolver.resolveFileAsFlow(a.path)
+                                .collect {
+                                    if (it is DownloadStatus.Complete) downloadStatus = it
+                                }
+                        } else {
+                            downloadStatus = null
+                        }
                     }
                     Row(
                         modifier = Modifier
@@ -438,14 +466,16 @@ private fun MessageAttachments(
                                 interactionSource = null,
                                 indication = null
                             ) {
-                                isCached = !isCached
+                                if (!isCached && !isDownloading) {
+                                    isDownloading = true
+                                } else if (isCached) context.openCachedFileExternal(a.path)
                             },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (sentByCurrentUser && !isCached) DownloadProgress(
-                            progress = 0.5f,
-                            isDownloading = true,
+                            progress = progress,
+                            isDownloading = isDownloading,
                             fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0)
                         )
                         DocumentAttachment(
@@ -462,8 +492,8 @@ private fun MessageAttachments(
                                 .clip(shape)
                         )
                         if (!sentByCurrentUser && !isCached) DownloadProgress(
-                            progress = 0f,
-                            isDownloading = false,
+                            progress = progress,
+                            isDownloading = isDownloading,
                             fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0)
                         )
                     }
@@ -758,7 +788,6 @@ private fun DownloadProgress(
     iconSize: Dp = 14.dp,
     strokeWidth: Dp = 2.dp
 ) {
-    val animatedProgress by animateFloatAsState(progress)
     val animatedColor by animateColorAsState(
         targetValue = if (isDownloading) MaterialTheme.colorScheme.primary else Gray
     )
@@ -793,7 +822,7 @@ private fun DownloadProgress(
                 drawArc(
                     color = animatedColor,
                     startAngle = -90f,
-                    sweepAngle = 360f * animatedProgress,
+                    sweepAngle = 360f * progress,
                     useCenter = false,
                     style = style
                 )
