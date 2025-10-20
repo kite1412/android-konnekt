@@ -234,7 +234,7 @@ class ConversationViewModel @Inject constructor(
                                         createdAt = r.data.createdAt
                                     )
                                 }
-                                fixedChatId?.let { observeFlows(it) }
+                                fixedChatId?.let(::observeFlows)
                                 sendMessage(content)
                             }
                         }

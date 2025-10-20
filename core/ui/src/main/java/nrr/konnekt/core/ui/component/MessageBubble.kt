@@ -1,7 +1,5 @@
 package nrr.konnekt.core.ui.component
 
-import android.util.Log
-import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
@@ -28,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
@@ -52,8 +51,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -443,7 +440,6 @@ private fun MessageAttachments(
                     var progress by remember { mutableFloatStateOf(0f) }
 
                     LaunchedEffect(downloadStatus) {
-                        Log.d("core:ui", "status: $downloadStatus")
                         if (downloadStatus == null || downloadStatus is DownloadStatus.Complete) {
                             val cached = a.path in fileCache
                             if (cached) delay(200L)
@@ -454,10 +450,19 @@ private fun MessageAttachments(
                         if (isDownloading) {
                             fileResolver.resolveFileAsFlow(a.path)
                                 .collect {
-                                    if (it is DownloadStatus.Complete) downloadStatus = it
+                                    if (it is DownloadStatus.Progress) progress = it.progress
+                                    else if (it is DownloadStatus.Complete) downloadStatus = it
                                 }
                         } else {
                             downloadStatus = null
+                        }
+                    }
+                    val downloadProgress: @Composable () -> Unit = remember {
+                        {
+                            DownloadProgress(
+                                progress = { progress },
+                                isDownloading = isDownloading,
+                                fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0))
                         }
                     }
                     Row(
@@ -473,11 +478,7 @@ private fun MessageAttachments(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (sentByCurrentUser && !isCached) DownloadProgress(
-                            progress = progress,
-                            isDownloading = isDownloading,
-                            fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0)
-                        )
+                        if (sentByCurrentUser && !isCached) downloadProgress()
                         DocumentAttachment(
                             fileName = a.name?.let(formatter::restore) ?: "File",
                             messageSentAt = messageSentAt,
@@ -491,11 +492,7 @@ private fun MessageAttachments(
                                 )
                                 .clip(shape)
                         )
-                        if (!sentByCurrentUser && !isCached) DownloadProgress(
-                            progress = progress,
-                            isDownloading = isDownloading,
-                            fileSizeMB = getSizeInMB(a.size?.toInt() ?: 0)
-                        )
+                        if (!sentByCurrentUser && !isCached) downloadProgress()
                     }
                 }
                 else -> Unit
@@ -780,8 +777,7 @@ private fun DocumentAttachment(
 
 @Composable
 private fun DownloadProgress(
-    @FloatRange(0.0, 1.0)
-    progress: Float,
+    progress: () -> Float,
     isDownloading: Boolean,
     fileSizeMB: Float,
     modifier: Modifier = Modifier,
@@ -798,35 +794,14 @@ private fun DownloadProgress(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box {
-            Canvas(
+            CircularProgressIndicator(
+                progress = progress,
                 modifier = Modifier
-                    .size(iconSize * 1.5f)
-            ) {
-                val style = Stroke(
-                    width = strokeWidth.toPx(),
-                    cap = StrokeCap.Round
-                )
-
-                // track
-                drawArc(
-                    color = animatedColor.copy(
-                        alpha = if (!isDownloading) 1f else 0.5f
-                    ),
-                    startAngle = 0f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    style = style
-                )
-
-                // progress
-                drawArc(
-                    color = animatedColor,
-                    startAngle = -90f,
-                    sweepAngle = 360f * progress,
-                    useCenter = false,
-                    style = style
-                )
-            }
+                    .size(iconSize * 1.5f),
+                color = animatedColor,
+                trackColor = animatedColor.copy(alpha = if (isDownloading) 0.5f else 1f),
+                strokeWidth = strokeWidth
+            )
             Icon(
                 painter = painterResource(KonnektIcon.arrowDown),
                 contentDescription = "download",
