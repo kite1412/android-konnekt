@@ -1,5 +1,7 @@
 package nrr.konnekt.core.domain
 
+import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.util.FileType
 
@@ -47,4 +49,19 @@ interface FileUploadConstraints {
      * @return The [AttachmentType] for the given extension or null if extension is not allowed.
      */
     fun isExtensionAllowed(extension: String): AttachmentType?
+
+    fun checkSize(bytesLength: Int) {
+        if (bytesLength < 0)
+            throw FileUploadConstraintViolationException(
+                message = "File size is invalid",
+                reason = FileUploadConstraintViolationExceptionReason.SIZE_INVALID
+            )
+        if (bytesLength > maxSizeBytes)
+            throw FileUploadConstraintViolationException(
+                message = "File size is too large, max size: ${maxSizeMB()} MB",
+                reason = FileUploadConstraintViolationExceptionReason.SIZE_EXCEEDED
+            )
+    }
+
+    fun maxSizeMB(): Long = maxSizeBytes / 1_048_576
 }

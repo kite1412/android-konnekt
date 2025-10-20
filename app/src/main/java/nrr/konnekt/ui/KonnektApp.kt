@@ -30,6 +30,7 @@ import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
 import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
 import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.SnackbarHostStateWrapper
 
@@ -51,7 +52,8 @@ internal fun KonnektApp(
             LocalSnackbarHostState provides snackbarHostState,
             LocalFileResolver provides viewModel.fileResolver,
             LocalFileNameFormatter provides viewModel.fileNameFormatter,
-            LocalFileCache provides viewModel.fileCache
+            LocalFileCache provides viewModel.fileCache,
+            LocalFileUploadConstraints provides viewModel.fileUploadConstraints
         ) {
             AnimatedContent(
                 targetState = viewModel.showSplashOnce,

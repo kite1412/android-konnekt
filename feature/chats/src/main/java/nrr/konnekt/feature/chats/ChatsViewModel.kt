@@ -24,6 +24,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chats.util.ChatFilter
+import nrr.konnekt.feature.chats.util.CreateGroupChatSetting
 import javax.inject.Inject
 
 @HiltViewModel
@@ -77,6 +78,7 @@ class ChatsViewModel @Inject constructor(
     internal var createChatType by mutableStateOf<ChatType?>(null)
     internal var usersByIdentifier by mutableStateOf<List<User>?>(null)
     internal var createChatActionEnabled by mutableStateOf(true)
+    internal var createGroupChatSetting by mutableStateOf(CreateGroupChatSetting())
 
     internal fun findUsers(username: String) {
         viewModelScope.launch {
@@ -124,6 +126,24 @@ class ChatsViewModel @Inject constructor(
             )
             createChatActionEnabled = true
             if (res is Result.Success) complete(res.data)
+        }
+    }
+
+    internal fun createGroupChat(complete: (String) -> Unit) {
+        viewModelScope.launch {
+            createChatActionEnabled = false
+
+            val res = createChatUseCase(
+                type = ChatType.GROUP,
+                chatSetting = CreateChatSetting(
+                    name = createGroupChatSetting.name,
+                    icon = createGroupChatSetting.icon
+                )
+            )
+
+            createGroupChatSetting = CreateGroupChatSetting()
+            createChatActionEnabled = true
+            if (res is Result.Success) complete(res.data.id)
         }
     }
 }

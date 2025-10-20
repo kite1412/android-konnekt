@@ -100,7 +100,8 @@ import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
-import nrr.konnekt.core.domain.FileUploadConstraints
+import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
@@ -108,16 +109,18 @@ import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
-import nrr.konnekt.core.model.util.FileType
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.player.PlaybackState
+import nrr.konnekt.core.ui.UriException
+import nrr.konnekt.core.ui.UriExceptionReason
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
@@ -129,7 +132,6 @@ import nrr.konnekt.core.ui.util.getAudioDurationMs
 import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
-import nrr.konnekt.feature.conversation.exception.UriConversionException
 import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ActiveStatus
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
@@ -209,7 +211,6 @@ internal fun ConversationScreen(
                 onChatClick = navigateToChatDetail,
                 onMessageAction = viewModel::setMessageAction,
                 onDismissMessageAction = viewModel::dismissMessageAction,
-                fileUploadConstraints = viewModel.fileUploadConstraints,
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -238,7 +239,6 @@ private fun ConversationScreen(
     onChatClick: (Chat) -> Unit,
     onMessageAction: (MessageAction) -> Unit,
     onDismissMessageAction: () -> Unit,
-    fileUploadConstraints: FileUploadConstraints,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -335,8 +335,7 @@ private fun ConversationScreen(
                     action = composerAction,
                     onActionChange = onComposerActionChange,
                     onSend = onSend,
-                    sendingMessage = sendingMessage,
-                    fileUploadConstraints = fileUploadConstraints
+                    sendingMessage = sendingMessage
                 )
             }
             if (messages.isNotEmpty() && lastVisibleDate.isNotBlank())
@@ -710,11 +709,11 @@ private fun MessageComposer(
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     sendingMessage: Boolean,
-    fileUploadConstraints: FileUploadConstraints,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
+    val fileUploadConstraints = LocalFileUploadConstraints.current
 
     val getMultipleContentsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -729,8 +728,21 @@ private fun MessageComposer(
                             "with thumbnail: ${attachment.thumbnail != null}"
                 )
                 onAddAttachment(attachment)
-            } catch (e: UriConversionException) {
-                e.message?.let(snackbarHostState::showSnackbar)
+            } catch (e: FileUploadConstraintViolationException) {
+                snackbarHostState.showSnackbar(
+                    message = when (e.reason) {
+                        FileUploadConstraintViolationExceptionReason.SIZE_EXCEEDED ->
+                            "Max file size exceeded, max size: ${fileUploadConstraints.maxSizeMB()} MB"
+                        FileUploadConstraintViolationExceptionReason.SIZE_INVALID -> "Can't read file size"
+                    }
+                )
+            } catch (e: UriException) {
+                snackbarHostState.showSnackbar(
+                    message = when (e.reason) {
+                        UriExceptionReason.INVALID_FILE_NAME -> "Invalid file name"
+                        UriExceptionReason.INVALID_CONTENT -> "Invalid content"
+                    }
+                )
             } catch (_: Exception) {
                 snackbarHostState.showSnackbar("Fail to load file")
             }
@@ -1428,17 +1440,6 @@ private fun ConversationScreenPreview(
                 onChatClick = {},
                 onMessageAction = {},
                 onDismissMessageAction = {},
-                fileUploadConstraints = object : FileUploadConstraints {
-                    override val maxSizeBytes: Long = 0L
-                    override val allowedImageTypes: List<FileType> = listOf()
-                    override val allowedVideoTypes: List<FileType> = listOf()
-                    override val allowedAudioTypes: List<FileType> = listOf()
-                    override val allowedDocumentTypes: List<FileType> = listOf()
-
-                    override fun isMimeTypeAllowed(mimeType: String): AttachmentType? = null
-
-                    override fun isExtensionAllowed(extension: String): AttachmentType? = null
-                },
                 contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()

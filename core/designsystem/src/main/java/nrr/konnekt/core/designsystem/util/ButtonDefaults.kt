@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import nrr.konnekt.core.designsystem.theme.Gray
+import nrr.konnekt.core.designsystem.theme.DarkGray
 
 object ButtonDefaults {
     @Composable
@@ -15,7 +15,7 @@ object ButtonDefaults {
         backgroundColor: Color = MaterialTheme.colorScheme.primary,
         contentColor: Color = shadowColor,
         borderColor: Color = shadowColor,
-        disabledShadowColor: Color = Gray,
+        disabledShadowColor: Color = DarkGray,
         disabledBackgroundColor: Color = backgroundColor.copy(alpha = 0.7f),
         disabledContentColor: Color = disabledShadowColor,
         disabledBorderColor: Color = disabledShadowColor,

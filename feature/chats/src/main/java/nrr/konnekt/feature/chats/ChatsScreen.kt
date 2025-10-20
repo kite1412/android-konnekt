@@ -1,5 +1,7 @@
 package nrr.konnekt.feature.chats
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -7,7 +9,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,9 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.decodeToImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -71,25 +82,33 @@ import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
+import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
+import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.getFileName
 import nrr.konnekt.core.ui.util.topRadialGradient
+import nrr.konnekt.core.ui.util.uriToByteArray
 import nrr.konnekt.feature.chats.util.ChatFilter
+import nrr.konnekt.feature.chats.util.CreateGroupChatSetting
 import nrr.konnekt.feature.chats.util.GroupDropdownItems
 import nrr.konnekt.feature.chats.util.PersonDropdownItems
 
 @Composable
 internal fun ChatsScreen(
-    navigateToCreateGroupChat: () -> Unit,
     navigateToConversation: (id: String) -> Unit,
     navigateToTempConversation: (id: String) -> Unit,
     contentPadding: PaddingValues,
@@ -132,6 +151,13 @@ internal fun ChatsScreen(
                 viewModel.createChatType = null
                 viewModel.usersByIdentifier = null
             },
+            createGroupChatSetting = viewModel.createGroupChatSetting,
+            onCreateGroupChatSettingChange = { setting ->
+                viewModel.createGroupChatSetting = setting
+            },
+            onCreateGroupChat = {
+                viewModel.createGroupChat(navigateToConversation)
+            },
             onUserClick = { u ->
                 viewModel.getPersonalChat(
                     otherUserId = u.id,
@@ -142,7 +168,6 @@ internal fun ChatsScreen(
                 )
             },
             onUserSearch = viewModel::findUsers,
-            navigateToCreateGroupChat = navigateToCreateGroupChat,
             onCreateChatRoom = { name ->
                 viewModel.createChatRoom(
                     name = name,
@@ -174,9 +199,11 @@ private fun ChatsScreen(
     chatFilter: ChatFilter,
     onFilterChange: (ChatFilter) -> Unit,
     dismissPopup: () -> Unit,
+    createGroupChatSetting: CreateGroupChatSetting,
+    onCreateGroupChatSettingChange: (CreateGroupChatSetting) -> Unit,
+    onCreateGroupChat: () -> Unit,
     onUserSearch: (String) -> Unit,
     onUserClick: (User) -> Unit,
-    navigateToCreateGroupChat: () -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
@@ -195,10 +222,7 @@ private fun ChatsScreen(
         ) {
             Header(
                 user = user,
-                onCreateChatClick = {
-                    if (it == ChatType.GROUP) navigateToCreateGroupChat()
-                    else onCreateChatClick(it)
-                },
+                onCreateChatClick = onCreateChatClick,
                 modifier = Modifier
                     .padding(
                         start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
@@ -248,8 +272,11 @@ private fun ChatsScreen(
         }
         if (createChatType != null) CreateChatPopup(
             type = createChatType,
-            onSearch = onUserSearch,
             dismiss = dismissPopup,
+            createGroupChatSetting = createGroupChatSetting,
+            onCreateGroupChatSettingChange = onCreateGroupChatSettingChange,
+            onCreateGroupChat = onCreateGroupChat,
+            onSearch = onUserSearch,
             onUserClick = onUserClick,
             onCreateChatRoom = onCreateChatRoom,
             usersByIdentifier = usersByIdentifier,
@@ -504,8 +531,11 @@ private fun Chats(
 @Composable
 private fun CreateChatPopup(
     type: ChatType,
-    onSearch: (username: String) -> Unit,
     dismiss: () -> Unit,
+    createGroupChatSetting: CreateGroupChatSetting,
+    onCreateGroupChatSettingChange: (CreateGroupChatSetting) -> Unit,
+    onCreateGroupChat: () -> Unit,
+    onSearch: (username: String) -> Unit,
     onUserClick: (User) -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
     createActionEnabled: Boolean,
@@ -513,6 +543,10 @@ private fun CreateChatPopup(
     usersByIdentifier: List<User>? = null
 ) {
     var userIdentifier by rememberSaveable { mutableStateOf("") }
+    val dismissOnAction = { action: () -> Unit ->
+        dismiss()
+        action()
+    }
 
     Dialog(
         onDismissRequest = dismiss,
@@ -544,7 +578,7 @@ private fun CreateChatPopup(
                     text = when (type) {
                         ChatType.PERSONAL -> "Add person"
                         ChatType.CHAT_ROOM -> "Create a chat room"
-                        else -> ""
+                        else -> "Create a new group"
                     },
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Medium
@@ -561,17 +595,26 @@ private fun CreateChatPopup(
                     )
                 }
             }
-            if (type == ChatType.PERSONAL) SearchUser(
-                identifier = userIdentifier,
-                onIdentifierChange = { i -> userIdentifier = i },
-                onUserClick = onUserClick,
-                onSearch = onSearch,
-                users = usersByIdentifier,
-                clickUserEnabled = createActionEnabled
-            ) else if (type == ChatType.CHAT_ROOM) CreateChatRoom(
-                onCreate = onCreateChatRoom,
-                enabled = createActionEnabled
-            )
+            when (type) {
+                ChatType.PERSONAL -> SearchUser(
+                    identifier = userIdentifier,
+                    onIdentifierChange = { i -> userIdentifier = i },
+                    onUserClick = { dismissOnAction { onUserClick(it) } },
+                    onSearch = onSearch,
+                    users = usersByIdentifier,
+                    clickUserEnabled = createActionEnabled
+                )
+                ChatType.CHAT_ROOM -> CreateChatRoom(
+                    onCreate = { dismissOnAction { onCreateChatRoom(it) } },
+                    enabled = createActionEnabled
+                )
+                ChatType.GROUP -> CreateGroupChat(
+                    setting = createGroupChatSetting,
+                    onSettingChange = onCreateGroupChatSettingChange,
+                    onCreate = { dismissOnAction { onCreateGroupChat() } },
+                    enabled = createActionEnabled
+                )
+            }
         }
     }
 }
@@ -654,6 +697,24 @@ private fun SearchUser(
     }
 }
 
+private fun chatNameConstraints(
+    name: String,
+    chatType: String
+) = listOf(
+    TextFieldErrorIndicator(
+        error = name.isBlank(),
+        message = "$chatType name cannot be empty"
+    ),
+    TextFieldErrorIndicator(
+        error = name.length <= 3,
+        message = "$chatType name must be at least 4 characters long"
+    )
+)
+
+private fun checkNameConstraints(name: String) = chatNameConstraints(name, "")
+    .map { it.error }
+    .reduce { acc, next -> !acc && !next }
+
 @Composable
 private fun CreateChatRoom(
     onCreate: (name: String) -> Unit,
@@ -665,27 +726,21 @@ private fun CreateChatRoom(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             placeholder = "Chat room name",
-            errorIndicators = listOf(
-                TextFieldErrorIndicator(
-                    error = name.isBlank(),
-                    message = "Chat room name cannot be empty"
-                ),
-                TextFieldErrorIndicator(
-                    error = name.length <= 3,
-                    message = "Chat room name must be at least 4 characters long"
-                )
+            errorIndicators = chatNameConstraints(
+                name = name,
+                chatType = "Chat room"
             ),
             singleLine = true
         )
         ShadowedButton(
             onClick = { onCreate(name) },
-            enabled = enabled && name.isNotBlank() && name.length > 3,
+            enabled = enabled && checkNameConstraints(name),
         ) {
             Text(text = "Create")
         }
@@ -731,6 +786,134 @@ private fun User(
     }
 }
 
+@Composable
+private fun CreateGroupChat(
+    setting: CreateGroupChatSetting,
+    onSettingChange: (CreateGroupChatSetting) -> Unit,
+    onCreate: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val boxSize = 100.dp
+            val color = MaterialTheme.colorScheme.primary
+            val context = LocalContext.current
+            val fileUploadConstraints = LocalFileUploadConstraints.current
+            val snackbarHostState = LocalSnackbarHostState.current
+            val getImageLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.GetContent()
+            ) {
+                if (it != null) try {
+                    val content = context.uriToByteArray(it)
+                    fileUploadConstraints.checkSize(content.size)
+
+                    val fileName = context.getFileName(it)
+                    onSettingChange(
+                        setting.copy(
+                            icon = FileUpload(
+                                fileName = fileName,
+                                fileExtension = fileName.substringAfterLast('.'),
+                                content = content
+                            )
+                        )
+                    )
+                } catch (e: FileUploadConstraintViolationException) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar(
+                        message = when (e.reason) {
+                            FileUploadConstraintViolationExceptionReason.SIZE_EXCEEDED ->
+                                "Image size is too large"
+                            FileUploadConstraintViolationExceptionReason.SIZE_INVALID ->
+                                "Can't read image size"
+                        }
+                    )
+                } catch (e: UriException) {
+                    e.printStackTrace()
+                    snackbarHostState.showSnackbar("Can't read image")
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(boxSize)
+                    .clip(CircleShape)
+                    .clickable {
+                        getImageLauncher.launch("image/*")
+                    }
+            ) {
+                if (setting.icon == null) Box {
+                    Canvas(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        drawArc(
+                            color = color,
+                            startAngle = 0f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            style = Stroke(
+                                width = 4.dp.toPx(),
+                                cap = StrokeCap.Round,
+                                pathEffect = PathEffect.dashPathEffect(
+                                    intervals = floatArrayOf(
+                                        8.dp.toPx(),
+                                        16.dp.toPx()
+                                    )
+                                )
+                            )
+                        )
+                    }
+                    Icon(
+                        painter = painterResource(KonnektIcon.image),
+                        contentDescription = "add group icon",
+                        modifier = Modifier
+                            .size(boxSize / 2)
+                            .align(Alignment.Center),
+                        tint = color
+                    )
+                } else Image(
+                    bitmap = setting.icon.content.decodeToImageBitmap(),
+                    contentDescription = "group icon",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            if (setting.icon == null) Text(
+                text = "Add group icon",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = color
+                )
+            )
+        }
+        OutlinedTextField(
+            value = setting.name,
+            onValueChange = { onSettingChange(setting.copy(name = it)) },
+            placeholder = "New group name",
+            singleLine = true,
+            errorIndicators = chatNameConstraints(
+                name = setting.name,
+                chatType = "Group chat"
+            )
+        )
+        ShadowedButton(
+            onClick = { onCreate() },
+            modifier = Modifier.align(Alignment.End),
+            enabled = enabled && checkNameConstraints(setting.name)
+        ) {
+            Text(text = "Create")
+        }
+    }
+}
+
 @Preview
 @Composable
 private fun ChatsScreenPreview(
@@ -765,9 +948,11 @@ private fun ChatsScreenPreview(
                 chatFilter = ChatFilter.ALL,
                 onFilterChange = {},
                 dismissPopup = { createChatType = null },
+                createGroupChatSetting = CreateGroupChatSetting(),
+                onCreateGroupChatSettingChange = {},
+                onCreateGroupChat = {},
                 onUserClick = {},
                 onUserSearch = {},
-                navigateToCreateGroupChat = {},
                 onCreateChatRoom = {},
                 createActionEnabled = true,
                 modifier = Modifier.padding(it),

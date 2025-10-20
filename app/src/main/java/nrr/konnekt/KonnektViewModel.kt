@@ -15,6 +15,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.FileCache
 import nrr.konnekt.core.domain.FileNameFormatter
 import nrr.konnekt.core.domain.FileResolver
+import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.util.AuthStatus
 import nrr.konnekt.core.ui.util.ValueManager
@@ -26,7 +27,8 @@ internal class KonnektViewModel @Inject constructor(
     internal val fileResolver: FileResolver,
     internal val userPresenceManager: UserPresenceManager,
     internal val fileNameFormatter: FileNameFormatter,
-    internal val fileCache: FileCache
+    internal val fileCache: FileCache,
+    internal val fileUploadConstraints: FileUploadConstraints
 ) : ViewModel() {
     var showSplashOnce by mutableStateOf(false)
     var statusBarColor by mutableStateOf(Color.Transparent)

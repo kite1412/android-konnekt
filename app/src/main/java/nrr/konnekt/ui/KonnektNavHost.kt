@@ -30,7 +30,6 @@ internal fun KonnektNavHost(
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         chatsScreen(
-            navigateToCreateGroupChat = {},
             navigateToConversation = navController::navigateToConversation,
             navigateToTempConversation = navController::navigateToTempPersonalConversation,
             contentPadding = rootContentPadding(scaffoldPadding)

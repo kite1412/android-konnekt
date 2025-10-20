@@ -21,7 +21,6 @@ fun NavController.navigateToChats(
 )
 
 fun NavGraphBuilder.chatsScreen(
-    navigateToCreateGroupChat: () -> Unit,
     navigateToConversation: (chatId: String) -> Unit,
     navigateToTempConversation: (id: String) -> Unit,
     contentPadding: PaddingValues,
@@ -29,7 +28,6 @@ fun NavGraphBuilder.chatsScreen(
 ) {
     composable<ChatsRoute> {
         ChatsScreen(
-            navigateToCreateGroupChat = navigateToCreateGroupChat,
             navigateToConversation = navigateToConversation,
             navigateToTempConversation = navigateToTempConversation,
             contentPadding = contentPadding,
