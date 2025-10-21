@@ -1,7 +1,5 @@
 package nrr.konnekt.core.model.util
 
-import nrr.konnekt.core.model.AttachmentType
-
 object DefaultAllowedFileType {
     val imageTypes = listOf(
         FileType("image/jpeg", "jpg"),
@@ -27,30 +25,4 @@ object DefaultAllowedFileType {
         FileType("application/zip", "zip"),
         FileType("plain/text", "txt")
     )
-
-    fun isMimeTypeAllowed(mimeType: String): AttachmentType? =
-        if (mimeType.startsWith("image/"))
-            imageTypes.firstOrNull {
-                it.mimeType == mimeType
-            }?.let { AttachmentType.IMAGE }
-        else if (mimeType.startsWith("video/"))
-            videoTypes.firstOrNull {
-                it.mimeType == mimeType
-            }?.let { AttachmentType.VIDEO }
-        else if (mimeType.startsWith("audio/"))
-            audioTypes.firstOrNull {
-                it.mimeType == mimeType
-            }?.let { AttachmentType.AUDIO }
-        else documentTypes.firstOrNull {
-            it.mimeType == mimeType
-        }?.let { AttachmentType.DOCUMENT }
-
-    fun isExtensionAllowed(extension: String): AttachmentType? =
-        if (imageTypes.mapExtensions().contains(extension)) AttachmentType.IMAGE
-        else if (videoTypes.mapExtensions().contains(extension)) AttachmentType.VIDEO
-        else if (audioTypes.mapExtensions().contains(extension)) AttachmentType.AUDIO
-        else if (documentTypes.mapExtensions().contains(extension)) AttachmentType.DOCUMENT
-        else null
-
-    private fun List<FileType>.mapExtensions() = map { it.extension }
 }

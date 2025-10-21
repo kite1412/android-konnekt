@@ -39,7 +39,8 @@ import kotlin.time.Instant
 
 internal class SupabaseMessageRepository @Inject constructor(
     authentication: Authentication,
-    private val fileNameFormatter: SupabaseFileNameFormatter
+    private val fileNameFormatter: SupabaseFileNameFormatter,
+    private val fileUploadConstraints: SupabaseFileUploadConstraints
 ) : MessageRepository, SupabaseService(authentication) {
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     override fun observeMessages(chatId: String): Flow<List<Message>> =
@@ -194,7 +195,10 @@ internal class SupabaseMessageRepository @Inject constructor(
                             }
                             createAttachments.add(
                                 SupabaseCreateAttachment(
-                                    type = resolveFileType(it.fileExtension),
+                                    type = resolveFileType(
+                                        fileExtension = it.fileExtension,
+                                        fileUploadConstraints = fileUploadConstraints
+                                    ),
                                     path = path.fullPath,
                                     name = fileName,
                                     size = it.size

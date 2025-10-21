@@ -60,11 +60,13 @@ internal interface SupabaseModule {
     ): FileResolver
 
     @Binds
+    @Singleton
     fun bindFileUploadConstraints(
         supabaseFileUploadConstraints: SupabaseFileUploadConstraints
     ): FileUploadConstraints
 
     @Binds
+    @Singleton
     fun bindFileNameFormatter(
         supabaseFileNameFormatter: SupabaseFileNameFormatter
     ): FileNameFormatter

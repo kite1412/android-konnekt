@@ -56,5 +56,27 @@ private fun Context.getAttachmentType(
     uri: Uri,
     fileUploadConstraints: FileUploadConstraints
 ): AttachmentType =
-    contentResolver.getType(uri)?.let(fileUploadConstraints::isMimeTypeAllowed)
-        ?: throw AttachmentTypeException()
+    contentResolver.getType(uri)?.let {
+        isMimeTypeAllowed(it, fileUploadConstraints)
+    } ?: throw AttachmentTypeException()
+
+private fun isMimeTypeAllowed(
+    mimeType: String,
+    fileUploadConstraints: FileUploadConstraints
+): AttachmentType? = with(fileUploadConstraints) {
+    if (mimeType.startsWith("image/"))
+        allowedImageTypes.firstOrNull {
+            it.mimeType == mimeType
+        }?.let { AttachmentType.IMAGE }
+    else if (mimeType.startsWith("video/"))
+        allowedVideoTypes.firstOrNull {
+            it.mimeType == mimeType
+        }?.let { AttachmentType.VIDEO }
+    else if (mimeType.startsWith("audio/"))
+        allowedAudioTypes.firstOrNull {
+            it.mimeType == mimeType
+        }?.let { AttachmentType.AUDIO }
+    else allowedDocumentTypes.firstOrNull {
+        it.mimeType == mimeType
+    }?.let { AttachmentType.DOCUMENT }
+}
