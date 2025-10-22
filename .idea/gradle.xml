@@ -33,6 +33,7 @@
             <option value="$PROJECT_DIR$/core/network" />
             <option value="$PROJECT_DIR$/core/network/supabase" />
             <option value="$PROJECT_DIR$/core/network/upload" />
+            <option value="$PROJECT_DIR$/core/network/upload/domain" />
             <option value="$PROJECT_DIR$/core/network/upload/util" />
             <option value="$PROJECT_DIR$/core/player" />
             <option value="$PROJECT_DIR$/core/storage" />
