@@ -83,12 +83,12 @@ import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.FileUpload
-import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationException
-import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownItem

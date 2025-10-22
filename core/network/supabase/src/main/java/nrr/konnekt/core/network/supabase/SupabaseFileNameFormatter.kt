@@ -1,7 +1,7 @@
 package nrr.konnekt.core.network.supabase
 
-import nrr.konnekt.core.domain.FileNameFormatter
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.network.upload.domain.FileNameFormatter
 import javax.inject.Inject
 
 internal class SupabaseFileNameFormatter @Inject constructor()

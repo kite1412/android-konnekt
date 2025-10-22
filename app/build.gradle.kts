@@ -15,6 +15,8 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.domain)
     implementation(projects.core.data)
+    implementation(projects.core.storage.file)
+    implementation(projects.core.network.upload.domain)
     implementation(projects.feature.authentication)
     implementation(projects.feature.chats)
     implementation(projects.feature.conversation)

@@ -7,11 +7,11 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import nrr.konnekt.core.domain.FileResolver
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
+import nrr.konnekt.core.network.upload.domain.FileResolver
+import nrr.konnekt.core.network.upload.domain.util.DownloadStatus as _DownloadStatus
 import javax.inject.Inject
-import nrr.konnekt.core.domain.util.DownloadStatus as _DownloadStatus
 
 internal class SupabaseFileResolver @Inject constructor()
     : FileResolver {

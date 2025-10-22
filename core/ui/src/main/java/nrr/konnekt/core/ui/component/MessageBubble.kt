@@ -72,12 +72,12 @@ import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.ShadowedBoxStyle
-import nrr.konnekt.core.domain.util.DownloadStatus
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.network.upload.domain.util.DownloadStatus
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
 import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter

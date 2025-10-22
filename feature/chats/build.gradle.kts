@@ -4,10 +4,14 @@ plugins {
 
 android {
     namespace = "nrr.konnekt.feature.chats"
+}
 
-    kotlin {
-        sourceSets.all {
-            languageSettings.optIn("kotlin.time.ExperimentalTime")
-        }
+kotlin {
+    sourceSets.all {
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
     }
+}
+
+dependencies {
+    implementation(projects.core.network.upload.domain)
 }

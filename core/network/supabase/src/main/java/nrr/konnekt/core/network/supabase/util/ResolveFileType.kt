@@ -1,8 +1,8 @@
 package nrr.konnekt.core.network.supabase.util
 
-import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.util.FileType
+import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
 
 internal fun resolveFileType(
     fileExtension: String,

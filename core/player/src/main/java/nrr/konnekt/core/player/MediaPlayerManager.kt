@@ -38,26 +38,23 @@ object MediaPlayerManager {
         playerView: PlayerView? = null
     ) {
         if (player == null) create(context)
-        when (_playbackState.value) {
-            PlaybackState.PAUSED if _currentKey.value == key -> {
-                player?.play()
-            }
-            else -> {
-                cleanupTempFile()
-                restartStates()
-                _currentKey.value = key
-                player?.let { player ->
-                    val tempFile = File.createTempFile("media_", ".tmp", context.cacheDir)
-                    tempFile.outputStream().use { it.write(mediaBytes) }
-                    currentTempFile = tempFile
-                    val mediaItem = MediaItem.fromUri(tempFile.toURI().toString())
+        if (_playbackState.value == PlaybackState.PAUSED && _currentKey.value == key)
+            player?.play()
+        else {
+            cleanupTempFile()
+            restartStates()
+            _currentKey.value = key
+            player?.let { player ->
+                val tempFile = File.createTempFile("media_", ".tmp", context.cacheDir)
+                tempFile.outputStream().use { it.write(mediaBytes) }
+                currentTempFile = tempFile
+                val mediaItem = MediaItem.fromUri(tempFile.toURI().toString())
 
-                    playerView?.player = player
-                    player.setMediaItem(mediaItem)
-                    player.prepare()
-                    player.play()
-                    _playbackState.value = PlaybackState.PLAYING
-                }
+                playerView?.player = player
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                player.play()
+                _playbackState.value = PlaybackState.PLAYING
             }
         }
     }

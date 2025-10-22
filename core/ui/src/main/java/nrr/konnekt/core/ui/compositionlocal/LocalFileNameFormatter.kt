@@ -1,7 +1,7 @@
 package nrr.konnekt.core.ui.compositionlocal
 
 import androidx.compose.runtime.compositionLocalOf
-import nrr.konnekt.core.domain.FileNameFormatter
+import nrr.konnekt.core.network.upload.domain.FileNameFormatter
 
 val LocalFileNameFormatter = compositionLocalOf<FileNameFormatter> {
     object : FileNameFormatter {

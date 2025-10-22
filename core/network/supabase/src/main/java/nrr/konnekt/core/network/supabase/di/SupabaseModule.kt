@@ -5,11 +5,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.FileNameFormatter
-import nrr.konnekt.core.domain.FileResolver
-import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.domain.UserPresenceManager
-import nrr.konnekt.core.domain.annotation.DelegateResolver
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.domain.repository.UserRepository
@@ -21,6 +17,10 @@ import nrr.konnekt.core.network.supabase.SupabaseFileUploadConstraints
 import nrr.konnekt.core.network.supabase.SupabaseMessageRepository
 import nrr.konnekt.core.network.supabase.SupabaseUserPresenceManager
 import nrr.konnekt.core.network.supabase.SupabaseUserRepository
+import nrr.konnekt.core.network.upload.domain.FileNameFormatter
+import nrr.konnekt.core.network.upload.domain.FileResolver
+import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
+import nrr.konnekt.core.network.upload.util.annotation.DelegateResolver
 import javax.inject.Singleton
 
 @Module

@@ -3,8 +3,8 @@ package nrr.konnekt.core.ui.compositionlocal
 import androidx.compose.runtime.compositionLocalOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import nrr.konnekt.core.domain.FileResolver
-import nrr.konnekt.core.domain.util.DownloadStatus
+import nrr.konnekt.core.network.upload.domain.FileResolver
+import nrr.konnekt.core.network.upload.domain.util.DownloadStatus
 
 val LocalFileResolver = compositionLocalOf<FileResolver> {
     object : FileResolver {

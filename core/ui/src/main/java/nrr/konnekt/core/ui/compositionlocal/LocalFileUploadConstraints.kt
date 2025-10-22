@@ -1,9 +1,8 @@
 package nrr.konnekt.core.ui.compositionlocal
 
 import androidx.compose.runtime.compositionLocalOf
-import nrr.konnekt.core.domain.FileUploadConstraints
-import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.util.FileType
+import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
 
 val LocalFileUploadConstraints = compositionLocalOf<FileUploadConstraints> {
     object : FileUploadConstraints {
@@ -17,9 +16,5 @@ val LocalFileUploadConstraints = compositionLocalOf<FileUploadConstraints> {
             get() = emptyList()
         override val allowedDocumentTypes: List<FileType>
             get() = emptyList()
-
-        override fun isMimeTypeAllowed(mimeType: String): AttachmentType? = null
-
-        override fun isExtensionAllowed(extension: String): AttachmentType? = null
     }
 }

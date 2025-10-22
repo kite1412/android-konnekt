@@ -1,7 +1,7 @@
 package nrr.konnekt.core.ui.compositionlocal
 
 import androidx.compose.runtime.compositionLocalOf
-import nrr.konnekt.core.domain.FileCache
+import nrr.konnekt.core.storage.file.FileCache
 
 val LocalFileCache = compositionLocalOf<FileCache> {
     object : FileCache {

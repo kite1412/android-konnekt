@@ -1,4 +1,4 @@
-package nrr.konnekt.core.domain.exception
+package nrr.konnekt.core.network.upload.domain.exception
 
 data class FileUploadConstraintViolationException(
     override val message: String?,

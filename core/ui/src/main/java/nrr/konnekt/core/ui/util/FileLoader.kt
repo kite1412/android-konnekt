@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import nrr.konnekt.core.domain.FileResolver
+import nrr.konnekt.core.network.upload.domain.FileResolver
 import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver
 
 @Composable

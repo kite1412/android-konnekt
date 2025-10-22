@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.konnekt.jvm.library)
-    alias(libs.plugins.konnekt.hilt)
 }
 
 kotlin {
@@ -13,4 +12,5 @@ dependencies {
     api(projects.konnekt.core.model)
 
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.javax.inject)
 }

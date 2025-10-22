@@ -1,4 +1,4 @@
-package nrr.konnekt.core.domain.util
+package nrr.konnekt.core.network.upload.domain.util
 
 sealed interface DownloadStatus {
     data class Progress(val progress: Float) : DownloadStatus

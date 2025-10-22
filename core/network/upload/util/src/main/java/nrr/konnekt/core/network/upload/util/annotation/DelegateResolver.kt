@@ -1,4 +1,4 @@
-package nrr.konnekt.core.domain.annotation
+package nrr.konnekt.core.network.upload.util.annotation
 
 import javax.inject.Qualifier
 

@@ -40,6 +40,8 @@ kotlin {
 
 dependencies {
     implementation(projects.konnekt.core.domain)
+    implementation(projects.konnekt.core.network.upload.domain)
+    implementation(projects.konnekt.core.network.upload.util)
 
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
@@ -48,7 +50,6 @@ dependencies {
     implementation(libs.supabase.storage)
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
-    implementation(libs.kotlinx.serialization.json)
 
     androidTestImplementation(libs.kotlinx.coroutines.test)
 }

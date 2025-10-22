@@ -4,8 +4,8 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.compose.ui.graphics.ImageBitmap
-import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.model.AttachmentType
+import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.getFileName
 import nrr.konnekt.core.ui.util.getVideoThumbnail

@@ -14,6 +14,7 @@ kotlin {
 
 dependencies {
     implementation(projects.core.player)
+    implementation(projects.core.network.upload.domain)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)

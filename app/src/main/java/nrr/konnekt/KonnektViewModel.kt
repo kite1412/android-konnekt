@@ -12,12 +12,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.FileCache
-import nrr.konnekt.core.domain.FileNameFormatter
-import nrr.konnekt.core.domain.FileResolver
-import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.util.AuthStatus
+import nrr.konnekt.core.network.upload.domain.FileNameFormatter
+import nrr.konnekt.core.network.upload.domain.FileResolver
+import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
+import nrr.konnekt.core.storage.file.FileCache
 import nrr.konnekt.core.ui.util.ValueManager
 import javax.inject.Inject
 

@@ -1,8 +1,8 @@
-package nrr.konnekt.core.domain
+package nrr.konnekt.core.network.upload.domain
 
-import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationException
-import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.model.util.FileType
+import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationExceptionReason
 
 /**
  * Constraints for uploading files.

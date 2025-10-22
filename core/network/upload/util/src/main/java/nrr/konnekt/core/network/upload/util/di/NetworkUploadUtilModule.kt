@@ -1,18 +1,18 @@
-package nrr.konnekt.core.domain.di
+package nrr.konnekt.core.network.upload.util.di
 
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import nrr.konnekt.core.domain.CachingFileResolver
-import nrr.konnekt.core.domain.FileCache
-import nrr.konnekt.core.domain.FileResolver
-import nrr.konnekt.core.domain.annotation.DelegateResolver
 import javax.inject.Singleton
+import nrr.konnekt.core.network.upload.domain.FileResolver
+import nrr.konnekt.core.network.upload.util.CachingFileResolver
+import nrr.konnekt.core.network.upload.util.annotation.DelegateResolver
+import nrr.konnekt.core.storage.file.FileCache
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal object DomainModule {
+internal object NetworkUploadUtilModule {
     @Provides
     @Singleton
     fun provideCachingFileResolver(

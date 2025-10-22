@@ -1,4 +1,4 @@
-package nrr.konnekt.core.domain
+package nrr.konnekt.core.network.upload.domain
 
 /**
  * Contract for formatting and restoring of file names.

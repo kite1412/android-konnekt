@@ -1,8 +1,10 @@
-package nrr.konnekt.core.domain
+package nrr.konnekt.core.network.upload.util
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import nrr.konnekt.core.domain.util.DownloadStatus
+import nrr.konnekt.core.network.upload.domain.FileResolver
+import nrr.konnekt.core.network.upload.domain.util.DownloadStatus
+import nrr.konnekt.core.storage.file.FileCache
 
 class CachingFileResolver(
     private val delegate: FileResolver,

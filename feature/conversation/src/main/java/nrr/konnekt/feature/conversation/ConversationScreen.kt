@@ -100,8 +100,6 @@ import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
-import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationException
-import nrr.konnekt.core.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
@@ -111,6 +109,8 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
+import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationExceptionReason
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.player.PlaybackState
 import nrr.konnekt.core.ui.UriException

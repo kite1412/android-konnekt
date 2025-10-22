@@ -1,8 +1,8 @@
 package nrr.konnekt.core.network.supabase
 
-import nrr.konnekt.core.domain.FileUploadConstraints
 import nrr.konnekt.core.model.util.DefaultAllowedFileType
 import nrr.konnekt.core.model.util.FileType
+import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
 import javax.inject.Inject
 
 class SupabaseFileUploadConstraints @Inject constructor() : FileUploadConstraints {
