@@ -33,6 +33,7 @@ interface FileUploadConstraints {
      */
     val allowedDocumentTypes: List<FileType>
 
+    // TODO delete
     fun checkSize(bytesLength: Int) {
         if (bytesLength < 0)
             throw FileUploadConstraintViolationException(

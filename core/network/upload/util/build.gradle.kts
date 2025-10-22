@@ -10,6 +10,7 @@ android {
 dependencies {
     implementation(projects.core.network.upload.domain)
     implementation(projects.core.storage.file)
+    implementation(projects.core.model)
 
     implementation(libs.kotlinx.coroutines.core)
 }
