@@ -24,12 +24,13 @@ rootProject.name = "Konnekt"
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS") // enable access to other modules using projects.*
 include(":app")
-include(":core:designsystem")
-include(":core:model")
 include(":core:data")
+include(":core:designsystem")
 include(":core:domain")
+include(":core:model")
 include(":core:network:supabase")
 include(":core:player")
+include(":core:storage:file")
 include(":core:ui")
 include(":feature:authentication")
 include(":feature:chats")

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -27,7 +28,8 @@ fun AvatarIcon(
     name: String,
     modifier: Modifier = Modifier,
     iconPath: String? = null,
-    diameter: Dp = 40.dp
+    diameter: Dp = 40.dp,
+    contentScale: ContentScale = ContentScale.Crop
 ) {
     val icon by rememberResolvedFile(iconPath)
 
@@ -40,7 +42,8 @@ fun AvatarIcon(
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = "chat icon",
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                contentScale = contentScale
             )
         } ?: with(name.firstOrNull()) char@{
             Box(
