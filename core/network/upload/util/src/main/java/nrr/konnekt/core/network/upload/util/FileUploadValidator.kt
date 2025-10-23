@@ -33,10 +33,15 @@ class FileUploadValidator @Inject constructor(
         }
     } catch (e: FileUploadConstraintViolationException) {
         e.printStackTrace()
-        Invalid(e.reason)
+        Invalid(e)
     } catch (e: RuntimeException) {
         e.printStackTrace()
-        Invalid(ViolationReason.FILE_NOT_FOUND)
+        Invalid(
+            FileUploadConstraintViolationException(
+                message = "File not found",
+                reason = ViolationReason.FILE_NOT_FOUND
+            )
+        )
     }
 
     private fun Context.getFileSize(uri: Uri): Int {
@@ -69,7 +74,7 @@ class FileUploadValidator @Inject constructor(
             )
         if (bytesLength > constraints.maxSizeBytes)
             throw FileUploadConstraintViolationException(
-                message = "File size is too large, max size: ${constraints.maxSizeMB()} MB",
+                message = "File size is too large, max size: ${getMB(constraints.maxSizeBytes)} MB",
                 reason = ViolationReason.FILE_SIZE_TOO_LARGE
             )
     }

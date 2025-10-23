@@ -109,8 +109,9 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
-import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationException
-import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationExceptionReason
+import nrr.konnekt.core.network.upload.util.ViolationReason
+import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
+import nrr.konnekt.core.network.upload.util.getMB
 import nrr.konnekt.core.player.MediaPlayerManager
 import nrr.konnekt.core.player.PlaybackState
 import nrr.konnekt.core.ui.UriException
@@ -121,6 +122,7 @@ import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
@@ -713,14 +715,18 @@ private fun MessageComposer(
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
-    val fileUploadConstraints = LocalFileUploadConstraints.current
+    val fileUploadValidator = LocalFileUploadValidator.current
+    val fileUploadConstrains = LocalFileUploadConstraints.current
 
     val getMultipleContentsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { res ->
         res.forEach {
             try {
-                val attachment = context.uriToComposerAttachment(it, fileUploadConstraints)
+                val attachment = context.uriToComposerAttachment(
+                    uri = it,
+                    fileUploadValidator = fileUploadValidator
+                )
                 Log.d(
                     LOG_TAG,
                     "Add attachment: ${attachment.fileName}, " +
@@ -731,9 +737,13 @@ private fun MessageComposer(
             } catch (e: FileUploadConstraintViolationException) {
                 snackbarHostState.showSnackbar(
                     message = when (e.reason) {
-                        FileUploadConstraintViolationExceptionReason.SIZE_EXCEEDED ->
-                            "Max file size exceeded, max size: ${fileUploadConstraints.maxSizeMB()} MB"
-                        FileUploadConstraintViolationExceptionReason.SIZE_INVALID -> "Can't read file size"
+                        ViolationReason.FILE_SIZE_TOO_LARGE ->
+                            "Max file size exceeded, max size: ${
+                                getMB(fileUploadConstrains.maxSizeBytes).toInt()
+                            } MB"
+                        ViolationReason.FILE_SIZE_INVALID -> "Can't read file size"
+                        ViolationReason.UNSUPPORTED_MIME_TYPE -> "Mime type not supported"
+                        else -> "Can't resolve file"
                     }
                 )
             } catch (e: UriException) {

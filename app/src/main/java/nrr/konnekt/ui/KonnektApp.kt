@@ -31,6 +31,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
 import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
 import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.SnackbarHostStateWrapper
 
@@ -53,7 +54,8 @@ internal fun KonnektApp(
             LocalFileResolver provides viewModel.fileResolver,
             LocalFileNameFormatter provides viewModel.fileNameFormatter,
             LocalFileCache provides viewModel.fileCache,
-            LocalFileUploadConstraints provides viewModel.fileUploadConstraints
+            LocalFileUploadConstraints provides viewModel.fileUploadConstraints,
+            LocalFileUploadValidator provides viewModel.fileUploadValidator
         ) {
             AnimatedContent(
                 targetState = viewModel.showSplashOnce,

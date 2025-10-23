@@ -18,6 +18,7 @@ dependencies {
     implementation(projects.core.player)
     implementation(projects.core.storage.file)
     implementation(projects.core.network.upload.domain)
+    implementation(projects.core.network.upload.util)
 
     implementation(libs.androidx.core.ktx)
 }

@@ -87,14 +87,14 @@ import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
-import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationException
-import nrr.konnekt.core.network.upload.domain.exception.FileUploadConstraintViolationExceptionReason
+import nrr.konnekt.core.network.upload.util.ValidationResult
+import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
-import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
@@ -806,14 +806,29 @@ private fun CreateGroupChat(
             val boxSize = 100.dp
             val color = MaterialTheme.colorScheme.primary
             val context = LocalContext.current
-            val fileUploadConstraints = LocalFileUploadConstraints.current
+            val fileUploadValidator = LocalFileUploadValidator.current
             val snackbarHostState = LocalSnackbarHostState.current
             val getImageLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()
             ) {
                 if (it != null) try {
+                    val validationResult = fileUploadValidator(it)
+                    if (validationResult is ValidationResult.Invalid) {
+                        snackbarHostState.showSnackbar(
+                            message = when (validationResult.exception.reason) {
+                                ViolationReason.FILE_SIZE_TOO_LARGE ->
+                                    "Image size is too large"
+                                ViolationReason.FILE_SIZE_INVALID ->
+                                    "Can't read image size"
+                                ViolationReason.UNSUPPORTED_MIME_TYPE ->
+                                    "Mime type is not supported"
+                                else -> "Can't resolve image"
+                            }
+                        )
+                        return@rememberLauncherForActivityResult
+                    }
+
                     val content = context.uriToByteArray(it)
-                    fileUploadConstraints.checkSize(content.size)
 
                     val fileName = context.getFileName(it)
                     onSettingChange(
@@ -824,16 +839,6 @@ private fun CreateGroupChat(
                                 content = content
                             )
                         )
-                    )
-                } catch (e: FileUploadConstraintViolationException) {
-                    e.printStackTrace()
-                    snackbarHostState.showSnackbar(
-                        message = when (e.reason) {
-                            FileUploadConstraintViolationExceptionReason.SIZE_EXCEEDED ->
-                                "Image size is too large"
-                            FileUploadConstraintViolationExceptionReason.SIZE_INVALID ->
-                                "Can't read image size"
-                        }
                     )
                 } catch (e: UriException) {
                     e.printStackTrace()

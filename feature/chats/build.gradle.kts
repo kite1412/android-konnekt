@@ -14,4 +14,5 @@ kotlin {
 
 dependencies {
     implementation(projects.core.network.upload.domain)
+    implementation(projects.core.network.upload.util)
 }
