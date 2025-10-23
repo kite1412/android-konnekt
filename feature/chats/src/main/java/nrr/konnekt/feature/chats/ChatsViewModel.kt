@@ -32,7 +32,6 @@ class ChatsViewModel @Inject constructor(
     authentication: Authentication,
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
     observeReadMarkersUseCase: ObserveReadMarkersUseCase,
-    private val userRepository: UserRepository,
     private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase,
     private val createChatUseCase: CreateChatUseCase
 ) : ViewModel() {
@@ -42,13 +41,15 @@ class ChatsViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
+            initialValue = null
         )
     internal val chats = combine(
         flow = _chats,
         flow2 = snapshotFlow { chatFilter },
         flow3 = snapshotFlow { searchValue }
     ) { chats, filter, searchValue ->
+        if (chats == null) return@combine null
+
         val filterBySearch = if (searchValue.isNotBlank()) chats.filter {
             it.chat.setting
                 ?.name?.contains(
@@ -63,6 +64,11 @@ class ChatsViewModel @Inject constructor(
             ChatFilter.CHAT_ROOM -> filterBySearch.filter { it.chat.type == ChatType.CHAT_ROOM }
         }
     }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
     internal val myReadMarkers = observeReadMarkersUseCase.currentUser()
         .stateIn(
             scope = viewModelScope,

@@ -66,7 +66,7 @@ class ConversationViewModel @Inject constructor(
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
     private val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
-    private var fixedChatId: String? = null
+    internal var fixedChatId: String? by mutableStateOf(null)
     internal val currentUser = authentication
         .loggedInUser
         .stateIn(

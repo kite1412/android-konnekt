@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -42,6 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -117,6 +117,7 @@ import nrr.konnekt.core.player.PlaybackState
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
 import nrr.konnekt.core.ui.component.AvatarIcon
+import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
@@ -159,7 +160,7 @@ internal fun ConversationScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
     val chat by viewModel.chat.collectAsStateWithLifecycle()
-    val messages by viewModel.messages.collectAsStateWithLifecycle(emptyList())
+    val messages by viewModel.messages.collectAsStateWithLifecycle(null)
     val readMarkers by viewModel.readMarkers.collectAsStateWithLifecycle(null)
     val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
@@ -191,7 +192,8 @@ internal fun ConversationScreen(
             ConversationScreen(
                 currentUser = u,
                 chat = c,
-                messages = messages,
+                isLoadingMessages = messages == null && viewModel.fixedChatId != null,
+                messages = messages ?: emptyList(),
                 readMarkers = readMarkers,
                 messageInput = messageInput,
                 messageAction = messageAction,
@@ -225,6 +227,7 @@ internal fun ConversationScreen(
 private fun ConversationScreen(
     currentUser: User,
     chat: Chat,
+    isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
     messages: List<Message>,
     readMarkers: List<UserReadMarker>?,
@@ -264,8 +267,8 @@ private fun ConversationScreen(
         }
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
+                .fillMaxWidth()
+                .weight(1f)
         ) {
             var showFloatingDateHeader by remember {
                 mutableStateOf(true)
@@ -273,73 +276,57 @@ private fun ConversationScreen(
             var lastVisibleDate by remember {
                 mutableStateOf("")
             }
-
-            Column(
-                modifier = Modifier.fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val conversationItems = remember(messages) {
-                    messages.mapToConversationItem()
-                }
-                val state = rememberLazyListState()
-                val scrollInProgress by remember {
-                    derivedStateOf(
-                        state::isScrollInProgress
-                    )
-                }
-                val visibleItems by remember {
-                    derivedStateOf {
-                        state.layoutInfo.visibleItemsInfo
-                    }
-                }
-
-                LaunchedEffect(scrollInProgress) {
-                    if (scrollInProgress) {
-                        showFloatingDateHeader = true
-                    } else {
-                        delay(1000)
-                        showFloatingDateHeader = false
-                    }
-                }
-                LaunchedEffect(visibleItems) {
-                    if (visibleItems.isNotEmpty()) {
-                        visibleItems.lastOrNull()?.index?.let { i ->
-                            (conversationItems
-                                .slice(i until conversationItems.size)
-                                .firstOrNull { item ->
-                                    item is ConversationItem.DateHeader
-                                } as? ConversationItem.DateHeader)
-                                ?.let {
-                                    lastVisibleDate = it.date.dateHeaderString()
-                                }
-                        }
-                    }
-                }
-                Conversation(
-                    items = conversationItems,
-                    readMarkers = readMarkers,
-                    chatType = chat.type,
-                    sentByCurrentUser = { m -> m.sender.id == currentUser.id },
-                    deletedByCurrentUser = { m ->
-                        m.messageStatuses
-                            .firstOrNull { it.userId == currentUser.id }
-                            ?.isDeleted == true
-                    },
-                    onMessageAction = onMessageAction,
-                    modifier = Modifier.weight(1f),
-                    state = state
-                )
-                MessageComposer(
-                    message = messageInput,
-                    onMessageChange = onMessageInputChange,
-                    attachments = composerAttachments,
-                    onAddAttachment = onAddComposerAttachment,
-                    action = composerAction,
-                    onActionChange = onComposerActionChange,
-                    onSend = onSend,
-                    sendingMessage = sendingMessage
+            val conversationItems = remember(messages) {
+                messages.mapToConversationItem()
+            }
+            val state = rememberLazyListState()
+            val scrollInProgress by remember {
+                derivedStateOf(
+                    state::isScrollInProgress
                 )
             }
+            val visibleItems by remember {
+                derivedStateOf {
+                    state.layoutInfo.visibleItemsInfo
+                }
+            }
+
+            LaunchedEffect(scrollInProgress) {
+                if (scrollInProgress) {
+                    showFloatingDateHeader = true
+                } else {
+                    delay(1000)
+                    showFloatingDateHeader = false
+                }
+            }
+            LaunchedEffect(visibleItems) {
+                if (visibleItems.isNotEmpty()) {
+                    visibleItems.lastOrNull()?.index?.let { i ->
+                        (conversationItems
+                            .slice(i until conversationItems.size)
+                            .firstOrNull { item ->
+                                item is ConversationItem.DateHeader
+                            } as? ConversationItem.DateHeader)
+                            ?.let {
+                                lastVisibleDate = it.date.dateHeaderString()
+                            }
+                    }
+                }
+            }
+            if (!isLoadingMessages) Conversation(
+                items = conversationItems,
+                readMarkers = readMarkers,
+                chatType = chat.type,
+                sentByCurrentUser = { m -> m.sender.id == currentUser.id },
+                deletedByCurrentUser = { m ->
+                    m.messageStatuses
+                        .firstOrNull { it.userId == currentUser.id }
+                        ?.isDeleted == true
+                },
+                onMessageAction = onMessageAction,
+                state = state,
+                contentPadding = PaddingValues(bottom = 8.dp)
+            )
             if (messages.isNotEmpty() && lastVisibleDate.isNotBlank())
                 this@Column.AnimatedVisibility(
                     visible = showFloatingDateHeader,
@@ -351,7 +338,22 @@ private fun ConversationScreen(
                         date = lastVisibleDate
                     )
                 }
+            if (isLoadingMessages) LoadingMessages(
+                modifier = Modifier.align(Alignment.Center)
+            )
         }
+        MessageComposer(
+            message = messageInput,
+            onMessageChange = onMessageInputChange,
+            attachments = composerAttachments,
+            onAddAttachment = onAddComposerAttachment,
+            action = composerAction,
+            onActionChange = onComposerActionChange,
+            onSend = onSend,
+            sendingMessage = sendingMessage,
+            sendEnabled = !isLoadingMessages,
+            modifier = Modifier.imePadding()
+        )
     }
     when (messageAction?.type) {
         ActionType.FOCUS_ATTACHMENTS -> MessageAttachmentsFocused(
@@ -516,6 +518,14 @@ private fun Header(
     }
 }
 
+@Composable
+private fun LoadingMessages(modifier: Modifier = Modifier) {
+    CubicLoading(
+        text = "Loading message",
+        modifier = modifier
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Conversation(
@@ -526,7 +536,8 @@ private fun Conversation(
     deletedByCurrentUser: (Message) -> Boolean,
     onMessageAction: (MessageAction) -> Unit,
     modifier: Modifier = Modifier,
-    state: LazyListState = rememberLazyListState()
+    state: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues.Zero
 ) {
     val myLatestReadMessage = remember(items, readMarkers) {
         items
@@ -565,7 +576,8 @@ private fun Conversation(
         modifier = modifier.fillMaxWidth(),
         state = state,
         reverseLayout = true,
-        verticalArrangement = Arrangement.Top
+        verticalArrangement = Arrangement.Top,
+        contentPadding = contentPadding
     ) {
         items(
             count = items.size,
@@ -711,6 +723,7 @@ private fun MessageComposer(
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     sendingMessage: Boolean,
+    sendEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
@@ -793,9 +806,10 @@ private fun MessageComposer(
                         Icon(
                             painter = painterResource(KonnektIcon.paperclip),
                             contentDescription = "attachments",
-                            modifier = iconModifier {
+                            modifier = iconModifier(sendEnabled) {
                                 onActionChange(MessageComposerAction.Attachment)
-                            }
+                            },
+                            tint = if (sendEnabled) LocalContentColor.current else DarkGray
                         )
 
                         val density = LocalDensity.current
@@ -841,10 +855,11 @@ private fun MessageComposer(
                             ),
                             contentDescription = "attachments",
                             modifier = iconModifier(
-                                clickEnabled = message.isNotBlank() || attachments.isNotEmpty()
+                                clickEnabled = enableSendMessage && sendEnabled
                             ) {
-                                if (enableSendMessage) onSend(message)
-                            }
+                                onSend(message)
+                            },
+                            tint = if (!sendEnabled) DarkGray else LocalContentColor.current
                         ) else CircularProgressIndicator(
                             modifier = Modifier.size(iconSize),
                             color = Gray,
@@ -1434,6 +1449,7 @@ private fun ConversationScreenPreview(
             ConversationScreen(
                 currentUser = user,
                 chat = conversation.chat,
+                isLoadingMessages = false,
                 messages = conversation.messages,
                 readMarkers = null,
                 messageInput = messageInput,

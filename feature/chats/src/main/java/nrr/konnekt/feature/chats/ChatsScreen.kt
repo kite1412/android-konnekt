@@ -91,6 +91,7 @@ import nrr.konnekt.core.network.upload.util.ValidationResult
 import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.component.AvatarIcon
+import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
@@ -116,7 +117,7 @@ internal fun ChatsScreen(
     viewModel: ChatsViewModel = hiltViewModel()
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-    val chats by viewModel.chats.collectAsStateWithLifecycle(emptyList())
+    val chats by viewModel.chats.collectAsStateWithLifecycle()
     val myReadMarkers by viewModel.myReadMarkers.collectAsStateWithLifecycle()
 
     currentUser?.let {
@@ -183,7 +184,7 @@ internal fun ChatsScreen(
 @Composable
 private fun ChatsScreen(
     user: User,
-    chats: List<LatestChatMessage>,
+    chats: List<LatestChatMessage>?,
     searchValue: String,
     createChatType: ChatType?,
     usersByIdentifier: List<User>?,
@@ -230,23 +231,25 @@ private fun ChatsScreen(
                     )
                     .padding(horizontal = 8.dp)
             )
-            Chats(
-                user = user,
-                chats = chats,
-                searchValue = searchValue,
-                chatFilter = chatFilter,
-                unreadByCurrentUser = messageUnreadByCurrentUser,
-                onChatClick = onChatClick,
-                onArchiveChat = onArchiveChat,
-                onClearChat = onClearChat,
-                onLeaveChat = onLeaveChat,
-                onBlockChat = onBlockChat,
-                onSearchValueChange = onSearchValueChange,
-                onFilterChange = onFilterChange,
-                contentPadding = contentPadding
-            )
+            chats?.let {
+                Chats(
+                    user = user,
+                    chats = it,
+                    searchValue = searchValue,
+                    chatFilter = chatFilter,
+                    unreadByCurrentUser = messageUnreadByCurrentUser,
+                    onChatClick = onChatClick,
+                    onArchiveChat = onArchiveChat,
+                    onClearChat = onClearChat,
+                    onLeaveChat = onLeaveChat,
+                    onBlockChat = onBlockChat,
+                    onSearchValueChange = onSearchValueChange,
+                    onFilterChange = onFilterChange,
+                    contentPadding = contentPadding
+                )
+            }
         }
-        if (chats.isEmpty()) Column(
+        if (chats?.isEmpty() == true) Column(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(
@@ -270,6 +273,9 @@ private fun ChatsScreen(
                 )
             )
         }
+        if (chats == null) LoadingChats(
+            modifier = Modifier.align(Alignment.Center)
+        )
         if (createChatType != null) CreateChatPopup(
             type = createChatType,
             dismiss = dismissPopup,
@@ -357,6 +363,18 @@ private fun Header(
                 diameter = 50.dp
             )
         }
+    }
+}
+
+@Composable
+private fun LoadingChats(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CubicLoading(
+            text = "Loading chats"
+        )
     }
 }
 
