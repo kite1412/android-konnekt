@@ -1,4 +1,4 @@
-package nrr.konnekt.feature.conversation.util
+package nrr.konnekt.core.ui.util
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -54,14 +54,14 @@ internal object ActiveStatus {
     ) {
         Active(
             text = if (totalActiveParticipants > 0) "$totalActiveParticipants Active now"
-                else "Nobody active",
+            else "Nobody active",
             isActive = totalActiveParticipants > 0,
             modifier = modifier,
             textStyle = LocalTextStyle.current.copy(
                 fontStyle = if (totalActiveParticipants > 0) FontStyle.Normal
-                    else FontStyle.Italic,
+                else FontStyle.Italic,
                 color = if (totalActiveParticipants > 0) LocalContentColor.current
-                    else Gray
+                else Gray
             )
         )
     }

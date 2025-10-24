@@ -46,7 +46,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -70,7 +69,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -97,9 +95,10 @@ import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
-import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.media.MediaPlayerManager
+import nrr.konnekt.core.media.PlaybackState
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
@@ -112,11 +111,9 @@ import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
 import nrr.konnekt.core.network.upload.util.getMB
-import nrr.konnekt.core.media.MediaPlayerManager
-import nrr.konnekt.core.media.PlaybackState
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
-import nrr.konnekt.core.ui.component.AvatarIcon
+import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
@@ -136,7 +133,6 @@ import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.conversation.util.ActionType
-import nrr.konnekt.feature.conversation.util.ActiveStatus
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.ConversationItem
 import nrr.konnekt.feature.conversation.util.LOG_TAG
@@ -377,87 +373,33 @@ private fun Header(
     dropdownContent: @Composable ColumnScope.() -> Unit
 ) {
     val chatNameOrId = chat.setting?.name ?: chat.id
-    val chatName = @Composable { style: TextStyle ->
-        Text(
-            text = chatNameOrId,
-            style = style.copy(
-                fontWeight = FontWeight.Bold
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val iconButtonSize = 32.dp
+        val iconButtonTint = MaterialTheme.colorScheme.primary
+
+        ChatHeader(
+            chatName = chatNameOrId,
+            chatIconPath = chat.setting?.iconPath,
+            chatType = chat.type,
+            totalActiveParticipants = totalActiveParticipants,
+            peerLastActive = peerLastActive,
+            onNavigateBack = onNavigateBack,
+            onClick = { onChatClick(chat) },
+            modifier = Modifier
+                .weight(1f),
+            iconSize = iconButtonSize,
+            iconTint = iconButtonTint
         )
-    }
+        if (chat.type != ChatType.CHAT_ROOM) {
+            var dropdownExpanded by remember { mutableStateOf(false) }
 
-    if (chat.type != ChatType.CHAT_ROOM) {
-        var dropdownExpanded by remember { mutableStateOf(false) }
-
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            val iconButtonSize = 32.dp
-            val iconButtonTint = MaterialTheme.colorScheme.primary
-
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onNavigateBack
-                ) {
-                    Icon(
-                        painter = painterResource(KonnektIcon.chevronLeft),
-                        contentDescription = "back",
-                        modifier = Modifier.size(iconButtonSize),
-                        tint = iconButtonTint
-                    )
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            indication = null,
-                            interactionSource = null
-                        ) {
-                            onChatClick(chat)
-                        },
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AvatarIcon(
-                        name = chatNameOrId,
-                        iconPath = chat.setting?.iconPath,
-                        diameter = 60.dp
-                    )
-                    Column {
-                        chatName(MaterialTheme.typography.bodyLarge)
-                        CompositionLocalProvider(
-                            LocalTextStyle provides MaterialTheme.typography.bodySmall
-                        ) {
-                            with(ActiveStatus) {
-                                when (chat.type) {
-                                    ChatType.PERSONAL -> if (peerLastActive != null) Personal(
-                                        isActive = totalActiveParticipants > 0,
-                                        lastActive = peerLastActive
-                                    ) else Text(
-                                        text = "Looking for information...",
-                                        style = LocalTextStyle.current.copy(
-                                            fontStyle = FontStyle.Italic,
-                                            color = Gray
-                                        )
-                                    )
-                                    else -> Group(
-                                        totalActiveParticipants = totalActiveParticipants
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
             Box {
                 IconButton(
                     onClick = { dropdownExpanded = !dropdownExpanded }
@@ -476,44 +418,6 @@ private fun Header(
                     dropdownContent(this)
                 }
             }
-        }
-    } else Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            chatName(MaterialTheme.typography.titleSmall)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                with(MaterialTheme.typography.bodySmall) {
-                    Icon(
-                        painter = painterResource(KonnektIcon.users),
-                        contentDescription = "total participants",
-                        modifier = Modifier.size(fontSize.value.dp * 1.5f),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "$totalActiveParticipants Joined",
-                        style = this
-                    )
-                }
-            }
-        }
-        TextButton(
-            onClick = onNavigateBack
-        ) {
-            Text(
-                text = "Leave",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Red
-                )
-            )
         }
     }
 }

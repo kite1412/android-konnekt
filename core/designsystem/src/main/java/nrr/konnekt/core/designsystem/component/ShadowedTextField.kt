@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.VisualTransformation
@@ -42,6 +46,7 @@ fun ShadowedTextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     placeholder: String = "Enter text here",
     errorIndicators: List<TextFieldErrorIndicator>? = null,
     label: String? = null,
@@ -49,7 +54,10 @@ fun ShadowedTextField(
     singleLine: Boolean = true,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle()
+    style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle(),
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    focusRequester: FocusRequester? = null
 ) {
     val valueIsEmpty = value.isEmpty()
     val errorColor = MaterialTheme.colorScheme.error
@@ -111,7 +119,12 @@ fun ShadowedTextField(
                         BasicTextField(
                             value = value,
                             onValueChange = onValueChange,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                                    else Modifier
+                                ),
                             textStyle = style.textStyle,
                             decorationBox = {
                                 Box(
@@ -130,7 +143,10 @@ fun ShadowedTextField(
                             cursorBrush = SolidColor(style.textStyle.color),
                             singleLine = singleLine,
                             maxLines = maxLines,
-                            visualTransformation = visualTransformation
+                            visualTransformation = visualTransformation,
+                            enabled = enabled,
+                            keyboardActions = keyboardActions,
+                            keyboardOptions = keyboardOptions
                         )
                     }
                     actions?.invoke()

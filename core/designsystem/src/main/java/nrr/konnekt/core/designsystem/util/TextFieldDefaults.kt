@@ -59,7 +59,7 @@ object TextFieldDefaults {
     )
 }
 
-class ShadowedTextFieldStyle(
+data class ShadowedTextFieldStyle(
     val labelTextStyle: TextStyle,
     val textStyle: TextStyle,
     val shadowColor: Color,
@@ -69,7 +69,7 @@ class ShadowedTextFieldStyle(
     val space: Dp
 )
 
-class OutlinedTextFieldStyle(
+data class OutlinedTextFieldStyle(
     val outlineColor: Color,
     val textStyle: TextStyle,
     val backgroundColor: Color,
