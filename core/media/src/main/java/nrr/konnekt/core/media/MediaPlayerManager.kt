@@ -1,4 +1,4 @@
-package nrr.konnekt.core.player
+package nrr.konnekt.core.media
 
 import android.content.Context
 import android.util.Log
@@ -14,7 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import nrr.konnekt.core.player.util.LOG_TAG
+import nrr.konnekt.core.media.util.LOG_TAG
 import java.io.File
 
 object MediaPlayerManager {

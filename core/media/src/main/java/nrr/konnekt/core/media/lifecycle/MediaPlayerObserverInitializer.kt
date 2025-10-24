@@ -1,4 +1,4 @@
-package nrr.konnekt.core.player.lifecycle
+package nrr.konnekt.core.media.lifecycle
 
 import android.app.Activity
 import android.app.Application

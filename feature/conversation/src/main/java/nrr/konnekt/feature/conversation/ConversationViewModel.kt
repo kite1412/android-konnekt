@@ -40,7 +40,7 @@ import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
-import nrr.konnekt.core.player.MediaPlayerManager
+import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.LOG_TAG

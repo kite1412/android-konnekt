@@ -1,3 +1,3 @@
-package nrr.konnekt.core.player.util
+package nrr.konnekt.core.media.util
 
 internal const val LOG_TAG = "MediaPlayerManager"

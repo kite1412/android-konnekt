@@ -78,7 +78,7 @@ import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.upload.domain.util.DownloadStatus
-import nrr.konnekt.core.player.MediaPlayerManager
+import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
 import nrr.konnekt.core.ui.compositionlocal.LocalFileNameFormatter
 import nrr.konnekt.core.ui.compositionlocal.LocalFileResolver

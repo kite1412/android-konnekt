@@ -1,4 +1,4 @@
-package nrr.konnekt.core.player
+package nrr.konnekt.core.media
 
 enum class PlaybackState {
     IDLE,

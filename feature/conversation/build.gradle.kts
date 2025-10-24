@@ -13,7 +13,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(projects.core.player)
+    implementation(projects.core.media)
     implementation(projects.core.network.upload.domain)
     implementation(projects.core.network.upload.util)
 

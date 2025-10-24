@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "nrr.konnekt.core.player"
+    namespace = "nrr.konnekt.core.media"
 }
 
 dependencies {

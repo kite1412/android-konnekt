@@ -112,8 +112,8 @@ import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
 import nrr.konnekt.core.network.upload.util.getMB
-import nrr.konnekt.core.player.MediaPlayerManager
-import nrr.konnekt.core.player.PlaybackState
+import nrr.konnekt.core.media.MediaPlayerManager
+import nrr.konnekt.core.media.PlaybackState
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
 import nrr.konnekt.core.ui.component.AvatarIcon
