@@ -33,4 +33,5 @@ object KonnektIcon {
     val pause = R.drawable.pause
     val arrowDown = R.drawable.arrow_down
     val pencil = R.drawable.pencil
+    val share = R.drawable.share
 }
