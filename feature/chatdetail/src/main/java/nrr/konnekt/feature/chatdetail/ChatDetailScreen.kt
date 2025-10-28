@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -269,7 +271,7 @@ private fun ChatInfo(
 }
 
 @Composable
-private fun ColumnScope.PersonalChatInfo(
+private fun PersonalChatInfo(
     isAdded: Boolean,
     groupsInCommon: List<Chat>,
     pushNotificationEnabled: Boolean,
@@ -322,6 +324,30 @@ private fun ColumnScope.PersonalChatInfo(
                 )
             )
         }
+    }
+    PersonalChatActions(
+        isAdded = isAdded,
+        isBlocked = false,
+        onBlockChange = {  },
+        onClearChat = {}
+    )
+}
+
+@Composable
+private fun PersonalChatActions(
+    isAdded: Boolean,
+    isBlocked: Boolean,
+    onBlockChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    onClearChat: (() -> Unit)? = null
+) = ActionsLayout(modifier) {
+    if (isAdded) onClearChat?.let {
+        ActionClearChat(onClick = it)
+    }
+    if (isBlocked) ActionBlockChat {
+        onBlockChange(true)
+    } else ActionUnblockChat {
+        onBlockChange(false)
     }
 }
 
@@ -448,6 +474,86 @@ private fun ToggleSetting(
             onCheckedChange = onCheckedChange,
             enabled = enabled
         )
+    }
+}
+
+@Composable
+private fun ActionsLayout(
+    modifier: Modifier = Modifier,
+    actions: @Composable ColumnScope.() -> Unit
+) = Column(
+    modifier = modifier,
+    verticalArrangement = Arrangement.spacedBy(16.dp),
+    content = actions
+)
+
+@Composable
+private fun ActionUnblockChat(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) = Action(
+    iconId = KonnektIcon.circleOff,
+    name = "Unblock",
+    onClick = onClick,
+    modifier = modifier,
+    contentColor = MaterialTheme.colorScheme.primary
+)
+
+@Composable
+private fun ActionBlockChat(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) = Action(
+    iconId = KonnektIcon.circleOff,
+    name = "Block",
+    onClick = onClick,
+    modifier = modifier,
+    contentColor = Red
+)
+
+@Composable
+private fun ActionClearChat(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) = Action(
+    iconId = KonnektIcon.messageCircleX,
+    name = "Clear Chat",
+    onClick = onClick,
+    modifier = modifier,
+    contentColor = Red
+)
+
+@Composable
+private fun Action(
+    iconId: Int,
+    name: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentColor: Color = Red
+) {
+    CompositionLocalProvider(
+        LocalContentColor provides contentColor
+    ) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(iconId),
+                contentDescription = name,
+                modifier = Modifier.size(40.dp)
+            )
+            Text(
+                text = name,
+                style = LocalTextStyle.current.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
     }
 }
 
