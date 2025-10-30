@@ -135,6 +135,7 @@ import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.ConversationItem
+import nrr.konnekt.feature.conversation.util.IdType
 import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
@@ -148,7 +149,7 @@ import kotlin.time.Instant
 @Composable
 internal fun ConversationScreen(
     navigateBack: () -> Unit,
-    navigateToChatDetail: (Chat) -> Unit,
+    navigateToChatDetail: (id: String, type: IdType) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ConversationViewModel = hiltViewModel()
@@ -195,20 +196,27 @@ internal fun ConversationScreen(
                 messageAction = messageAction,
                 onMessageInputChange = { viewModel.messageInput = it },
                 composerAttachments = viewModel.composerAttachments,
-                onAddComposerAttachment = {
-                    viewModel.composerAttachments.add(it)
-                },
+                onAddComposerAttachment = viewModel.composerAttachments::add,
                 composerAction = viewModel.composerAction,
                 onComposerActionChange = {
                     viewModel.composerAction = it
                 },
-                onSend = {
-                    viewModel.sendMessage(it)
-                },
+                onSend = viewModel::sendMessage,
                 sendingMessage = viewModel.sendingMessage,
                 totalActiveParticipants = totalActiveParticipants ?: 0,
                 onNavigateBack = navigateBack,
-                onChatClick = navigateToChatDetail,
+                onChatClick = {
+                    val type = viewModel.idType
+                    navigateToChatDetail(
+                        when (type) {
+                            IdType.CHAT -> it.id
+                            IdType.USER -> viewModel.peerId ?: throw RuntimeException(
+                                "No peer id provided for IdType.USER"
+                            )
+                        },
+                        viewModel.idType
+                    )
+                },
                 onMessageAction = viewModel::setMessageAction,
                 onDismissMessageAction = viewModel::dismissMessageAction,
                 contentPadding = contentPadding,

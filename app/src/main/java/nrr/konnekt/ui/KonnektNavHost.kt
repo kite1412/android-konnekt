@@ -8,11 +8,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import nrr.konnekt.authentication.navigation.AuthenticationRoute
 import nrr.konnekt.authentication.navigation.authenticationScreen
+import nrr.konnekt.feature.chatdetail.navigation.chatDetailScreen
+import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
+import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
 import nrr.konnekt.feature.chats.navigation.ChatsRoute
 import nrr.konnekt.feature.chats.navigation.chatsScreen
 import nrr.konnekt.feature.conversation.navigation.conversationScreen
 import nrr.konnekt.feature.conversation.navigation.navigateToConversation
 import nrr.konnekt.feature.conversation.navigation.navigateToTempPersonalConversation
+import nrr.konnekt.feature.conversation.util.IdType
 
 @Composable
 internal fun KonnektNavHost(
@@ -35,9 +39,18 @@ internal fun KonnektNavHost(
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         conversationScreen(
-            navigateBack = { navController.popBackStack() },
-            navigateToChatDetail = {},
+            navigateBack = navController::popBackStack,
+            navigateToChatDetail = { id, type ->
+                when (type) {
+                    IdType.CHAT -> navController::navigateToChatDetail
+                    IdType.USER -> navController::navigateToTempPersonalChatDetail
+                }(id)
+            },
             contentPadding = smallContentPadding(scaffoldPadding)
+        )
+        chatDetailScreen(
+            navigateBack = navController::popBackStack,
+            contentPadding = contentPadding(scaffoldPadding)
         )
     }
 }

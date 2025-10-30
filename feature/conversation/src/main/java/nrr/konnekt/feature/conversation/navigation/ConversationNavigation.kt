@@ -5,8 +5,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import kotlinx.serialization.Serializable
-import nrr.konnekt.core.model.Chat
 import nrr.konnekt.feature.conversation.ConversationScreen
+import nrr.konnekt.feature.conversation.util.IdType
 
 @Serializable
 data class ConversationRoute(
@@ -22,7 +22,7 @@ fun NavController.navigateToTempPersonalConversation(peerId: String) =
 
 fun NavGraphBuilder.conversationScreen(
     navigateBack: () -> Unit,
-    navigateToChatDetail: (Chat) -> Unit,
+    navigateToChatDetail: (id: String, idType: IdType) -> Unit,
     contentPadding: PaddingValues
 ) {
     composable<ConversationRoute> {

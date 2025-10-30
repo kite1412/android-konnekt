@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.component.Toggle
 import nrr.konnekt.core.designsystem.theme.Gray
@@ -78,15 +80,28 @@ import kotlin.time.ExperimentalTime
 @Composable
 internal fun ChatDetailScreen(
     navigateBack: () -> Unit,
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatDetailViewModel = hiltViewModel()
 ) {
+    val chat by viewModel.chat.collectAsStateWithLifecycle()
+    val totalActiveParticipants by viewModel.totalChatParticipants.collectAsStateWithLifecycle()
+
     LaunchedEffect(Unit) {
         viewModel.events.collect {
             when (it) {
                 is UiEvent.NavigateBack -> navigateBack()
             }
         }
+    }
+    chat?.let { chat ->
+        ChatDetailScreen(
+            chat = chat,
+            totalActiveParticipants = totalActiveParticipants ?: 0,
+            onNavigateBack = navigateBack,
+            onShare = {},
+            modifier = modifier.padding(contentPadding)
+        )
     }
 }
 
@@ -189,7 +204,7 @@ private fun ChatInfo(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         var descEdit by rememberSaveable(desc) { mutableStateOf(desc ?: "") }
         var editDesc by rememberSaveable { mutableStateOf(false) }
@@ -258,14 +273,18 @@ private fun ChatInfo(
             focusRequester = focusRequester
         )
 
-        when (chatType) {
-            ChatType.PERSONAL -> PersonalChatInfo(
-                isAdded = isPersonalChatAdded,
-                groupsInCommon = peerGroupsInCommon,
-                pushNotificationEnabled = pushNotificationEnabled,
-                onPushNotificationChange = onPushNotificationChange
-            )
-            else -> Unit
+        Column(
+            verticalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            when (chatType) {
+                ChatType.PERSONAL -> PersonalChatInfo(
+                    isAdded = isPersonalChatAdded,
+                    groupsInCommon = peerGroupsInCommon,
+                    pushNotificationEnabled = pushNotificationEnabled,
+                    onPushNotificationChange = onPushNotificationChange
+                )
+                else -> Unit
+            }
         }
     }
 }
@@ -344,10 +363,10 @@ private fun PersonalChatActions(
     if (isAdded) onClearChat?.let {
         ActionClearChat(onClick = it)
     }
-    if (isBlocked) ActionBlockChat {
-        onBlockChange(true)
-    } else ActionUnblockChat {
+    if (isBlocked) ActionUnblockChat {
         onBlockChange(false)
+    } else ActionBlockChat {
+        onBlockChange(true)
     }
 }
 

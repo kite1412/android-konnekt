@@ -34,15 +34,16 @@ import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.usecase.UpdateReadMarkerUseCase
 import nrr.konnekt.core.domain.util.Result
+import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
-import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
+import nrr.konnekt.feature.conversation.util.IdType
 import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
@@ -65,7 +66,7 @@ class ConversationViewModel @Inject constructor(
     private val createChatUseCase: CreateChatUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
-    private val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
+    internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
     internal var fixedChatId: String? by mutableStateOf(null)
     internal val currentUser = authentication
         .loggedInUser
@@ -80,6 +81,8 @@ class ConversationViewModel @Inject constructor(
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
     internal val composerAttachments = mutableStateListOf<ComposerAttachment>()
+    internal var idType = IdType.CHAT
+        private set
 
     private var _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
@@ -102,6 +105,7 @@ class ConversationViewModel @Inject constructor(
                 _events.emit(UiEvent.NavigateBack)
                 return@scope
             }
+            if (peerId != null) idType = IdType.USER
             var peerId = peerId
             if (chatId != null) {
                 fixedChatId = chatId
