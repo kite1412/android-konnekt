@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.component.Toggle
+import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
@@ -67,7 +68,10 @@ import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.Event
+import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
@@ -76,6 +80,7 @@ import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.feature.chatdetail.util.UiEvent
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @Composable
 internal fun ChatDetailScreen(
@@ -100,7 +105,9 @@ internal fun ChatDetailScreen(
             totalActiveParticipants = totalActiveParticipants ?: 0,
             onNavigateBack = navigateBack,
             onShare = {},
-            modifier = modifier.padding(contentPadding)
+            onDescChange = {},
+            modifier = modifier.padding(contentPadding),
+            isPersonalChatAdded = viewModel.isPersonalChatAdded
         )
     }
 }
@@ -111,9 +118,9 @@ private fun ChatDetailScreen(
     totalActiveParticipants: Int,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
+    onDescChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
-    onDescChange: ((String) -> Unit)? = null,
     isPersonalChatAdded: Boolean = false,
     peerGroupsInCommon: List<Chat> = emptyList(),
     pushNotificationEnabled: Boolean = false,
@@ -134,14 +141,21 @@ private fun ChatDetailScreen(
         ) {
             item {
                 ChatInfo(
-                    desc = chat.setting?.description,
-                    chatType = chat.type,
+                    chat = chat,
+                    isAdmin = true,
                     canEditDesc = canEditDesc,
                     onDescChange = onDescChange,
                     isPersonalChatAdded = isPersonalChatAdded,
                     peerGroupsInCommon = peerGroupsInCommon,
-                    pushNotificationEnabled = pushNotificationEnabled,
-                    onPushNotificationChange = onPushNotificationChange
+                    messageNotificationEnabled = pushNotificationEnabled,
+                    onMessageNotificationChange = onPushNotificationChange,
+                    onClearChat = {},
+                    eventNotificationEnabled = true,
+                    onEventNotificationChange = {},
+                    onLeaveChat = {},
+                    onAddMember = {},
+                    onCreateEvent = {},
+                    onDeleteGroup = {},
                 )
             }
         }
@@ -192,23 +206,32 @@ private fun chatInfoTitleStyle(): TextStyle =
 
 @Composable
 private fun ChatInfo(
-    chatType: ChatType,
-    desc: String?,
-    modifier: Modifier = Modifier,
-    canEditDesc: Boolean = true,
-    onDescChange: ((String) -> Unit)? = null,
-    isPersonalChatAdded: Boolean = false,
-    peerGroupsInCommon: List<Chat> = emptyList(),
-    pushNotificationEnabled: Boolean = false,
-    onPushNotificationChange: (Boolean) -> Unit = {}
+    chat: Chat,
+    isAdmin: Boolean,
+    onClearChat: () -> Unit,
+    canEditDesc: Boolean,
+    onDescChange: (String) -> Unit,
+    isPersonalChatAdded: Boolean,
+    peerGroupsInCommon: List<Chat>,
+    messageNotificationEnabled: Boolean,
+    onMessageNotificationChange: (Boolean) -> Unit,
+    eventNotificationEnabled: Boolean,
+    onEventNotificationChange: (Boolean) -> Unit,
+    onLeaveChat: () -> Unit,
+    onAddMember: () -> Unit,
+    onCreateEvent: () -> Unit,
+    onDeleteGroup: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        var descEdit by rememberSaveable(desc) { mutableStateOf(desc ?: "") }
+        var descEdit by rememberSaveable(chat.setting?.description) {
+            mutableStateOf(chat.setting?.description ?: "")
+        }
         var editDesc by rememberSaveable { mutableStateOf(false) }
-        val editable = chatType == ChatType.GROUP && canEditDesc
+        val editable = chat.type == ChatType.GROUP && canEditDesc
         val editEnabled = editable && editDesc
         val focusRequester = remember { FocusRequester() }
 
@@ -217,15 +240,15 @@ private fun ChatInfo(
             onValueChange = {
                 descEdit = it
             },
-            label = if (chatType == ChatType.PERSONAL) "Bio" else "Group Description",
+            label = if (chat.type == ChatType.PERSONAL) "Bio" else "Group Description",
             enabled = editEnabled,
-            placeholder = if (chatType == ChatType.PERSONAL) "No Bio" else "No Description",
+            placeholder = if (chat.type == ChatType.PERSONAL) "No Bio" else "No Description",
             actions = if (editable) {
                 {
                     LaunchedEffect(editDesc) {
                         Log.d("feat:detail", editDesc.toString())
                         if (!editDesc) {
-                            descEdit = desc ?: ""
+                            descEdit = chat.setting?.description ?: ""
                             focusRequester.freeFocus()
                         } else focusRequester.requestFocus()
                     }
@@ -262,8 +285,8 @@ private fun ChatInfo(
             ),
             keyboardActions = KeyboardActions(
                 onDone = {
-                    if (editEnabled && descEdit != desc)
-                        onDescChange?.invoke(descEdit)
+                    if (editEnabled && descEdit != chat.setting?.description)
+                        onDescChange(descEdit)
                     editDesc = false
                 }
             ),
@@ -276,12 +299,27 @@ private fun ChatInfo(
         Column(
             verticalArrangement = Arrangement.spacedBy(32.dp)
         ) {
-            when (chatType) {
+            when (chat.type) {
                 ChatType.PERSONAL -> PersonalChatInfo(
                     isAdded = isPersonalChatAdded,
                     groupsInCommon = peerGroupsInCommon,
-                    pushNotificationEnabled = pushNotificationEnabled,
-                    onPushNotificationChange = onPushNotificationChange
+                    pushNotificationEnabled = messageNotificationEnabled,
+                    onPushNotificationChange = onMessageNotificationChange,
+                    onClearChat = onClearChat
+                )
+                ChatType.GROUP -> GroupChatInfo(
+                    isAdmin = isAdmin,
+                    events = chat.events,
+                    participants = chat.participants,
+                    messageNotificationEnabled = messageNotificationEnabled,
+                    onMessageNotificationChange = onMessageNotificationChange,
+                    eventNotificationEnabled = eventNotificationEnabled,
+                    onClearChat = onClearChat,
+                    onLeaveChat = onLeaveChat,
+                    onAddMember = onAddMember,
+                    onCreateEvent = onCreateEvent,
+                    onDeleteGroup = onDeleteGroup,
+                    onEventNotificationChange = onEventNotificationChange
                 )
                 else -> Unit
             }
@@ -294,21 +332,17 @@ private fun PersonalChatInfo(
     isAdded: Boolean,
     groupsInCommon: List<Chat>,
     pushNotificationEnabled: Boolean,
-    onPushNotificationChange: (Boolean) -> Unit
+    onPushNotificationChange: (Boolean) -> Unit,
+    onClearChat: () -> Unit
 ) {
     if (isAdded) ToggleSetting(
         desc = "Message Notifications",
         checked = pushNotificationEnabled,
         onCheckedChange = onPushNotificationChange
     )
-    if (groupsInCommon.isNotEmpty()) Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    if (groupsInCommon.isNotEmpty()) ChatInfoSection(
+        title = "${groupsInCommon.size} Groups in Common"
     ) {
-
-        Text(
-            text = "${groupsInCommon.size} Groups in Common",
-            style = chatInfoTitleStyle()
-        )
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -348,7 +382,7 @@ private fun PersonalChatInfo(
         isAdded = isAdded,
         isBlocked = false,
         onBlockChange = {  },
-        onClearChat = {}
+        onClearChat = onClearChat
     )
 }
 
@@ -368,6 +402,165 @@ private fun PersonalChatActions(
     } else ActionBlockChat {
         onBlockChange(true)
     }
+}
+
+@Composable
+private fun GroupChatInfo(
+    isAdmin: Boolean,
+    events: List<Event>,
+    participants: List<ChatParticipant>,
+    messageNotificationEnabled: Boolean,
+    onMessageNotificationChange: (Boolean) -> Unit,
+    eventNotificationEnabled: Boolean,
+    onClearChat: () -> Unit,
+    onLeaveChat: () -> Unit,
+    onAddMember: () -> Unit,
+    onCreateEvent: () -> Unit,
+    onDeleteGroup: () -> Unit,
+    onEventNotificationChange: (Boolean) -> Unit
+) {
+    if (events.isNotEmpty()) ChatInfoSection(
+        title = "Events",
+        titleStyle = chatInfoTitleStyle().copy(
+            color = MaterialTheme.colorScheme.primary
+        )
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            events.forEach {
+                GroupEvent(
+                    title = it.title,
+                    startsAt = it.startsAt,
+                    desc = it.description
+                )
+            }
+        }
+    }
+    ChatInfoSection(
+        title = "Notifications",
+        titleStyle = chatInfoTitleStyle().copy(
+            color = Gray
+        )
+    ) {
+        ToggleSetting(
+            desc = "Messages",
+            checked = messageNotificationEnabled,
+            onCheckedChange = onMessageNotificationChange
+        )
+        ToggleSetting(
+            desc = "Events",
+            checked = eventNotificationEnabled,
+            onCheckedChange = onEventNotificationChange
+        )
+    }
+    GroupChatActions(
+        isAdmin = isAdmin,
+        onClearChat = onClearChat,
+        onLeaveChat = onLeaveChat,
+        onAddMember = onAddMember,
+        onCreateEvent = onCreateEvent,
+        onDeleteGroup = onDeleteGroup
+    )
+}
+
+@Composable
+private fun GroupChatActions(
+    isAdmin: Boolean,
+    onClearChat: () -> Unit,
+    onLeaveChat: () -> Unit,
+    onAddMember: () -> Unit,
+    onCreateEvent: () -> Unit,
+    onDeleteGroup: () -> Unit,
+    modifier: Modifier = Modifier,
+) = ActionsLayout(modifier = modifier) {
+    if (isAdmin) {
+        val contentColor = MaterialTheme.colorScheme.primary
+
+        Action(
+            iconId = KonnektIcon.userAdd,
+            name = "Add Member",
+            onClick = onAddMember,
+            contentColor = contentColor
+        )
+        Action(
+            iconId = KonnektIcon.calendar,
+            name = "Create Event",
+            onClick = onCreateEvent,
+            contentColor = contentColor
+        )
+    }
+    ActionClearChat(onClick = onClearChat)
+    Action(
+        iconId = KonnektIcon.logOut,
+        name = "Leave",
+        onClick = onLeaveChat,
+        modifier = modifier
+    )
+    if (isAdmin) Action(
+        iconId = KonnektIcon.delete,
+        name = "Delete Group",
+        onClick = onDeleteGroup
+    )
+}
+
+@Composable
+private fun GroupEvent(
+    title: String,
+    startsAt: Instant,
+    desc: String?,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            painter = painterResource(KonnektIcon.calendar),
+            contentDescription = "event",
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Column {
+            Text(
+                text = startsAt.toDateAndTimeString("dd MMMM yyyy"),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = DarkGray,
+                    fontStyle = FontStyle.Italic
+                )
+            )
+            Text(
+                text = title,
+                style = LocalTextStyle.current.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            desc?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = Gray
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatInfoSection(
+    title: String,
+    modifier: Modifier = Modifier,
+    titleStyle: TextStyle = chatInfoTitleStyle(),
+    content: @Composable ColumnScope.() -> Unit
+) = Column(
+    modifier = modifier,
+    verticalArrangement = Arrangement.spacedBy(8.dp)
+) {
+    Text(
+        text = title,
+        style = titleStyle
+    )
+    content(this)
 }
 
 @Composable
@@ -594,6 +787,7 @@ private fun ChatDetailScreenPreview(
                 totalActiveParticipants = 1,
                 onNavigateBack = {},
                 onShare = {},
+                onDescChange = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

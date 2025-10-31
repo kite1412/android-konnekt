@@ -55,7 +55,7 @@ interface ChatRepository {
     suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>>
 
     /**
-     * Get a list of chat participants.
+     * Get a list of chat participants given a chat ID.
      *
      * @param chatId The ID of the chat to get participants for.
      * @return A list of chat participants.

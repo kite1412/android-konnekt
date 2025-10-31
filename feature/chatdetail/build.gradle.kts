@@ -5,3 +5,9 @@ plugins {
 android {
     namespace = "nrr.konnekt.feature.chatdetail"
 }
+
+kotlin {
+    sourceSets.all {
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
+    }
+}

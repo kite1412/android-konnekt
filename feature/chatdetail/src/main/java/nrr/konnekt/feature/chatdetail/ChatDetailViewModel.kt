@@ -24,6 +24,7 @@ class ChatDetailViewModel @Inject constructor(
 ) : ViewModel() {
     private val chatId = savedStateHandle.toRoute<ChatDetailRoute>().chatId
     private val peerId = savedStateHandle.toRoute<ChatDetailRoute>().peerId
+    internal val isPersonalChatAdded = peerId == null
 
     private val _events = MutableSharedFlow<UiEvent>()
     internal val events = _events.asSharedFlow()
