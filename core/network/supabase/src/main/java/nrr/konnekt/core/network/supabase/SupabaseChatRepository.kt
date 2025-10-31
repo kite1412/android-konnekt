@@ -48,9 +48,10 @@ import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
+import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.rpc.toChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.toChat
-import nrr.konnekt.core.network.supabase.dto.toChatParticipant
 import nrr.konnekt.core.network.supabase.dto.toChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.toChatSetting
 import nrr.konnekt.core.network.supabase.dto.toMessage
@@ -116,7 +117,7 @@ internal class SupabaseChatRepository @Inject constructor(
                                 SupabaseChat::id isIn jc.map { c -> c.chatId }
                             }
                         }.decodeList<SupabaseChat>()
-                    }.map(SupabaseChat::toChat)
+                    }
                 )
             }
         }
@@ -155,7 +156,7 @@ internal class SupabaseChatRepository @Inject constructor(
     private val personalChatParticipants by lazy {
         performAuthenticatedAction { u ->
             joinedChats.flatMapLatest { c ->
-                c.filter { it.type == ChatType.PERSONAL }
+                c.filter { it.type == ChatType.PERSONAL.toString() }
                     .let { filtered ->
                         chatParticipants {
                             select {
@@ -201,49 +202,34 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         }
     }
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val participants by lazy {
-        joinedChats.flatMapLatest { chats ->
-            flowOf(
-                chatParticipants {
-                    select {
-                        filter {
-                            SupabaseChatParticipant::chatId isIn chats.map { it.id }
-                        }
-                    }.decodeList<SupabaseChatParticipant>()
-                }
-                    .map(SupabaseChatParticipant::toChatParticipant)
-            )
-        }
-    }
     private val chats by lazy {
         combine(
             flow = joinedChats,
             flow2 = settings,
-            flow3 = personalChatParticipants,
-            flow4 = participants
-        ) { chats, settings, otherUsers, participants ->
+            flow3 = personalChatParticipants
+        ) { chats, settings, otherUsers ->
             chats.map { c ->
-                c.copy(
-                    setting = if (c.type != ChatType.PERSONAL) settings
-                        .firstOrNull { s -> s.first == c.id }
-                        ?.second
-                    else otherUsers
-                        .firstOrNull { it.first == c.id }
-                        ?.second
-                        ?.let {
-                            ChatSetting(
-                                name = it.username,
-                                iconPath = it.imagePath
-                            )
-                        },
-                    participants = participants.filter { p -> p.chatId == c.id }
-                )
+                c
+                    .toChat(
+                        setting = if (c.type != ChatType.PERSONAL.toString()) settings
+                            .firstOrNull { s -> s.first == c.id }
+                            ?.second
+                        else otherUsers
+                            .firstOrNull { it.first == c.id }
+                            ?.second
+                            ?.let {
+                                ChatSetting(
+                                    name = it.username,
+                                    iconPath = it.imagePath
+                                )
+                            }
+                    )
             }
         }
     }
 
     private var messageAttachments = emptyList<SupabaseAttachment>()
+
     @OptIn(ExperimentalCoroutinesApi::class, SupabaseExperimental::class)
     private val messages by lazy {
         chats.flatMapLatest { c ->
@@ -367,19 +353,12 @@ internal class SupabaseChatRepository @Inject constructor(
         userPresenceManager.activeUsers
             .flatMapLatest { userStatuses ->
                 flowOf(
-                    chatParticipants {
-                        select {
-                            filter {
-                                SupabaseChatParticipant::chatId eq chatId
-                                SupabaseChatParticipant::leftAt eq null
-                            }
-                        }.decodeList<SupabaseChatParticipant>()
-                    }
-                        .filter { p ->
-                            userStatuses
-                                .firstOrNull { us -> us.userId == p.userId } != null
+                    rpc.getChatParticipants(chatId)
+                        ?.filter { p ->
+                            userStatuses.firstOrNull { us -> us.userId == p.user.id } != null
                         }
-                        .map(SupabaseChatParticipant::toChatParticipant)
+                        ?.map(GetChatParticipant::toChatParticipant)
+                        ?: emptyList()
                 )
             }
 
@@ -461,14 +440,9 @@ internal class SupabaseChatRepository @Inject constructor(
 
     override suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>> =
         try {
-            val participants = chatParticipants {
-                select {
-                    filter {
-                        SupabaseChatParticipant::chatId eq chatId
-                    }
-                }.decodeList<SupabaseChatParticipant>()
-            }
-                .map(SupabaseChatParticipant::toChatParticipant)
+            val participants = rpc.getChatParticipants(chatId)
+                ?.map(GetChatParticipant::toChatParticipant)
+                ?: emptyList()
 
             Success(participants)
         } catch (e: Exception) {

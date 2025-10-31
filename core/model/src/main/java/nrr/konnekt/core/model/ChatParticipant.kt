@@ -10,7 +10,7 @@ data class ChatParticipant(
     @SerialName("chat_id")
     val chatId: String,
     @SerialName("user_id")
-    val userId: String,
+    val user: User,
     val role: ParticipantRole,
     @SerialName("joined_at")
     @Contextual

@@ -12,6 +12,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
+import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.SendMessageWithAttachments
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
@@ -113,7 +114,7 @@ internal abstract class SupabaseService(
             chatId: String,
             content: String,
             attachments: List<SupabaseCreateAttachment>
-        ) = performSuspendingAuthenticatedAction { u ->
+        ): SendMessageWithAttachments? = performSuspendingAuthenticatedAction { u ->
             call<SendMessageWithAttachments>(
                 function = "send_message_with_attachments",
                 parameters = {
@@ -132,6 +133,17 @@ internal abstract class SupabaseService(
                             )
                         }
                     })
+                }
+            )
+        }
+
+        suspend fun getChatParticipants(
+            chatId: String
+        ): List<GetChatParticipant>? = performSuspendingAuthenticatedAction {
+            call<List<GetChatParticipant>>(
+                function = "get_chat_participants",
+                parameters = {
+                    put("_chat_id", chatId)
                 }
             )
         }

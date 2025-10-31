@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
-import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
@@ -107,7 +106,7 @@ class ChatsViewModel @Inject constructor(
                 chats.firstOrNull { c ->
                     c.chat.type == ChatType.PERSONAL
                             && c.chat.participants.firstOrNull { p ->
-                        p.userId == otherUserId
+                        p.user.id == otherUserId
                     } != null
                 }?.chat?.id ?: run {
                     exists = false

@@ -118,9 +118,9 @@ class ConversationViewModel @Inject constructor(
                         if (res.data.type == ChatType.PERSONAL) {
                             peerId = res.data.participants.firstOrNull { p ->
                                 currentUser.first()?.id?.let {
-                                    p.userId != it
+                                    p.user.id != it
                                 } == true
-                            }?.userId
+                            }?.user?.id
                         }
                     }
                     is Result.Error -> {

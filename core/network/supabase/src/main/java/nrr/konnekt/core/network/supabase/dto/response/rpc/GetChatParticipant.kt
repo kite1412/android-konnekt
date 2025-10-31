@@ -1,32 +1,29 @@
-package nrr.konnekt.core.network.supabase.dto
+package nrr.konnekt.core.network.supabase.dto.response.rpc
 
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ParticipantRole
-import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
+import nrr.konnekt.core.network.supabase.dto.response.toUser
 import kotlin.time.Instant
 
 @Serializable
-internal data class SupabaseChatParticipant(
+internal data class GetChatParticipant(
     @SerialName("chat_id")
     val chatId: String,
-    @SerialName("user_id")
-    val userId: String,
+    val user: SupabaseUser,
     val role: String,
     @SerialName("joined_at")
-    @Contextual
     val joinedAt: Instant,
     @SerialName("left_at")
-    @Contextual
     val leftAt: Instant?
 )
 
-internal fun SupabaseChatParticipant.toChatParticipant(user: User) =
+internal fun GetChatParticipant.toChatParticipant() =
     ChatParticipant(
         chatId = chatId,
-        user = user,
+        user = user.toUser(),
         role = ParticipantRole.valueOf(role.uppercase()),
         joinedAt = joinedAt,
         leftAt = leftAt

@@ -35,4 +35,7 @@ object KonnektIcon {
     val pencil = R.drawable.pencil
     val share = R.drawable.share
     val triangleAlert = R.drawable.triangle_alert
+    val calendar = R.drawable.calendar
+    val userAdd = R.drawable.user_add
+    val delete = R.drawable.delete
 }

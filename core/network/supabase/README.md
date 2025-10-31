@@ -186,6 +186,36 @@ end;
 $$;
 ```
 
+### get_chat_participants
+```
+create or replace function get_chat_participants(
+  _chat_id uuid
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  result jsonb;
+begin
+  select jsonb_agg(
+    jsonb_build_object(
+      'chat_id', _chat_id,
+      'user', to_jsonb(u),
+      'role', cp.role,
+      'joined_at', cp.joined_at,
+      'left_at', cp.left_at
+    )
+  )
+  into result
+  from chat_participants cp
+  join users u on u.id = cp.user_id
+  where cp.chat_id = _chat_id and cp.left_at is null;
+
+  return coalesce(result, '[]'::jsonb);
+end;
+$$;
+```
+
 ## Buckets
 - icon
 - chat-media
