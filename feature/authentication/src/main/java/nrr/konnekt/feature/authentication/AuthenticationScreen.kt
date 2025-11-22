@@ -1,4 +1,4 @@
-package nrr.konnekt.authentication
+package nrr.konnekt.feature.authentication
 
 import android.util.Patterns
 import androidx.compose.animation.AnimatedContent

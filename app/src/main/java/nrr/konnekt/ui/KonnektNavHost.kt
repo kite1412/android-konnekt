@@ -6,8 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import nrr.konnekt.authentication.navigation.AuthenticationRoute
-import nrr.konnekt.authentication.navigation.authenticationScreen
+import nrr.konnekt.feature.authentication.navigation.AuthenticationRoute
+import nrr.konnekt.feature.authentication.navigation.authenticationScreen
 import nrr.konnekt.feature.chatdetail.navigation.chatDetailScreen
 import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
 import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail

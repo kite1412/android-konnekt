@@ -1,4 +1,4 @@
-package nrr.konnekt.authentication
+package nrr.konnekt.feature.authentication
 
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue

@@ -695,7 +695,7 @@ private fun ActionsLayout(
     actions: @Composable ColumnScope.() -> Unit
 ) = Column(
     modifier = modifier,
-    verticalArrangement = Arrangement.spacedBy(16.dp),
+    verticalArrangement = Arrangement.spacedBy(8.dp),
     content = actions
 )
 
@@ -749,6 +749,7 @@ private fun Action(
         Row(
             modifier = modifier
                 .fillMaxWidth()
+                .clip(CircleShape)
                 .clickable(onClick = onClick)
                 .padding(8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -757,11 +758,11 @@ private fun Action(
             Icon(
                 painter = painterResource(iconId),
                 contentDescription = name,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(32.dp)
             )
             Text(
                 text = name,
-                style = LocalTextStyle.current.copy(
+                style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = FontWeight.Bold
                 )
             )

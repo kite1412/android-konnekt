@@ -1,4 +1,4 @@
-package nrr.konnekt.authentication
+package nrr.konnekt.feature.authentication
 
 internal sealed interface ActionState {
     object Performing : ActionState

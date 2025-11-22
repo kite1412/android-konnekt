@@ -1,10 +1,10 @@
-package nrr.konnekt.authentication.navigation
+package nrr.konnekt.feature.authentication.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import kotlinx.serialization.Serializable
-import nrr.konnekt.authentication.AuthenticationScreen
+import nrr.konnekt.feature.authentication.AuthenticationScreen
 
 @Serializable
 object AuthenticationRoute
