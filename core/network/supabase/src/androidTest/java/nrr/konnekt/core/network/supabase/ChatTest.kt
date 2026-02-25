@@ -2,6 +2,8 @@ package nrr.konnekt.core.network.supabase
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -30,7 +32,10 @@ internal class ChatTest : TestSetup() {
     override fun init(): Unit = runBlocking {
         super.init()
         user = initUser()
-        userPresenceManager = SupabaseUserPresenceManager(auth)
+        userPresenceManager = SupabaseUserPresenceManager(
+            scope = CoroutineScope(Dispatchers.Main),
+            authentication = auth
+        )
         repo = SupabaseChatRepository(
             authentication = auth,
             userPresenceManager = userPresenceManager
@@ -87,7 +92,7 @@ internal class ChatTest : TestSetup() {
             logTag,
             "latest messages:\n${
                 res.joinToString(separator = ", ") {
-                    "${it.message?.message?.content}, " +
+                    "${it.message?.content}, " +
                             "sender: ${it.message?.sender?.username}"
                 }
             }"
@@ -98,8 +103,8 @@ internal class ChatTest : TestSetup() {
 
     @Test
     fun observeActiveParticipantsSuccess() = runBlocking {
-        userPresenceManager.updateLastActiveAt(user)
-        userPresenceManager.markUserActive(user)
+        userPresenceManager.updateLastActiveAt()
+        userPresenceManager.markUserActive()
         val job = repo
             .observeActiveParticipants(getProperty("SUPABASE_CHAT_ID"))
             .onEach {

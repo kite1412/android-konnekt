@@ -16,7 +16,11 @@ internal class MessageTest : TestSetup() {
     @Before
     override fun init(): Unit = runBlocking {
         super.init()
-        repo = SupabaseMessageRepository(auth)
+         repo = SupabaseMessageRepository(
+             authentication = auth,
+             fileNameFormatter = SupabaseFileNameFormatter(),
+             fileUploadConstraints = SupabaseFileUploadConstraints()
+        )
         initUser()
     }
 
@@ -42,6 +46,17 @@ internal class MessageTest : TestSetup() {
                         fileExtension = "png",
                         content = loadFile("an-image.png")
                     )
+                )
+            ) is Result.Success
+        )
+    }
+
+    @Test
+    fun deleteMessageSuccess() = runTest {
+        assert(
+            repo.deleteMessages(
+                messageIds = listOf(
+                    getProperty("SUPABASE_MESSAGE_ID")
                 )
             ) is Result.Success
         )

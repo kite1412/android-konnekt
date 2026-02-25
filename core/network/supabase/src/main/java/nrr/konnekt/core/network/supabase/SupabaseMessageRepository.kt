@@ -246,9 +246,29 @@ internal class SupabaseMessageRepository @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun deleteMessage(messageId: String): MessageResult<Message> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun deleteMessages(messageIds: List<String>): MessageResult<List<Message>> =
+        performSuspendingAuthenticatedAction { u ->
+            messages {
+                update(
+                    update = {
+                        SupabaseMessage::isHidden setTo true
+                    }
+                ) {
+                    filter {
+                        SupabaseMessage::id isIn messageIds
+                    }
+                    select()
+                }
+            }
+                .decodeList<SupabaseMessage>()
+                .takeIf { list -> list.isNotEmpty() }?.let { list ->
+                    Success(
+                        data = list.map { raw ->
+                            raw.toMessage(u)
+                        }
+                    )
+                } ?: Error(MessageError.Unknown)
+        }
 
     override suspend fun updateUserReadMarker(
         chatId: String,

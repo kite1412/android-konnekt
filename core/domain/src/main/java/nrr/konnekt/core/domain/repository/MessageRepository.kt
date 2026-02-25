@@ -64,10 +64,10 @@ interface MessageRepository {
     /**
      * Delete a message by setting [Message.isHidden] to true.
      *
-     * @param messageId The ID of the message to delete.
-     * @return The deleted message.
+     * @param messageIds The IDs of the messages to delete.
+     * @return The deleted messages.
      */
-    suspend fun deleteMessage(messageId: String): MessageResult<Message>
+    suspend fun deleteMessages(messageIds: List<String>): MessageResult<List<Message>>
 
     /**
      * Mark a message as read.

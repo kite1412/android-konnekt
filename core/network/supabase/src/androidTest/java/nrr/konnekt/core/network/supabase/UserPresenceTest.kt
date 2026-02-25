@@ -2,6 +2,8 @@ package nrr.konnekt.core.network.supabase
 
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import nrr.konnekt.core.domain.util.Result
@@ -19,17 +21,20 @@ internal class UserPresenceTest : TestSetup() {
     @Before
     override fun init() = runBlocking {
         super.init()
-        manager = SupabaseUserPresenceManager(auth)
+        manager = SupabaseUserPresenceManager(
+            scope = CoroutineScope(Dispatchers.Main),
+            authentication = auth
+        )
         currentUser = initUser()
     }
 
     @Test
     fun updateUserStatusSuccess(): Unit = runBlocking {
-        manager.markUserActive(currentUser)
+        manager.markUserActive()
         delay(2000)
         Log.d(logTag, "active users: ${manager.activeUsers.value}")
         delay(2000)
-        val res = manager.markUserInactive(currentUser)
+        val res = manager.markUserInactive()
         assert(res is Result.Success)
     }
 }
