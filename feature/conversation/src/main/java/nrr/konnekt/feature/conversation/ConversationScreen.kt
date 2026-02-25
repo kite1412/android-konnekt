@@ -48,6 +48,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -97,6 +98,7 @@ import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
+import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.media.MediaPlayerManager
@@ -198,6 +200,7 @@ internal fun ConversationScreen(
                 selectedMessageIds = viewModel.selectedMessages.map(Message::id),
                 messageInput = messageInput,
                 messageAction = messageAction,
+                selectedMessageAction = viewModel.selectedMessageAction,
                 onMessageInputChange = { viewModel.messageInput = it },
                 composerAttachments = viewModel.composerAttachments,
                 onAddComposerAttachment = viewModel.composerAttachments::add,
@@ -209,6 +212,9 @@ internal fun ConversationScreen(
                 sendingMessage = viewModel.sendingMessage,
                 totalActiveParticipants = totalActiveParticipants ?: 0,
                 isOnMessagesSelectionMode = viewModel.isOnMessagesSelectionMode,
+                isSelectionDeletable = !(viewModel.selectedMessages.any { message ->
+                    message.sender.id != currentUser?.id || message.isHidden
+                }),
                 onNavigateBack = navigateBack,
                 onChatClick = {
                     val type = viewModel.idType
@@ -224,8 +230,12 @@ internal fun ConversationScreen(
                 },
                 onMessageAction = viewModel::setMessageAction,
                 onDismissMessageAction = viewModel::dismissMessageAction,
-                onSelectedMessageActionClick = {},
+                onSelectedMessageActionClick = {
+                    viewModel.selectedMessageAction = it
+                },
                 onCancelMessagesSelection = viewModel::cancelMessagesSelection,
+                onDeleteForMeClick = {},
+                onDeleteClick = viewModel::deleteSelectedMessages,
                 isSelectionEditable = viewModel.selectedMessages.size == 1
                         && viewModel.selectedMessages.first().sender.id == currentUser?.id,
                 contentPadding = contentPadding,
@@ -243,11 +253,13 @@ private fun ConversationScreen(
     isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
     isOnMessagesSelectionMode: Boolean,
+    isSelectionDeletable: Boolean,
     messages: List<Message>,
     readMarkers: List<UserReadMarker>?,
     selectedMessageIds: List<String>,
     messageInput: String,
     messageAction: MessageAction?,
+    selectedMessageAction: SelectedMessageAction?,
     isSelectionEditable: Boolean,
     onMessageInputChange: (String) -> Unit,
     composerAttachments: List<ComposerAttachment>,
@@ -260,8 +272,10 @@ private fun ConversationScreen(
     onChatClick: (Chat) -> Unit,
     onMessageAction: (MessageAction) -> Unit,
     onDismissMessageAction: () -> Unit,
-    onSelectedMessageActionClick: (SelectedMessageAction) -> Unit,
+    onSelectedMessageActionClick: (SelectedMessageAction?) -> Unit,
     onCancelMessagesSelection: () -> Unit,
+    onDeleteForMeClick: () -> Unit,
+    onDeleteClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -389,6 +403,15 @@ private fun ConversationScreen(
             sentAt = messageAction.message.sentAt,
             attachments = messageAction.message.attachments,
             onBackClick = { onDismissMessageAction() }
+        )
+    if (selectedMessageAction == SelectedMessageAction.DELETE_MESSAGE)
+        DeleteMessagesDialog(
+            isDeletable = isSelectionDeletable,
+            onDismissMessageAction = {
+                onSelectedMessageActionClick(null)
+            },
+            onDeleteForMeClick = onDeleteForMeClick,
+            onDeleteClick = onDeleteClick
         )
 }
 
@@ -525,6 +548,67 @@ fun SelectedMessageActionIconButton(
                 contentDescription = this.toString(),
                 modifier = Modifier.size(iconSize)
             )
+        }
+    }
+}
+
+@Composable
+fun DeleteMessagesDialog(
+    isDeletable: Boolean,
+    onDismissMessageAction: () -> Unit,
+    onDeleteForMeClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val onClickWrapper = { action: () -> Unit ->
+        {
+            action()
+            onDismissMessageAction()
+        }
+    }
+
+    Dialog(onDismissRequest = onDismissMessageAction) {
+        Column(
+            modifier = modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Delete selected message?")
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val textStyle = LocalTextStyle.current.copy(
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                TextButton(onClick = onDismissMessageAction) {
+                    Text(
+                        text = "Cancel",
+                        style = textStyle
+                    )
+                }
+                TextButton(onClick = onClickWrapper(onDeleteForMeClick)) {
+                    Text(
+                        text = "Delete for me",
+                        style = textStyle
+                    )
+                }
+                if (isDeletable) {
+                    TextButton(onClick = onClickWrapper(onDeleteClick)) {
+                        Text(
+                            text = "Delete",
+                            style = textStyle.copy(
+                                color = Red
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -1502,6 +1586,7 @@ private fun ConversationScreenPreview(
                 selectedMessageIds = emptyList(),
                 messageInput = messageInput,
                 messageAction = null,
+                selectedMessageAction = null,
                 isSelectionEditable = true,
                 onMessageInputChange = { v -> messageInput = v },
                 composerAttachments = emptyList(),
@@ -1513,11 +1598,14 @@ private fun ConversationScreenPreview(
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 isOnMessagesSelectionMode = false,
+                isSelectionDeletable = true,
                 onChatClick = {},
                 onMessageAction = {},
                 onDismissMessageAction = {},
                 onSelectedMessageActionClick = {},
                 onCancelMessagesSelection = {},
+                onDeleteForMeClick = {},
+                onDeleteClick = {},
                 contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()

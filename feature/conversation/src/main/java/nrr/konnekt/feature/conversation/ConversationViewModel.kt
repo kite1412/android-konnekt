@@ -1,7 +1,6 @@
 package nrr.konnekt.feature.conversation
 
 import android.util.Log
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +30,7 @@ import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
+import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
@@ -50,6 +50,7 @@ import nrr.konnekt.feature.conversation.util.IdType
 import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
+import nrr.konnekt.feature.conversation.util.SelectedMessageAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.toFileUpload
 import javax.inject.Inject
@@ -66,7 +67,8 @@ class ConversationViewModel @Inject constructor(
     private val userPresenceManager: UserPresenceManager,
     private val sendMessageUseCase: SendMessageUseCase,
     private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
-    private val createChatUseCase: CreateChatUseCase
+    private val createChatUseCase: CreateChatUseCase,
+    private val deleteMessagesUseCase: DeleteMessagesUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
     internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
@@ -85,6 +87,7 @@ class ConversationViewModel @Inject constructor(
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
     internal var isOnMessagesSelectionMode by mutableStateOf(false)
         private set
+    internal var selectedMessageAction by mutableStateOf<SelectedMessageAction?>(null)
     internal val composerAttachments = mutableStateListOf<ComposerAttachment>()
     internal val selectedMessages = mutableStateListOf<Message>()
     internal var idType = IdType.CHAT
@@ -282,5 +285,29 @@ class ConversationViewModel @Inject constructor(
         selectedMessages.clear()
         isOnMessagesSelectionMode = false
         _messageAction.value = null
+    }
+
+    internal fun deleteSelectedMessages() {
+        viewModelScope.launch {
+            currentUser.firstOrNull()?.let { user ->
+                val userMessages = selectedMessages.filter { it.sender.id == user.id }
+
+                val res = deleteMessagesUseCase(userMessages.map(Message::id))
+
+                if (res is Result.Success) {
+                    _events.emit(
+                        UiEvent.ShowSnackbar(
+                            "${if (res.data.size == 1) "Message" else "Messages"} deleted."
+                        )
+                    )
+                } else {
+                    _events.emit(
+                        UiEvent.ShowSnackbar("Failed to delete message, try again later")
+                    )
+                }
+
+                cancelMessagesSelection()
+            }
+        }
     }
 }
