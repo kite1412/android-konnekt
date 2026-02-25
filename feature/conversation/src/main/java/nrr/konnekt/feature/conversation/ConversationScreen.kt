@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -41,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -139,6 +141,7 @@ import nrr.konnekt.feature.conversation.util.IdType
 import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
+import nrr.konnekt.feature.conversation.util.SelectedMessageAction
 import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.attachments
 import nrr.konnekt.feature.conversation.util.dateHeaderString
@@ -192,6 +195,7 @@ internal fun ConversationScreen(
                 isLoadingMessages = messages == null && viewModel.fixedChatId != null,
                 messages = messages ?: emptyList(),
                 readMarkers = readMarkers,
+                selectedMessageIds = viewModel.selectedMessages.map(Message::id),
                 messageInput = messageInput,
                 messageAction = messageAction,
                 onMessageInputChange = { viewModel.messageInput = it },
@@ -204,6 +208,7 @@ internal fun ConversationScreen(
                 onSend = viewModel::sendMessage,
                 sendingMessage = viewModel.sendingMessage,
                 totalActiveParticipants = totalActiveParticipants ?: 0,
+                isOnMessagesSelectionMode = viewModel.isOnMessagesSelectionMode,
                 onNavigateBack = navigateBack,
                 onChatClick = {
                     val type = viewModel.idType
@@ -219,6 +224,10 @@ internal fun ConversationScreen(
                 },
                 onMessageAction = viewModel::setMessageAction,
                 onDismissMessageAction = viewModel::dismissMessageAction,
+                onSelectedMessageActionClick = {},
+                onCancelMessagesSelection = viewModel::cancelMessagesSelection,
+                isSelectionEditable = viewModel.selectedMessages.size == 1
+                        && viewModel.selectedMessages.first().sender.id == currentUser?.id,
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -233,10 +242,13 @@ private fun ConversationScreen(
     chat: Chat,
     isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
+    isOnMessagesSelectionMode: Boolean,
     messages: List<Message>,
     readMarkers: List<UserReadMarker>?,
+    selectedMessageIds: List<String>,
     messageInput: String,
     messageAction: MessageAction?,
+    isSelectionEditable: Boolean,
     onMessageInputChange: (String) -> Unit,
     composerAttachments: List<ComposerAttachment>,
     onAddComposerAttachment: (ComposerAttachment) -> Unit,
@@ -248,6 +260,8 @@ private fun ConversationScreen(
     onChatClick: (Chat) -> Unit,
     onMessageAction: (MessageAction) -> Unit,
     onDismissMessageAction: () -> Unit,
+    onSelectedMessageActionClick: (SelectedMessageAction) -> Unit,
+    onCancelMessagesSelection: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -260,14 +274,20 @@ private fun ConversationScreen(
             .padding(contentPadding),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Header(
-            chat = chat,
-            totalActiveParticipants = totalActiveParticipants,
-            onNavigateBack = onNavigateBack,
-            onChatClick = onChatClick,
-            peerLastActive = peerLastActive
-        ) {
+        AnimatedContent(targetState = isOnMessagesSelectionMode) {
+            if (!it) Header(
+                chat = chat,
+                totalActiveParticipants = totalActiveParticipants,
+                onNavigateBack = onNavigateBack,
+                onChatClick = onChatClick,
+                peerLastActive = peerLastActive
+            ) {
 
+            } else SelectedMessageActions(
+                isEditable = isSelectionEditable,
+                onActionClick = onSelectedMessageActionClick,
+                onCancel = onCancelMessagesSelection
+            )
         }
         Box(
             modifier = Modifier
@@ -321,11 +341,15 @@ private fun ConversationScreen(
                 items = conversationItems,
                 readMarkers = readMarkers,
                 chatType = chat.type,
+                isOnSelectionMode = isOnMessagesSelectionMode,
                 sentByCurrentUser = { m -> m.sender.id == currentUser.id },
                 deletedByCurrentUser = { m ->
                     m.messageStatuses
                         .firstOrNull { it.userId == currentUser.id }
                         ?.isDeleted == true
+                },
+                isMessageSelected = {
+                    selectedMessageIds.contains(it.id)
                 },
                 onMessageAction = onMessageAction,
                 state = state,
@@ -359,15 +383,13 @@ private fun ConversationScreen(
             modifier = Modifier.imePadding()
         )
     }
-    when (messageAction?.type) {
-        ActionType.FOCUS_ATTACHMENTS -> MessageAttachmentsFocused(
+    if (messageAction?.type == ActionType.FOCUS_ATTACHMENTS)
+        MessageAttachmentsFocused(
             sender = messageAction.message.sender,
             sentAt = messageAction.message.sentAt,
             attachments = messageAction.message.attachments,
             onBackClick = { onDismissMessageAction() }
         )
-        else -> Unit
-    }
 }
 
 @Composable
@@ -431,6 +453,83 @@ private fun Header(
 }
 
 @Composable
+fun SelectedMessageActions(
+    isEditable: Boolean,
+    onActionClick: (SelectedMessageAction) -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        val iconSize = 32.dp
+
+        IconButton(
+            onClick = onCancel,
+            colors = IconButtonDefaults.iconButtonColors().copy(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(
+                painter = painterResource(KonnektIcon.x),
+                contentDescription = "cancel",
+                modifier = Modifier.size(iconSize)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SelectedMessageActionIconButton(
+                action = SelectedMessageAction.DELETE_MESSAGE,
+                iconSize = iconSize,
+                onClick = onActionClick
+            )
+            AnimatedVisibility(visible = isEditable) {
+                SelectedMessageActionIconButton(
+                    action = SelectedMessageAction.EDIT_MESSAGE,
+                    iconSize = iconSize,
+                    onClick = onActionClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SelectedMessageActionIconButton(
+    action: SelectedMessageAction,
+    iconSize: Dp,
+    onClick: (SelectedMessageAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    with(action) {
+        IconButton(
+            onClick = {
+                onClick(this)
+            },
+            modifier = modifier,
+            colors = IconButtonDefaults.iconButtonColors().copy(
+                contentColor = iconColor.takeIf { c ->
+                    c != Color.Transparent
+                } ?: MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(
+                painter = painterResource(iconId),
+                contentDescription = this.toString(),
+                modifier = Modifier.size(iconSize)
+            )
+        }
+    }
+}
+
+@Composable
 private fun LoadingMessages(modifier: Modifier = Modifier) {
     CubicLoading(
         text = "Loading message",
@@ -444,8 +543,10 @@ private fun Conversation(
     items: List<ConversationItem>,
     readMarkers: List<UserReadMarker>?,
     chatType: ChatType,
+    isOnSelectionMode: Boolean,
     sentByCurrentUser: (Message) -> Boolean,
     deletedByCurrentUser: (Message) -> Boolean,
+    isMessageSelected: (Message) -> Boolean,
     onMessageAction: (MessageAction) -> Unit,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
@@ -514,6 +615,8 @@ private fun Conversation(
                                 sentByCurrentUser = sentByCurrentUser(item.message),
                                 wasSentByPreviousUser = item.wasSentByPreviousUser,
                                 deletedByCurrentUser = deletedByCurrentUser(item.message),
+                                isSelected = isMessageSelected(item.message),
+                                isOnSelectionMode = isOnSelectionMode,
                                 onAction = onMessageAction,
                                 applyTopPadding = applyTopPadding,
                                 seenContent = if (myLatestReadMessage == item) {
@@ -531,6 +634,8 @@ private fun Conversation(
                                 sentByCurrentUser = sentByCurrentUser,
                                 wasSentByPreviousUser = item.wasSentByPreviousUser,
                                 deletedByCurrentUser = deletedByCurrentUser(item.message),
+                                isSelected = isMessageSelected(item.message),
+                                isOnSelectionMode = isOnSelectionMode,
                                 onAction = onMessageAction,
                                 applyTopPadding = applyTopPadding,
                                 sender = if (sentByCurrentUser) null else item.message.sender,
@@ -563,6 +668,8 @@ private fun AdjustedMessageBubble(
     sentByCurrentUser: Boolean,
     wasSentByPreviousUser: Boolean,
     deletedByCurrentUser: Boolean,
+    isSelected: Boolean,
+    isOnSelectionMode: Boolean,
     onAction: (MessageAction) -> Unit,
     modifier: Modifier = Modifier,
     sender: User? = null,
@@ -594,6 +701,8 @@ private fun AdjustedMessageBubble(
                                 type = ActionType.FOCUS_ATTACHMENTS
                             )
                         )
+                    } else if (isOnSelectionMode) {
+                        onAction(MessageAction(message = message, type = ActionType.SHOW_ACTIONS))
                     }
                 },
                 onLongClick = {
@@ -605,23 +714,49 @@ private fun AdjustedMessageBubble(
         contentAlignment = if (sentByCurrentUser) Alignment.CenterEnd
             else Alignment.CenterStart
     ) {
-        if (sender == null) MessageBubble(
-            message = message,
-            sentByCurrentUser = sentByCurrentUser,
-            withTail = !wasSentByPreviousUser,
-            deletedByCurrentUser = deletedByCurrentUser,
-            maxContentWidth = this.maxWidth * 0.9f,
-            seenContent = seenContent
-        ) else MessageBubble(
-            sender = sender,
-            message = message,
-            sentByCurrentUser = sentByCurrentUser,
-            withTail = !wasSentByPreviousUser,
-            withAvatar = !wasSentByPreviousUser,
-            deletedByCurrentUser = deletedByCurrentUser,
-            maxContentWidth = this.maxWidth * 0.9f,
-            seenContent = seenContent
+        val contents = listOfNotNull<@Composable RowScope.() -> Unit>(
+            {
+                AnimatedVisibility(visible = isSelected) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.circleCheck),
+                        contentDescription = "selected",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            {
+                if (sender == null) MessageBubble(
+                    message = message,
+                    sentByCurrentUser = sentByCurrentUser,
+                    withTail = !wasSentByPreviousUser,
+                    deletedByCurrentUser = deletedByCurrentUser,
+                    maxContentWidth = this@BoxWithConstraints.maxWidth * 0.9f,
+                    seenContent = seenContent
+                ) else MessageBubble(
+                    sender = sender,
+                    message = message,
+                    sentByCurrentUser = sentByCurrentUser,
+                    withTail = !wasSentByPreviousUser,
+                    withAvatar = !wasSentByPreviousUser,
+                    deletedByCurrentUser = deletedByCurrentUser,
+                    maxContentWidth = this@BoxWithConstraints.maxWidth * 0.9f,
+                    seenContent = seenContent
+                )
+            }
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            contents
+                .run {
+                    if (!sentByCurrentUser) reversed()
+                    else this
+                }
+                .forEach {
+                    it(this)
+                }
+        }
     }
 }
 
@@ -1364,8 +1499,10 @@ private fun ConversationScreenPreview(
                 isLoadingMessages = false,
                 messages = conversation.messages,
                 readMarkers = null,
+                selectedMessageIds = emptyList(),
                 messageInput = messageInput,
                 messageAction = null,
+                isSelectionEditable = true,
                 onMessageInputChange = { v -> messageInput = v },
                 composerAttachments = emptyList(),
                 onAddComposerAttachment = {},
@@ -1375,9 +1512,12 @@ private fun ConversationScreenPreview(
                 sendingMessage = false,
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
+                isOnMessagesSelectionMode = false,
                 onChatClick = {},
                 onMessageAction = {},
                 onDismissMessageAction = {},
+                onSelectedMessageActionClick = {},
+                onCancelMessagesSelection = {},
                 contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()

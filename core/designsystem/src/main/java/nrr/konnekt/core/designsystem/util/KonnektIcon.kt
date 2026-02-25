@@ -38,4 +38,6 @@ object KonnektIcon {
     val calendar = R.drawable.calendar
     val userAdd = R.drawable.user_add
     val delete = R.drawable.delete
+    val circleCheck = R.drawable.circle_check
+    val trash = R.drawable.trash
 }

@@ -1,6 +1,7 @@
 package nrr.konnekt.feature.conversation
 
 import android.util.Log
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -42,6 +44,7 @@ import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
+import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.IdType
 import nrr.konnekt.feature.conversation.util.LOG_TAG
@@ -80,7 +83,10 @@ class ConversationViewModel @Inject constructor(
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
+    internal var isOnMessagesSelectionMode by mutableStateOf(false)
+        private set
     internal val composerAttachments = mutableStateListOf<ComposerAttachment>()
+    internal val selectedMessages = mutableStateListOf<Message>()
     internal var idType = IdType.CHAT
         private set
 
@@ -248,10 +254,33 @@ class ConversationViewModel @Inject constructor(
     internal fun stopPlayingMedia() = MediaPlayerManager.clearPlayback()
 
     internal fun setMessageAction(messageAction: MessageAction) {
-        _messageAction.value = messageAction
+        if (!isOnMessagesSelectionMode) {
+            _messageAction.value = messageAction
+        }
+
+        if (messageAction.type == ActionType.SHOW_ACTIONS || isOnMessagesSelectionMode) {
+            isOnMessagesSelectionMode = true
+
+            val message = messageAction.message
+            if (selectedMessages.contains(message)) {
+                selectedMessages.remove(message)
+
+                if (selectedMessages.isEmpty()) {
+                    isOnMessagesSelectionMode = false
+                }
+            } else {
+                selectedMessages += message
+            }
+        }
     }
 
     internal fun dismissMessageAction() {
+        _messageAction.value = null
+    }
+
+    internal fun cancelMessagesSelection() {
+        selectedMessages.clear()
+        isOnMessagesSelectionMode = false
         _messageAction.value = null
     }
 }
