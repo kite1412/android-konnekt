@@ -28,6 +28,7 @@ import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
+import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
@@ -43,6 +44,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
@@ -93,6 +95,7 @@ class ConversationViewModel @Inject constructor(
     internal var selectedMessageAction by mutableStateOf<SelectedMessageAction?>(null)
     internal val composerAttachments = mutableStateListOf<ComposerAttachment>()
     internal val selectedMessages = mutableStateListOf<Message>()
+    internal val hiddenMessageIds = mutableStateListOf<String>()
     internal var idType = IdType.CHAT
         private set
 
@@ -199,7 +202,6 @@ class ConversationViewModel @Inject constructor(
     }
 
     private fun <T, E: Error> deleteMessages(
-        actionDescription: String,
         operation: suspend (List<String>) -> Result<List<T>, E>
     ) {
         viewModelScope.launch {
@@ -212,12 +214,12 @@ class ConversationViewModel @Inject constructor(
                     if (res is Result.Success) {
                         _events.emit(
                             UiEvent.ShowSnackbar(
-                                "${if (res.data.size == 1) "Message" else "Messages"} $actionDescription."
+                                "${if (res.data.size == 1) "Message" else "${res.data.size} Messages"} deleted."
                             )
                         )
                     } else {
                         _events.emit(
-                            UiEvent.ShowSnackbar("Failed to $actionDescription message, try again later")
+                            UiEvent.ShowSnackbar("Failed to delete message, try again later")
                         )
                     }
                 }
@@ -225,6 +227,15 @@ class ConversationViewModel @Inject constructor(
                 cancelMessagesSelection()
             }
         }
+    }
+
+    private suspend fun hideMessages(ids: List<String>): MessageResult<List<MessageStatus>> {
+        val res = hideMessagesUseCase(ids)
+
+        if (res is Result.Success)
+            hiddenMessageIds.addAll(res.data.map(MessageStatus::messageId))
+
+        return res
     }
 
     internal fun sendMessage(
@@ -318,13 +329,7 @@ class ConversationViewModel @Inject constructor(
         _messageAction.value = null
     }
 
-    internal fun deleteSelectedMessages() = deleteMessages(
-        actionDescription = "delete",
-        operation = deleteMessagesUseCase::invoke
-    )
+    internal fun deleteSelectedMessages() = deleteMessages(deleteMessagesUseCase::invoke)
 
-    internal fun hideMessagesForMe() = deleteMessages(
-        actionDescription = "hide",
-        operation = hideMessagesUseCase::invoke
-    )
+    internal fun hideMessagesForMe() = deleteMessages(::hideMessages)
 }

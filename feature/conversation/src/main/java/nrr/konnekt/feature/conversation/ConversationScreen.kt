@@ -202,6 +202,11 @@ internal fun ConversationScreen(
                 messageAction = messageAction,
                 selectedMessageAction = viewModel.selectedMessageAction,
                 onMessageInputChange = { viewModel.messageInput = it },
+                deletedByCurrentUser = { m ->
+                    m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
+                        status.userId == currentUser?.id && status.isDeleted
+                    } || viewModel.hiddenMessageIds.contains(m.id)
+                },
                 composerAttachments = viewModel.composerAttachments,
                 onAddComposerAttachment = viewModel.composerAttachments::add,
                 composerAction = viewModel.composerAction,
@@ -262,6 +267,7 @@ private fun ConversationScreen(
     selectedMessageAction: SelectedMessageAction?,
     isSelectionEditable: Boolean,
     onMessageInputChange: (String) -> Unit,
+    deletedByCurrentUser: (Message) -> Boolean,
     composerAttachments: List<ComposerAttachment>,
     onAddComposerAttachment: (ComposerAttachment) -> Unit,
     composerAction: MessageComposerAction?,
@@ -357,11 +363,7 @@ private fun ConversationScreen(
                 chatType = chat.type,
                 isOnSelectionMode = isOnMessagesSelectionMode,
                 sentByCurrentUser = { m -> m.sender.id == currentUser.id },
-                deletedByCurrentUser = { m ->
-                    m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
-                        status.userId == currentUser.id && status.isDeleted
-                    }
-                },
+                deletedByCurrentUser = deletedByCurrentUser,
                 isMessageSelected = {
                     selectedMessageIds.contains(it.id)
                 },
@@ -1589,6 +1591,11 @@ private fun ConversationScreenPreview(
                 selectedMessageAction = null,
                 isSelectionEditable = true,
                 onMessageInputChange = { v -> messageInput = v },
+                deletedByCurrentUser = { m ->
+                    m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
+                        status.userId == user.id && status.isDeleted
+                    }
+                },
                 composerAttachments = emptyList(),
                 onAddComposerAttachment = {},
                 composerAction = composerAction,

@@ -36,7 +36,6 @@ import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.resolveFileType
 import javax.inject.Inject
-import kotlin.math.min
 import kotlin.time.Instant
 
 internal class SupabaseMessageRepository @Inject constructor(
@@ -79,9 +78,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                             filter {
                                 MessageStatus::isDeleted eq true
                                 MessageStatus::userId eq user.id
-                                MessageStatus::messageId isIn m
-                                    .take(min(15, m.size))
-                                    .map(SupabaseMessage::id)
+                                MessageStatus::messageId isIn m.map(SupabaseMessage::id)
                             }
                         }
                             .decodeList<MessageStatus>()
