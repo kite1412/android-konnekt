@@ -201,6 +201,9 @@ internal fun ConversationScreen(
                 messageInput = messageInput,
                 messageAction = messageAction,
                 selectedMessageAction = viewModel.selectedMessageAction,
+                isSelectionEditable = viewModel.selectedMessages.size == 1
+                        && viewModel.selectedMessages.first().sender.id == currentUser?.id
+                        && viewModel.editingMessage == null,
                 onMessageInputChange = { viewModel.messageInput = it },
                 deletedByCurrentUser = { m ->
                     m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
@@ -220,6 +223,7 @@ internal fun ConversationScreen(
                 isSelectionDeletable = !(viewModel.selectedMessages.any { message ->
                     message.sender.id != currentUser?.id || message.isHidden
                 }),
+                editingMessage = viewModel.editingMessage,
                 onNavigateBack = navigateBack,
                 onChatClick = {
                     val type = viewModel.idType
@@ -235,14 +239,11 @@ internal fun ConversationScreen(
                 },
                 onMessageAction = viewModel::setMessageAction,
                 onDismissMessageAction = viewModel::dismissMessageAction,
-                onSelectedMessageActionClick = {
-                    viewModel.selectedMessageAction = it
-                },
+                onSelectedMessageActionClick = viewModel::updateSelectedMessageAction,
                 onCancelMessagesSelection = viewModel::cancelMessagesSelection,
                 onDeleteForMeClick = viewModel::hideMessagesForMe,
                 onDeleteClick = viewModel::deleteSelectedMessages,
-                isSelectionEditable = viewModel.selectedMessages.size == 1
-                        && viewModel.selectedMessages.first().sender.id == currentUser?.id,
+                onCancelEditing = viewModel::cancelEditing,
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -266,6 +267,7 @@ private fun ConversationScreen(
     messageAction: MessageAction?,
     selectedMessageAction: SelectedMessageAction?,
     isSelectionEditable: Boolean,
+    editingMessage: Message?,
     onMessageInputChange: (String) -> Unit,
     deletedByCurrentUser: (Message) -> Boolean,
     composerAttachments: List<ComposerAttachment>,
@@ -282,6 +284,7 @@ private fun ConversationScreen(
     onCancelMessagesSelection: () -> Unit,
     onDeleteForMeClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onCancelEditing: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -388,15 +391,17 @@ private fun ConversationScreen(
         }
         MessageComposer(
             message = messageInput,
+            sendingMessage = sendingMessage,
+            sendEnabled = !isLoadingMessages,
             onMessageChange = onMessageInputChange,
             attachments = composerAttachments,
             onAddAttachment = onAddComposerAttachment,
             action = composerAction,
             onActionChange = onComposerActionChange,
             onSend = onSend,
-            sendingMessage = sendingMessage,
-            sendEnabled = !isLoadingMessages,
-            modifier = Modifier.imePadding()
+            onCancelEditing = onCancelEditing,
+            modifier = Modifier.imePadding(),
+            editingMessage = editingMessage
         )
     }
     if (messageAction?.type == ActionType.FOCUS_ATTACHMENTS)
@@ -849,15 +854,17 @@ private fun AdjustedMessageBubble(
 @Composable
 private fun MessageComposer(
     message: String,
+    sendingMessage: Boolean,
+    sendEnabled: Boolean,
     onMessageChange: (String) -> Unit,
     attachments: List<ComposerAttachment>,
     onAddAttachment: (ComposerAttachment) -> Unit,
     action: MessageComposerAction?,
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
-    sendingMessage: Boolean,
-    sendEnabled: Boolean,
-    modifier: Modifier = Modifier
+    onCancelEditing: () -> Unit,
+    modifier: Modifier = Modifier,
+    editingMessage: Message? = null
 ) {
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
@@ -905,6 +912,12 @@ private fun MessageComposer(
         }
     }
 
+    LaunchedEffect(editingMessage) {
+        editingMessage?.let {
+            onMessageChange(it.content)
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -913,6 +926,44 @@ private fun MessageComposer(
             attachments = attachments,
             modifier = Modifier.fillMaxWidth()
         )
+        editingMessage?.let { message ->
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.background)
+                    .border(
+                        width = 3.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "You",
+                        fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        painter = painterResource(KonnektIcon.x),
+                        contentDescription = "cancel editing",
+                        modifier = Modifier
+                            .clickable(
+                                interactionSource = null,
+                                indication = null,
+                                onClick = onCancelEditing
+                            )
+                    )
+                }
+                Text(
+                    text = message.content,
+                    maxLines = 2,
+                    overflow = TextOverflow.StartEllipsis,
+                    color = Gray
+                )
+            }
+        }
         ShadowedTextField(
             value = message,
             onValueChange = onMessageChange,
@@ -936,14 +987,16 @@ private fun MessageComposer(
                         )
 
                     Box {
-                        Icon(
-                            painter = painterResource(KonnektIcon.paperclip),
-                            contentDescription = "attachments",
-                            modifier = iconModifier(sendEnabled) {
-                                onActionChange(MessageComposerAction.Attachment)
-                            },
-                            tint = if (sendEnabled) LocalContentColor.current else DarkGray
-                        )
+                        this@Row.AnimatedVisibility(editingMessage == null) {
+                            Icon(
+                                painter = painterResource(KonnektIcon.paperclip),
+                                contentDescription = "attachments",
+                                modifier = iconModifier(sendEnabled) {
+                                    onActionChange(MessageComposerAction.Attachment)
+                                },
+                                tint = if (sendEnabled) LocalContentColor.current else DarkGray
+                            )
+                        }
 
                         val density = LocalDensity.current
                         if (action == MessageComposerAction.Attachment) {
@@ -980,7 +1033,7 @@ private fun MessageComposer(
                     AnimatedContent(
                         targetState = message.isNotEmpty()
                     ) {
-                        val enableSendMessage = it || attachments.isNotEmpty()
+                        val enableSendMessage = it || attachments.isNotEmpty() || editingMessage != null
 
                         if (!sendingMessage) Icon(
                             painter = painterResource(
@@ -1590,6 +1643,7 @@ private fun ConversationScreenPreview(
                 messageAction = null,
                 selectedMessageAction = null,
                 isSelectionEditable = true,
+                editingMessage = null,
                 onMessageInputChange = { v -> messageInput = v },
                 deletedByCurrentUser = { m ->
                     m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
@@ -1613,6 +1667,7 @@ private fun ConversationScreenPreview(
                 onCancelMessagesSelection = {},
                 onDeleteForMeClick = {},
                 onDeleteClick = {},
+                onCancelEditing = {},
                 contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()

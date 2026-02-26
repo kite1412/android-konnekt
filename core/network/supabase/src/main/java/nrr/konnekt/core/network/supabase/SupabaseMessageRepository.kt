@@ -180,7 +180,7 @@ internal class SupabaseMessageRepository @Inject constructor(
     ): MessageResult<Message> = performSuspendingAuthenticatedAction result@{ u ->
         val createAttachments = mutableListOf<SupabaseCreateAttachment>()
 
-        if (attachments != null && attachments.isNotEmpty()) {
+        if (!attachments.isNullOrEmpty()) {
             with(Bucket.CHAT_MEDIA) {
                 val (allowed, disallowed) = attachments.partition {
                     allowedExtensions.contains(it.fileExtension)
@@ -258,8 +258,23 @@ internal class SupabaseMessageRepository @Inject constructor(
     override suspend fun editMessage(
         messageId: String,
         newContent: String
-    ): MessageResult<Message> {
-        TODO("Not yet implemented")
+    ): MessageResult<Message> = performSuspendingAuthenticatedAction { user ->
+        messages {
+            update(
+                update = {
+                    SupabaseMessage::content setTo newContent
+                }
+            ) {
+                filter {
+                    SupabaseMessage::id eq messageId
+                }
+                select()
+            }
+        }
+            .decodeSingleOrNull<SupabaseMessage>()
+            ?.toMessage(user)
+            ?.let(Result<Message, Nothing>::Success)
+            ?: Result.Error(MessageError.Unknown)
     }
 
     override suspend fun deleteMessages(messageIds: List<String>): MessageResult<List<Message>> =
@@ -289,30 +304,29 @@ internal class SupabaseMessageRepository @Inject constructor(
     override suspend fun updateUserReadMarker(
         chatId: String,
         instant: Instant?
-    ): MessageResult<UserReadMarker> =
-        performSuspendingAuthenticatedAction { u ->
-            userReadMarkers {
-                upsert(
-                    value = SupabaseUserReadMarker(
-                        userId = u.id,
-                        chatId = chatId,
-                        lastReadAt = instant ?: now()
-                    )
-                ) {
-                    select()
-                }
+    ): MessageResult<UserReadMarker> = performSuspendingAuthenticatedAction { u ->
+        userReadMarkers {
+            upsert(
+                value = SupabaseUserReadMarker(
+                    userId = u.id,
+                    chatId = chatId,
+                    lastReadAt = instant ?: now()
+                )
+            ) {
+                select()
             }
-                .decodeSingleOrNull<SupabaseUserReadMarker>()
-                ?.let {
-                    Success(
-                        UserReadMarker(
-                            user = u,
-                            chatId = chatId,
-                            lastReadAt = it.lastReadAt
-                        )
-                    )
-                } ?: Error(MessageError.Unknown)
         }
+            .decodeSingleOrNull<SupabaseUserReadMarker>()
+            ?.let {
+                Success(
+                    UserReadMarker(
+                        user = u,
+                        chatId = chatId,
+                        lastReadAt = it.lastReadAt
+                    )
+                )
+            } ?: Error(MessageError.Unknown)
+    }
 
     override suspend fun hideMessages(messageIds: List<String>): MessageResult<List<MessageStatus>> =
         performSuspendingAuthenticatedAction { user ->

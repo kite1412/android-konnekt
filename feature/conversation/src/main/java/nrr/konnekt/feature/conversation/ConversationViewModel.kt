@@ -32,6 +32,7 @@ import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
+import nrr.konnekt.core.domain.usecase.EditMessageUseCase
 import nrr.konnekt.core.domain.usecase.HideMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
@@ -73,7 +74,8 @@ class ConversationViewModel @Inject constructor(
     private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
     private val createChatUseCase: CreateChatUseCase,
     private val deleteMessagesUseCase: DeleteMessagesUseCase,
-    private val hideMessagesUseCase: HideMessagesUseCase
+    private val hideMessagesUseCase: HideMessagesUseCase,
+    private val editMessageUseCase: EditMessageUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
     internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
@@ -93,6 +95,7 @@ class ConversationViewModel @Inject constructor(
     internal var isOnMessagesSelectionMode by mutableStateOf(false)
         private set
     internal var selectedMessageAction by mutableStateOf<SelectedMessageAction?>(null)
+    internal var editingMessage by mutableStateOf<Message?>(null)
     internal val composerAttachments = mutableStateListOf<ComposerAttachment>()
     internal val selectedMessages = mutableStateListOf<Message>()
     internal val hiddenMessageIds = mutableStateListOf<String>()
@@ -244,14 +247,30 @@ class ConversationViewModel @Inject constructor(
         fixedChatId?.let {
             viewModelScope.launch {
                 sendingMessage = true
-                val res = sendMessageUseCase(
-                    chatId = it,
-                    content = content,
-                    attachment = composerAttachments
-                        .takeIf { a -> a.isNotEmpty() }
-                        ?.map(ComposerAttachment::toFileUpload)
-                )
-                composerAttachments.clear()
+                var res: MessageResult<Message>
+
+                if (editingMessage != null) {
+                    res = editMessageUseCase(
+                        messageId = editingMessage!!.id,
+                        newContent = content
+                    )
+
+                    if (res is Result.Success) {
+                        _events.emit(
+                            UiEvent.ShowSnackbar("Message edited")
+                        )
+                    }
+                    cancelEditing()
+                } else {
+                    res = sendMessageUseCase(
+                        chatId = it,
+                        content = content,
+                        attachment = composerAttachments
+                            .takeIf { a -> a.isNotEmpty() }
+                            ?.map(ComposerAttachment::toFileUpload)
+                    )
+                    composerAttachments.clear()
+                }
                 if (res is Result.Error) {
                     _events.emit(
                         value = UiEvent.ShowSnackbar(
@@ -268,6 +287,7 @@ class ConversationViewModel @Inject constructor(
                         )
                     )
                 }
+
                 messageInput = ""
                 sendingMessage = false
             }
@@ -319,6 +339,19 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    internal fun updateSelectedMessageAction(action: SelectedMessageAction?) {
+        selectedMessageAction = action
+
+        if (action == SelectedMessageAction.EDIT_MESSAGE) {
+            selectedMessages.firstOrNull()?.let { message ->
+                editingMessage = message
+
+                cancelMessagesSelection()
+                composerAttachments.clear()
+            }
+        }
+    }
+
     internal fun dismissMessageAction() {
         _messageAction.value = null
     }
@@ -327,6 +360,10 @@ class ConversationViewModel @Inject constructor(
         selectedMessages.clear()
         isOnMessagesSelectionMode = false
         _messageAction.value = null
+    }
+
+    internal fun cancelEditing() {
+        editingMessage = null
     }
 
     internal fun deleteSelectedMessages() = deleteMessages(deleteMessagesUseCase::invoke)
