@@ -85,12 +85,6 @@ internal abstract class SupabaseService(
     protected suspend fun <R> userReadMarkers(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(USER_READ_MARKERS, operation)
 
-    protected fun List<String>.toInValues(): String =
-        joinToString(
-            separator = ",",
-            prefix = "(",
-            postfix = ")"
-        )
 
     protected inner class Rpc {
         private suspend inline fun <reified R : Any> call(

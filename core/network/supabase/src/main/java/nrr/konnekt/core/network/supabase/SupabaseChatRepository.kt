@@ -131,7 +131,7 @@ internal class SupabaseChatRepository @Inject constructor(
                     filter = FilterOperation(
                         column = "chat_id",
                         operator = FilterOperator.IN,
-                        value = c.map { it.id }.toInValues()
+                        value = c.map { it.id }
                     )
                 ).share()
             }
@@ -146,7 +146,7 @@ internal class SupabaseChatRepository @Inject constructor(
                     filter = FilterOperation(
                         column = "chat_id",
                         operator = FilterOperator.IN,
-                        value = s.map { it.chatId }.toInValues()
+                        value = s.map { it.chatId }
                     )
                 )
             }
@@ -173,7 +173,7 @@ internal class SupabaseChatRepository @Inject constructor(
                                     filter = FilterOperation(
                                         column = "id",
                                         operator = FilterOperator.IN,
-                                        value = p.map { i -> i.userId }.toInValues()
+                                        value = p.map { i -> i.userId }
                                     )
                                 )
                                     .map { users ->
@@ -239,7 +239,7 @@ internal class SupabaseChatRepository @Inject constructor(
                     filter = FilterOperation(
                         column = "chat_id",
                         operator = FilterOperator.IN,
-                        value = c.map { c -> c.id }.toInValues()
+                        value = c.map { c -> c.id }
                     )
                 )
                     .map {
@@ -281,7 +281,7 @@ internal class SupabaseChatRepository @Inject constructor(
                     filter = FilterOperation(
                         column = "message_id",
                         operator = FilterOperator.IN,
-                        value = messages.map { it.id }.toInValues()
+                        value = messages.map { it.id }
                     )
                 ).share()
             }
