@@ -777,22 +777,26 @@ private fun AdjustedMessageBubble(
             )
             .combinedClickable(
                 onClick = {
-                    val visualAttachments = message.attachments.filter {
-                        it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO
-                    }
-                    if (visualAttachments.isNotEmpty()) {
-                        onAction(
-                            MessageAction(
-                                message = message.copy(
-                                    attachments = visualAttachments,
-                                    sender = message.sender.copy(
-                                        username = if (sentByCurrentUser) "Me" else message.sender.username
-                                    )
-                                ),
-                                type = ActionType.FOCUS_ATTACHMENTS
+                    if (!isSelected) {
+                        val visualAttachments = message.attachments.filter {
+                            it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO
+                        }
+                        if (isOnSelectionMode) {
+                            onAction(MessageAction(message = message, type = ActionType.SHOW_ACTIONS))
+                        } else if (visualAttachments.isNotEmpty()) {
+                            onAction(
+                                MessageAction(
+                                    message = message.copy(
+                                        attachments = visualAttachments,
+                                        sender = message.sender.copy(
+                                            username = if (sentByCurrentUser) "Me" else message.sender.username
+                                        )
+                                    ),
+                                    type = ActionType.FOCUS_ATTACHMENTS
+                                )
                             )
-                        )
-                    } else if (isOnSelectionMode) {
+                        }
+                    } else {
                         onAction(MessageAction(message = message, type = ActionType.SHOW_ACTIONS))
                     }
                 },
@@ -934,7 +938,8 @@ private fun MessageComposer(
                         width = 3.dp,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    .padding(16.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -956,12 +961,21 @@ private fun MessageComposer(
                             )
                     )
                 }
-                Text(
-                    text = message.content,
-                    maxLines = 2,
-                    overflow = TextOverflow.StartEllipsis,
-                    color = Gray
-                )
+                Column {
+                    if (message.attachments.isNotEmpty()) Text(
+                        text = "With ${message.attachments.size} attachments.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Gray,
+                            fontStyle = FontStyle.Italic
+                        )
+                    )
+                    Text(
+                        text = message.content,
+                        maxLines = 2,
+                        overflow = TextOverflow.StartEllipsis,
+                        color = Gray
+                    )
+                }
             }
         }
         ShadowedTextField(
