@@ -263,6 +263,7 @@ internal class SupabaseMessageRepository @Inject constructor(
             update(
                 update = {
                     SupabaseMessage::content setTo newContent
+                    SupabaseMessage::editedAt setTo now()
                 }
             ) {
                 filter {

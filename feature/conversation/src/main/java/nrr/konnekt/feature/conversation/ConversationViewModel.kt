@@ -205,11 +205,13 @@ class ConversationViewModel @Inject constructor(
     }
 
     private fun <T, E: Error> deleteMessages(
+        filterUserMessagesOnly: Boolean = true,
         operation: suspend (List<String>) -> Result<List<T>, E>
     ) {
         viewModelScope.launch {
             currentUser.firstOrNull()?.let { user ->
-                val userMessages = selectedMessages.filter { it.sender.id == user.id }
+                val userMessages = if (filterUserMessagesOnly) selectedMessages.filter { it.sender.id == user.id }
+                    else selectedMessages
 
                 if (userMessages.isNotEmpty()) {
                     val res = operation(userMessages.map(Message::id))
@@ -366,7 +368,12 @@ class ConversationViewModel @Inject constructor(
         editingMessage = null
     }
 
-    internal fun deleteSelectedMessages() = deleteMessages(deleteMessagesUseCase::invoke)
+    internal fun deleteSelectedMessages() = deleteMessages(
+        operation = deleteMessagesUseCase::invoke
+    )
 
-    internal fun hideMessagesForMe() = deleteMessages(::hideMessages)
+    internal fun hideMessagesForMe() = deleteMessages(
+        filterUserMessagesOnly = false,
+        operation = ::hideMessages
+    )
 }

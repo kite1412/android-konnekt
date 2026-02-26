@@ -105,7 +105,7 @@ fun MessageBubble(
         shadowColor = Color.Black,
         backgroundColor = Lime,
         borderColor = if (sentByCurrentUser) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.secondary,
+            else MaterialTheme.colorScheme.secondary,
         borderWidth = 4.dp,
         space = 8.dp,
         contentPadding = PaddingValues(
@@ -120,6 +120,8 @@ fun MessageBubble(
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     val verticalSpace = 4.dp
+    val isDeleted = message.isHidden || deletedByCurrentUser
+    val tailColor = if (isDeleted) DarkGray else tailColor
 
     Column(
         modifier = modifier
@@ -132,7 +134,7 @@ fun MessageBubble(
         verticalArrangement = Arrangement.spacedBy(verticalSpace),
         horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
     ) {
-        if (message.attachments.isNotEmpty())
+        if (message.attachments.isNotEmpty() && !isDeleted)
             MessageAttachments(
                 attachments = message.attachments,
                 messageSentAt = message.sentAt,
@@ -154,7 +156,10 @@ fun MessageBubble(
             )
             ShadowedBox(
                 reverse = !sentByCurrentUser,
-                style = shadowedBoxStyle
+                style = shadowedBoxStyle.copy(
+                    borderColor = if (isDeleted) DarkGray else shadowedBoxStyle.borderColor,
+                    backgroundColor = if (isDeleted) Gray else shadowedBoxStyle.backgroundColor
+                )
             ) {
                 with(message) {
                     Column(
