@@ -57,8 +57,8 @@ class PreviewParameterDataProvider
                 editedAt = Instant.parse("2025-07-10T15:00:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m1", "u1", Instant.parse("2025-07-10T15:01:00Z"), false),
-                    MessageStatus("m1", "u2", Instant.parse("2025-07-10T15:02:00Z"), false)
+                    MessageStatus("m1", "u1", false),
+                    MessageStatus("m1", "u2", false)
                 ),
                 attachments = listOf(
                     Attachment(
@@ -105,9 +105,9 @@ class PreviewParameterDataProvider
                 editedAt = now(),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m2", "u1", Instant.parse("2025-07-05T12:05:00Z"), false),
-                    MessageStatus("m2", "u2", Instant.parse("2025-07-05T12:00:10Z"), false),
-                    MessageStatus("m2", "u3", null, false)
+                    MessageStatus("m2", "u1", false),
+                    MessageStatus("m2", "u2", false),
+                    MessageStatus("m2", "u3", false)
                 )
             )
         ),
@@ -148,8 +148,8 @@ class PreviewParameterDataProvider
                 editedAt = Instant.parse("2025-07-21T17:30:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m3", "u3", Instant.parse("2025-07-21T17:31:00Z"), false),
-                    MessageStatus("m3", "u4", null, false)
+                    MessageStatus("m3", "u3", false),
+                    MessageStatus("m3", "u4", false)
                 )
             )
         ),
@@ -205,10 +205,10 @@ class PreviewParameterDataProvider
                 editedAt = Instant.parse("2025-07-26T09:00:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m4", "u1", Instant.parse("2025-07-26T09:01:00Z"), false),
-                    MessageStatus("m4", "u2", Instant.parse("2025-07-26T09:02:00Z"), false),
-                    MessageStatus("m4", "u3", Instant.parse("2025-07-26T09:03:00Z"), false),
-                    MessageStatus("m4", "u4", Instant.parse("2025-07-26T09:00:05Z"), false)
+                    MessageStatus("m4", "u1", false),
+                    MessageStatus("m4", "u2", false),
+                    MessageStatus("m4", "u3", false),
+                    MessageStatus("m4", "u4", false)
                 )
             )
         ),
@@ -260,9 +260,9 @@ class PreviewParameterDataProvider
                 editedAt = Instant.parse("2025-07-01T18:00:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m5", "u1", Instant.parse("2025-07-01T18:01:00Z"), false),
-                    MessageStatus("m5", "u2", Instant.parse("2025-07-01T18:01:30Z"), false),
-                    MessageStatus("m5", "u3", null, false)
+                    MessageStatus("m5", "u1", false),
+                    MessageStatus("m5", "u2", false),
+                    MessageStatus("m5", "u3", false)
                 )
             )
         )

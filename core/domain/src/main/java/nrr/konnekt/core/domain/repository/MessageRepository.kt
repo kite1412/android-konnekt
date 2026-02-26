@@ -79,12 +79,12 @@ interface MessageRepository {
     suspend fun updateUserReadMarker(chatId: String, instant: Instant? = null): MessageResult<UserReadMarker>
 
     /**
-     * Hide a message for the logged in user.
+     * Hide a message for the logged-in user.
      *
-     * @param messageId The ID of the message to hide.
-     * @return The updated message status.
+     * @param messageIds The IDs of the messages to hide.
+     * @return The updated message statuses.
      */
-    suspend fun hideMessage(messageId: String): MessageResult<MessageStatus>
+    suspend fun hideMessages(messageIds: List<String>): MessageResult<List<MessageStatus>>
 
     sealed interface MessageError : Error {
         object ChatNotFound : MessageError

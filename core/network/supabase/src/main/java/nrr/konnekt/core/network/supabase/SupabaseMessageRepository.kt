@@ -15,6 +15,7 @@ import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
 import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.util.Error
+import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
@@ -35,6 +36,7 @@ import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.resolveFileType
 import javax.inject.Inject
+import kotlin.math.min
 import kotlin.time.Instant
 
 internal class SupabaseMessageRepository @Inject constructor(
@@ -44,7 +46,7 @@ internal class SupabaseMessageRepository @Inject constructor(
 ) : MessageRepository, SupabaseService(authentication) {
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     override fun observeMessages(chatId: String): Flow<List<Message>> =
-        performOperation(MESSAGES) {
+        performOperation(MESSAGES) { user ->
             selectAsFlow(
                 primaryKey = SupabaseMessage::id,
                 filter = FilterOperation(
@@ -70,6 +72,20 @@ internal class SupabaseMessageRepository @Inject constructor(
                         }
                             .decodeList<SupabaseAttachment>()
                     }
+                    // TODO make it observable
+                    // only get statuses with isDeleted == true
+                    val statuses = messageStatuses {
+                        select {
+                            filter {
+                                MessageStatus::isDeleted eq true
+                                MessageStatus::userId eq user.id
+                                MessageStatus::messageId isIn m
+                                    .take(min(15, m.size))
+                                    .map(SupabaseMessage::id)
+                            }
+                        }
+                            .decodeList<MessageStatus>()
+                    }
 
                     m
                         .mapNotNull {
@@ -77,6 +93,9 @@ internal class SupabaseMessageRepository @Inject constructor(
                                 .firstOrNull { s -> s.id == it.senderId }
                                 ?.let(it::toMessage)
                                 ?.copy(
+                                    messageStatuses = statuses.filter { statuses ->
+                                        statuses.messageId == it.id
+                                    },
                                     attachments = attachments
                                         .filter { m ->
                                             m.messageId == it.id
@@ -298,7 +317,24 @@ internal class SupabaseMessageRepository @Inject constructor(
                 } ?: Error(MessageError.Unknown)
         }
 
-    override suspend fun hideMessage(messageId: String): MessageResult<MessageStatus> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun hideMessages(messageIds: List<String>): MessageResult<List<MessageStatus>> =
+        performSuspendingAuthenticatedAction { user ->
+            messageStatuses {
+                upsert(
+                    values = messageIds.map { messageId ->
+                        MessageStatus(
+                            userId = user.id,
+                            messageId = messageId,
+                            isDeleted = true
+                        )
+                    }
+                ) {
+                    select()
+                }
+            }
+                .decodeList<MessageStatus>()
+                .takeIf { l -> l.isNotEmpty() }
+                ?.let(Result<List<MessageStatus>, Nothing>::Success)
+                ?: Result.Error(MessageError.Unknown)
+        }
 }

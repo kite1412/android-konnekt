@@ -64,7 +64,7 @@ private val personalConversation = Conversation(
             editedAt = now - 3.days,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m1", user2.id, now - 3.days + 2.minutes, false)
+                MessageStatus("m1", user2.id, false)
             )
         ),
         Message(
@@ -76,7 +76,7 @@ private val personalConversation = Conversation(
             editedAt = now - 3.days + 5.minutes,
             isHidden = true,
             messageStatuses = listOf(
-                MessageStatus("m2", user2.id, now - 3.days + 7.minutes, false)
+                MessageStatus("m2", user2.id, false)
             )
         ),
         Message(
@@ -88,7 +88,7 @@ private val personalConversation = Conversation(
             editedAt = now - 1.days,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m3", user1.id, now - 1.days + 1.minutes, false)
+                MessageStatus("m3", user1.id, false)
             )
         ),
         Message(
@@ -100,7 +100,7 @@ private val personalConversation = Conversation(
             editedAt = now - 1.days + 3.minutes,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m4", user1.id, now - 1.days + 5.minutes, false)
+                MessageStatus("m4", user1.id,  false)
             )
         ),
         Message(
@@ -112,7 +112,7 @@ private val personalConversation = Conversation(
             editedAt = now,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m5", user2.id, now + 1.minutes, false)
+                MessageStatus("m5", user2.id, false)
             )
         ),
         Message(
@@ -124,7 +124,7 @@ private val personalConversation = Conversation(
             editedAt = now + 2.minutes,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m6", user2.id, now + 3.minutes, false)
+                MessageStatus("m6", user2.id, false)
             )
         ),
         Message(
@@ -136,7 +136,7 @@ private val personalConversation = Conversation(
             editedAt = now - 5.days + 1.minutes,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m0", user1.id, now - 5.days + 2.minutes, false)
+                MessageStatus("m0", user1.id, false)
             )
         ),
         Message(
@@ -148,7 +148,7 @@ private val personalConversation = Conversation(
             editedAt = now - 2.days,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m7", user1.id, now - 2.days + 1.minutes, false)
+                MessageStatus("m7", user1.id, false)
             )
         ),
         Message(
@@ -160,7 +160,7 @@ private val personalConversation = Conversation(
             editedAt = now - 2.days + 12.minutes,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m8", user2.id, now - 2.days + 13.minutes, false)
+                MessageStatus("m8", user2.id, false)
             )
         ),
         Message(
@@ -172,7 +172,7 @@ private val personalConversation = Conversation(
             editedAt = now - 12.hours,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m9", user1.id, now - 12.hours + 1.minutes, false)
+                MessageStatus("m9", user1.id, false)
             )
         ),
         Message(
@@ -184,7 +184,7 @@ private val personalConversation = Conversation(
             editedAt = now + 10.minutes,
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m10", user2.id, now + 11.minutes, false)
+                MessageStatus("m10", user2.id, false)
             )
         ),
         Message(
@@ -196,7 +196,7 @@ private val personalConversation = Conversation(
             editedAt = now + 15.minutes,
             isHidden = true,
             messageStatuses = listOf(
-                MessageStatus("m11", user1.id, now + 16.minutes, false)
+                MessageStatus("m11", user1.id, false)
             )
         )
     )
@@ -234,8 +234,8 @@ private val groupConversation = Conversation(
             editedAt = Instant.parse("2025-08-17T12:30:00Z"),
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m3", user2.id, Instant.parse("2025-08-17T12:31:00Z"), false),
-                MessageStatus("m3", user3.id, Instant.parse("2025-08-17T12:31:30Z"), false)
+                MessageStatus("m3", user2.id, false),
+                MessageStatus("m3", user3.id, false)
             )
         ),
         Message(
@@ -257,8 +257,8 @@ private val groupConversation = Conversation(
                 )
             ),
             messageStatuses = listOf(
-                MessageStatus("m4", user1.id, Instant.parse("2025-08-17T12:33:00Z"), false),
-                MessageStatus("m4", user3.id, Instant.parse("2025-08-17T12:34:00Z"), false)
+                MessageStatus("m4", user1.id, false),
+                MessageStatus("m4", user3.id, false)
             )
         )
     )
@@ -295,7 +295,7 @@ private val chatRoomConversation = Conversation(
             editedAt = Instant.parse("2025-08-11T14:05:00Z"),
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m5", "user1", Instant.parse("2025-08-11T14:06:30Z"), false),
+                MessageStatus("m5", "user1", false),
             )
         ),
         Message(
@@ -307,7 +307,7 @@ private val chatRoomConversation = Conversation(
             editedAt = Instant.parse("2025-08-11T14:06:00Z"),
             isHidden = false,
             messageStatuses = listOf(
-                MessageStatus("m6", "user4", Instant.parse("2025-08-11T14:07:00Z"), false)
+                MessageStatus("m6", "user4", false)
             )
         )
     )

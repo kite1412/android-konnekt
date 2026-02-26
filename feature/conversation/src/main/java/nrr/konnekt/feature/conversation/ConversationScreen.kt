@@ -234,7 +234,7 @@ internal fun ConversationScreen(
                     viewModel.selectedMessageAction = it
                 },
                 onCancelMessagesSelection = viewModel::cancelMessagesSelection,
-                onDeleteForMeClick = {},
+                onDeleteForMeClick = viewModel::hideMessagesForMe,
                 onDeleteClick = viewModel::deleteSelectedMessages,
                 isSelectionEditable = viewModel.selectedMessages.size == 1
                         && viewModel.selectedMessages.first().sender.id == currentUser?.id,
@@ -358,9 +358,9 @@ private fun ConversationScreen(
                 isOnSelectionMode = isOnMessagesSelectionMode,
                 sentByCurrentUser = { m -> m.sender.id == currentUser.id },
                 deletedByCurrentUser = { m ->
-                    m.messageStatuses
-                        .firstOrNull { it.userId == currentUser.id }
-                        ?.isDeleted == true
+                    m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
+                        status.userId == currentUser.id && status.isDeleted
+                    }
                 },
                 isMessageSelected = {
                     selectedMessageIds.contains(it.id)
@@ -644,7 +644,7 @@ private fun Conversation(
             }
             .takeIf { it.isNotEmpty() }
             ?.let {
-                if (readMarkers != null && readMarkers.isNotEmpty()) {
+                if (!readMarkers.isNullOrEmpty()) {
                     it.firstOrNull { m ->
                         (m as ConversationItem.MessageItem).message.sentAt <=
                                 readMarkers.maxBy { m -> m.lastReadAt }.lastReadAt

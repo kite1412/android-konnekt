@@ -31,10 +31,12 @@ import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
+import nrr.konnekt.core.domain.usecase.HideMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.usecase.UpdateReadMarkerUseCase
+import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.model.Chat
@@ -68,7 +70,8 @@ class ConversationViewModel @Inject constructor(
     private val sendMessageUseCase: SendMessageUseCase,
     private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
     private val createChatUseCase: CreateChatUseCase,
-    private val deleteMessagesUseCase: DeleteMessagesUseCase
+    private val deleteMessagesUseCase: DeleteMessagesUseCase,
+    private val hideMessagesUseCase: HideMessagesUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
     internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
@@ -118,9 +121,8 @@ class ConversationViewModel @Inject constructor(
             var peerId = peerId
             if (chatId != null) {
                 fixedChatId = chatId
-                val res = chatRepository.getChatById(chatId)
 
-                when (res) {
+                when (val res = chatRepository.getChatById(chatId)) {
                     is Result.Success -> {
                         _chat.value = res.data
                         observeFlows(res.data.id)
@@ -194,6 +196,35 @@ class ConversationViewModel @Inject constructor(
             .onEach {
                 Log.d(LOG_TAG, "read markers: $it")
             }
+    }
+
+    private fun <T, E: Error> deleteMessages(
+        actionDescription: String,
+        operation: suspend (List<String>) -> Result<List<T>, E>
+    ) {
+        viewModelScope.launch {
+            currentUser.firstOrNull()?.let { user ->
+                val userMessages = selectedMessages.filter { it.sender.id == user.id }
+
+                if (userMessages.isNotEmpty()) {
+                    val res = operation(userMessages.map(Message::id))
+
+                    if (res is Result.Success) {
+                        _events.emit(
+                            UiEvent.ShowSnackbar(
+                                "${if (res.data.size == 1) "Message" else "Messages"} $actionDescription."
+                            )
+                        )
+                    } else {
+                        _events.emit(
+                            UiEvent.ShowSnackbar("Failed to $actionDescription message, try again later")
+                        )
+                    }
+                }
+
+                cancelMessagesSelection()
+            }
+        }
     }
 
     internal fun sendMessage(
@@ -287,27 +318,13 @@ class ConversationViewModel @Inject constructor(
         _messageAction.value = null
     }
 
-    internal fun deleteSelectedMessages() {
-        viewModelScope.launch {
-            currentUser.firstOrNull()?.let { user ->
-                val userMessages = selectedMessages.filter { it.sender.id == user.id }
+    internal fun deleteSelectedMessages() = deleteMessages(
+        actionDescription = "delete",
+        operation = deleteMessagesUseCase::invoke
+    )
 
-                val res = deleteMessagesUseCase(userMessages.map(Message::id))
-
-                if (res is Result.Success) {
-                    _events.emit(
-                        UiEvent.ShowSnackbar(
-                            "${if (res.data.size == 1) "Message" else "Messages"} deleted."
-                        )
-                    )
-                } else {
-                    _events.emit(
-                        UiEvent.ShowSnackbar("Failed to delete message, try again later")
-                    )
-                }
-
-                cancelMessagesSelection()
-            }
-        }
-    }
+    internal fun hideMessagesForMe() = deleteMessages(
+        actionDescription = "hide",
+        operation = hideMessagesUseCase::invoke
+    )
 }

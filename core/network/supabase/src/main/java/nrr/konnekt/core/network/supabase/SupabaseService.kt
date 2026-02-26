@@ -50,9 +50,9 @@ internal abstract class SupabaseService(
 
     protected fun <R> performOperation(
         tableName: String,
-        operation: PostgrestQueryBuilder.() -> R
+        operation: PostgrestQueryBuilder.(User) -> R
     ) = performAuthenticatedAction {
-        operation(supabaseClient.postgrest[tableName])
+        operation(supabaseClient.postgrest[tableName], it)
     }
 
     protected suspend fun <R> users(operation: suspend PostgrestQueryBuilder.() -> R) =
