@@ -1,3 +1,4 @@
+
 import com.android.build.api.dsl.ApplicationExtension
 import nrr.konnekt.ExtensionType
 import nrr.konnekt.configureBuildTypes
@@ -12,7 +13,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         target.run {
             pluginManager.run {
                 apply("com.android.application")
-                apply("org.jetbrains.kotlin.android")
             }
 
             extensions.configure<ApplicationExtension> {

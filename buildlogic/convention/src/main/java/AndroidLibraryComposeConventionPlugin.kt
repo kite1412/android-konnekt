@@ -1,9 +1,9 @@
 
-import com.android.build.gradle.LibraryExtension
+import com.android.build.api.dsl.LibraryExtension
 import nrr.konnekt.configureAndroidCompose
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.getByType
 
 class AndroidLibraryComposeConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -12,9 +12,8 @@ class AndroidLibraryComposeConventionPlugin : Plugin<Project> {
                 apply("konnekt.android.library")
             }
 
-            extensions.configure<LibraryExtension> {
-                configureAndroidCompose(this)
-            }
+            val libExtension = extensions.getByType<LibraryExtension>()
+            configureAndroidCompose(libExtension)
         }
     }
 }

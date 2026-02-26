@@ -1,4 +1,4 @@
-import com.android.build.gradle.LibraryExtension
+import com.android.build.api.dsl.LibraryExtension
 import nrr.konnekt.ExtensionType
 import nrr.konnekt.configureBuildTypes
 import nrr.konnekt.configureKotlinAndroid
@@ -13,11 +13,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         target.run {
             pluginManager.run {
                 apply("com.android.library")
-                apply("org.jetbrains.kotlin.android")
             }
 
             extensions.configure<LibraryExtension> {
-                defaultConfig.targetSdk = libs.findVersion("projectTargetSdkVersion").get().toString().toInt()
+                testOptions.targetSdk = libs.findVersion("projectTargetSdkVersion").get().toString().toInt()
                 configureKotlinAndroid(this)
                 configureBuildTypes(this, ExtensionType.LIBRARY)
 
