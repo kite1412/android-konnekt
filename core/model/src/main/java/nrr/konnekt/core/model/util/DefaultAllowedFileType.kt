@@ -12,7 +12,8 @@ object DefaultAllowedFileType {
         FileType("video/mp4", "mp4")
     )
     val audioTypes = listOf(
-        FileType("audio/mpeg", "mp3")
+        FileType("audio/mpeg", "mp3"),
+        FileType("audio/mp4", "m4a")
     )
     val documentTypes = listOf(
         FileType("application/pdf", "pdf"),
