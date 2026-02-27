@@ -889,7 +889,7 @@ private fun MessageComposer(
     val context = LocalContext.current
     val fileUploadValidator = LocalFileUploadValidator.current
     val fileUploadConstrains = LocalFileUploadConstraints.current
-    var enableRecording by retain { mutableStateOf(false) }
+    var recordingEnabled by retain { mutableStateOf(false) }
 
     val getMultipleContentsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -1100,7 +1100,7 @@ private fun MessageComposer(
                 maxLines = 5
             )
         } else AudioMessageComposer(
-            startRecording = enableRecording,
+            recordingEnabled = recordingEnabled,
             onCancelRecording = {
                 onActionChange(null)
             },
@@ -1109,13 +1109,13 @@ private fun MessageComposer(
     }
     if (action == MessageComposerAction.Voice)
         RequestPermission(Manifest.permission.RECORD_AUDIO) {
-            enableRecording = true
+            recordingEnabled = it
         }
 }
 
 @Composable
 fun AudioMessageComposer(
-    startRecording: Boolean,
+    recordingEnabled: Boolean,
     onCancelRecording: () -> Unit,
     onSendRecording: (FileUpload) -> Unit,
     modifier: Modifier = Modifier
@@ -1124,19 +1124,18 @@ fun AudioMessageComposer(
     val clipShape = RoundedCornerShape(8.dp)
     val context = LocalContext.current
 
-    LaunchedEffect(startRecording) {
-        if (startRecording) {
+    LaunchedEffect(recordingEnabled) {
+        if (recordingEnabled) {
             AudioRecorder.startRecording(context)
             while (true) {
                 delay(1000)
                 second++
             }
-        } else {
-            second = 0
-            AudioRecorder.flush()
         }
     }
-    Column(
+
+    AnimatedContent(
+        targetState = recordingEnabled,
         modifier = modifier
             .fillMaxWidth()
             .background(
@@ -1153,74 +1152,91 @@ fun AudioMessageComposer(
                 start = 16.dp,
                 top = 16.dp
             )
-    ) {
-        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                val textStyle = LocalTextStyle.current.copy(
-                    fontStyle = FontStyle.Italic
-                )
+    ) { recordingEnabled ->
+        if (recordingEnabled) Column {
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val textStyle = LocalTextStyle.current.copy(
+                        fontStyle = FontStyle.Italic
+                    )
 
-                Text(
-                    text = "Recording audio",
-                    style = textStyle
-                )
-                Icon(
-                    painter = painterResource(KonnektIcon.mic),
-                    contentDescription = "recording",
-                    modifier = Modifier.size(textStyle.fontSize.value.dp)
-                )
+                    Text(
+                        text = "Recording audio",
+                        style = textStyle
+                    )
+                    Icon(
+                        painter = painterResource(KonnektIcon.mic),
+                        contentDescription = "recording",
+                        modifier = Modifier.size(textStyle.fontSize.value.dp)
+                    )
+                }
             }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "${second / 60}:${"%02d".format(second % 60)}",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${second / 60}:${"%02d".format(second % 60)}",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            AudioRecorder.flush()
+                            onCancelRecording()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(KonnektIcon.x),
+                            contentDescription = "cancel",
+                            tint = Red
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            val output = AudioRecorder.stopRecording()
+
+                            output?.let { file ->
+                                onSendRecording(
+                                    FileUpload(
+                                        fileName = now().toString(),
+                                        fileExtension = file.extension.ifEmpty(
+                                            defaultValue = AudioRecorder::DEFAULT_OUTPUT_FILE_FORMAT
+                                        ),
+                                        content = file.readBytes()
+                                    )
+                                )
+                            }
+                            AudioRecorder.deleteTempAudioFile()
+                            onCancelRecording()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(KonnektIcon.send),
+                            contentDescription = "send",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        } else CompositionLocalProvider(LocalContentColor provides Red) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        AudioRecorder.flush()
-                        onCancelRecording()
-                    }
-                ) {
+                Text("Recording audio permission required.")
+                IconButton(onClick = onCancelRecording) {
                     Icon(
                         painter = painterResource(KonnektIcon.x),
                         contentDescription = "cancel",
-                        tint = Red
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        val output = AudioRecorder.stopRecording()
-
-                        output?.let { file ->
-                            onSendRecording(
-                                FileUpload(
-                                    fileName = now().toString(),
-                                    fileExtension = file.extension.ifEmpty { "m4a" },
-                                    content = file.readBytes()
-                                )
-                            )
-                            AudioRecorder.deleteTempAudioFile()
-                        }
-                        onCancelRecording()
-                    }
-                ) {
-                    Icon(
-                        painter = painterResource(KonnektIcon.send),
-                        contentDescription = "send",
-                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }

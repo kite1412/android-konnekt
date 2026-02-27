@@ -8,6 +8,7 @@ import java.io.File
 object AudioRecorder {
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
+    const val DEFAULT_OUTPUT_FILE_FORMAT = "m4a"
 
     fun startRecording(context: Context): Boolean {
         stopRecording()

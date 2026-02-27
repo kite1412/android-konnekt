@@ -15,7 +15,7 @@ import androidx.core.content.ContextCompat
 @Composable
 fun RequestPermission(
     permission: String,
-    onGranted: () -> Unit
+    onResult: (isGranted: Boolean) -> Unit
 ) {
     var firstLaunch by retain {
         mutableStateOf(false)
@@ -23,10 +23,9 @@ fun RequestPermission(
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) onGranted()
-    }
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = onResult
+    )
 
     LaunchedEffect(Unit) {
         if (
@@ -38,6 +37,11 @@ fun RequestPermission(
         ) {
             launcher.launch(permission)
             firstLaunch = true
-        } else onGranted()
+        } else onResult(
+            ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        )
     }
 }
