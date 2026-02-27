@@ -208,8 +208,24 @@ internal fun ConversationScreen(
                 messageAction = messageAction,
                 selectedMessageAction = viewModel.selectedMessageAction,
                 isSelectionEditable = viewModel.selectedMessages.size == 1
-                        && viewModel.selectedMessages.first().sender.id == currentUser?.id
+                        && run {
+                            val first = viewModel.selectedMessages.first()
+                            first.sender.id == currentUser?.id &&
+                                    !first.isHidden &&
+                                    !first.messageStatuses.any { status ->
+                                        status.userId == currentUser?.id && status.isDeleted
+                                    } &&
+                                    !viewModel.hiddenMessageIds.contains(first.id)
+                        }
                         && viewModel.editingMessage == null,
+                isSelectionDeletable = viewModel.selectedMessages.any { message ->
+                    message.sender.id == currentUser?.id && !message.isHidden
+                },
+                isSelectionHidable = viewModel.selectedMessages.any { message ->
+                    !(message.messageStatuses.any { status ->
+                        status.userId == currentUser?.id && status.isDeleted
+                    }) && !message.isHidden && !viewModel.hiddenMessageIds.contains(message.id)
+                },
                 onMessageInputChange = { viewModel.messageInput = it },
                 deletedByCurrentUser = { m ->
                     m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
@@ -226,9 +242,6 @@ internal fun ConversationScreen(
                 sendingMessage = viewModel.sendingMessage,
                 totalActiveParticipants = totalActiveParticipants ?: 0,
                 isOnMessagesSelectionMode = viewModel.isOnMessagesSelectionMode,
-                isSelectionDeletable = !(viewModel.selectedMessages.any { message ->
-                    message.sender.id != currentUser?.id || message.isHidden
-                }),
                 editingMessage = viewModel.editingMessage,
                 onNavigateBack = navigateBack,
                 onChatClick = {
@@ -266,7 +279,6 @@ private fun ConversationScreen(
     isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
     isOnMessagesSelectionMode: Boolean,
-    isSelectionDeletable: Boolean,
     messages: List<Message>,
     readMarkers: List<UserReadMarker>?,
     selectedMessageIds: List<String>,
@@ -274,6 +286,8 @@ private fun ConversationScreen(
     messageAction: MessageAction?,
     selectedMessageAction: SelectedMessageAction?,
     isSelectionEditable: Boolean,
+    isSelectionDeletable: Boolean,
+    isSelectionHidable: Boolean,
     editingMessage: Message?,
     onMessageInputChange: (String) -> Unit,
     deletedByCurrentUser: (Message) -> Boolean,
@@ -316,6 +330,7 @@ private fun ConversationScreen(
 
             } else SelectedMessageActions(
                 isEditable = isSelectionEditable,
+                isDeletable = isSelectionHidable,
                 onActionClick = onSelectedMessageActionClick,
                 onCancel = onCancelMessagesSelection
             )
@@ -494,6 +509,7 @@ private fun Header(
 @Composable
 fun SelectedMessageActions(
     isEditable: Boolean,
+    isDeletable: Boolean,
     onActionClick: (SelectedMessageAction) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
@@ -524,11 +540,13 @@ fun SelectedMessageActions(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SelectedMessageActionIconButton(
-                action = SelectedMessageAction.DELETE_MESSAGE,
-                iconSize = iconSize,
-                onClick = onActionClick
-            )
+            AnimatedVisibility(isDeletable) {
+                SelectedMessageActionIconButton(
+                    action = SelectedMessageAction.DELETE_MESSAGE,
+                    iconSize = iconSize,
+                    onClick = onActionClick
+                )
+            }
             AnimatedVisibility(visible = isEditable) {
                 SelectedMessageActionIconButton(
                     action = SelectedMessageAction.EDIT_MESSAGE,
@@ -1819,6 +1837,8 @@ private fun ConversationScreenPreview(
                 messageAction = null,
                 selectedMessageAction = null,
                 isSelectionEditable = true,
+                isSelectionDeletable = true,
+                isSelectionHidable = true,
                 editingMessage = null,
                 onMessageInputChange = { v -> messageInput = v },
                 deletedByCurrentUser = { m ->
@@ -1835,7 +1855,6 @@ private fun ConversationScreenPreview(
                 onNavigateBack = {},
                 totalActiveParticipants = 0,
                 isOnMessagesSelectionMode = false,
-                isSelectionDeletable = true,
                 onChatClick = {},
                 onMessageAction = {},
                 onDismissMessageAction = {},
