@@ -6,15 +6,14 @@ import javax.inject.Inject
 
 internal class SupabaseFileNameFormatter @Inject constructor()
     : FileNameFormatter {
-    override fun format(rawName: String): String =
+    override fun format(rawName: String, ext: String): String =
         "${now()}_${
             if (rawName.length <= 150) rawName
-            else {
-                val ext = rawName.substringAfterLast('.')
-                val name = rawName.substringBeforeLast('.').take(140)
-
-                "$name${if (ext.isNotEmpty()) ".$ext" else ""}"
-            }
+            else rawName.substringBeforeLast('.').take(140)
+        }${
+            if (rawName.substringAfterLast('.') != ext) {
+                ".$ext"
+            } else ""
         }"
 
     override fun restore(formattedName: String): String =

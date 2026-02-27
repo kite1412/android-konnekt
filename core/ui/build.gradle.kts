@@ -21,4 +21,5 @@ dependencies {
     implementation(projects.core.network.upload.util)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
 }

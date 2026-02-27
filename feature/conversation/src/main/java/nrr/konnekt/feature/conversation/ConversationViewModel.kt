@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
+import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
@@ -267,7 +268,7 @@ class ConversationViewModel @Inject constructor(
                     res = sendMessageUseCase(
                         chatId = it,
                         content = content,
-                        attachment = composerAttachments
+                        attachments = composerAttachments
                             .takeIf { a -> a.isNotEmpty() }
                             ?.map(ComposerAttachment::toFileUpload)
                     )
@@ -376,4 +377,16 @@ class ConversationViewModel @Inject constructor(
         filterUserMessagesOnly = false,
         operation = ::hideMessages
     )
+
+    internal fun sendAudioRecording(fileUpload: FileUpload) {
+        viewModelScope.launch {
+            chatId?.let { chatId ->
+                sendMessageUseCase(
+                    chatId = chatId,
+                    content = "",
+                    attachments = listOf(fileUpload)
+                )
+            }
+        }
+    }
 }

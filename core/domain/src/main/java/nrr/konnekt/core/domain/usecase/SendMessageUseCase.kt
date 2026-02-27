@@ -10,10 +10,10 @@ class SendMessageUseCase @Inject constructor(
     suspend operator fun invoke(
         chatId: String,
         content: String,
-        attachment: List<FileUpload>? = null
+        attachments: List<FileUpload>? = null
     ) = messageRepository.sendMessage(
         chatId = chatId,
         content = content,
-        attachments = attachment
+        attachments = attachments
     )
 }

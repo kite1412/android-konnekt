@@ -195,7 +195,10 @@ internal class SupabaseMessageRepository @Inject constructor(
                 try {
                     perform {
                         allowed.forEach {
-                            val fileName = fileNameFormatter.format(it.fileName)
+                            val fileName = fileNameFormatter.format(
+                                rawName = it.fileName,
+                                ext = it.fileExtension
+                            )
                             val path = createPath(
                                 fileName = fileName,
                                 rootFolder = chatId

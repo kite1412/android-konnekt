@@ -14,7 +14,7 @@ interface FileNameFormatter {
      * @param rawName the actual file name before formatting.
      * @return the formatted file name.
      */
-    fun format(rawName: String): String
+    fun format(rawName: String, ext: String): String
 
     /**
      * Restores a formatted file name to the actual name of the file.

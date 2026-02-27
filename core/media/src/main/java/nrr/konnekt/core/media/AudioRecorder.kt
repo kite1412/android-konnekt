@@ -3,19 +3,20 @@ package nrr.konnekt.core.media
 import android.content.Context
 import android.media.MediaRecorder
 import android.util.Log
-import androidx.annotation.RequiresApi
 import java.io.File
 
 object AudioRecorder {
     private var recorder: MediaRecorder? = null
     private var outputFile: File? = null
 
-    @RequiresApi(android.os.Build.VERSION_CODES.S)
     fun startRecording(context: Context): Boolean {
         stopRecording()
         outputFile = createTempAudioFile(context)
         outputFile?.let { file ->
-            recorder = MediaRecorder(context).apply {
+            recorder = (
+                if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(context)
+                else MediaRecorder()
+            ).apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
@@ -34,6 +35,7 @@ object AudioRecorder {
             release()
         }
         recorder = null
+
         return outputFile
     }
 
@@ -42,6 +44,11 @@ object AudioRecorder {
             Log.e("AudioRecorder", "Failed to delete temporary audio file")
         }
         outputFile = null
+    }
+
+    fun flush() {
+        stopRecording()
+        deleteTempAudioFile()
     }
 
     private fun createTempAudioFile(context: Context): File =

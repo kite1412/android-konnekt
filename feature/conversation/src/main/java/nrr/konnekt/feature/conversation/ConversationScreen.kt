@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.conversation
 
+import android.Manifest
 import android.util.Log
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,9 +57,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,6 +104,8 @@ import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.media.AudioRecorder
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.media.PlaybackState
 import nrr.konnekt.core.model.Attachment
@@ -123,6 +128,7 @@ import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
+import nrr.konnekt.core.ui.component.RequestPermission
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
@@ -244,6 +250,7 @@ internal fun ConversationScreen(
                 onDeleteForMeClick = viewModel::hideMessagesForMe,
                 onDeleteClick = viewModel::deleteSelectedMessages,
                 onCancelEditing = viewModel::cancelEditing,
+                onSendAudioRecording = viewModel::sendAudioRecording,
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -285,6 +292,7 @@ private fun ConversationScreen(
     onDeleteForMeClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onCancelEditing: () -> Unit,
+    onSendAudioRecording: (FileUpload) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -400,6 +408,7 @@ private fun ConversationScreen(
             onActionChange = onComposerActionChange,
             onSend = onSend,
             onCancelEditing = onCancelEditing,
+            onSendRecording = onSendAudioRecording,
             modifier = Modifier.imePadding(),
             editingMessage = editingMessage
         )
@@ -782,7 +791,12 @@ private fun AdjustedMessageBubble(
                             it.type == AttachmentType.IMAGE || it.type == AttachmentType.VIDEO
                         }
                         if (isOnSelectionMode) {
-                            onAction(MessageAction(message = message, type = ActionType.SHOW_ACTIONS))
+                            onAction(
+                                MessageAction(
+                                    message = message,
+                                    type = ActionType.SHOW_ACTIONS
+                                )
+                            )
                         } else if (visualAttachments.isNotEmpty()) {
                             onAction(
                                 MessageAction(
@@ -867,6 +881,7 @@ private fun MessageComposer(
     onActionChange: (MessageComposerAction?) -> Unit,
     onSend: (String) -> Unit,
     onCancelEditing: () -> Unit,
+    onSendRecording: (FileUpload) -> Unit,
     modifier: Modifier = Modifier,
     editingMessage: Message? = null
 ) {
@@ -874,6 +889,7 @@ private fun MessageComposer(
     val context = LocalContext.current
     val fileUploadValidator = LocalFileUploadValidator.current
     val fileUploadConstrains = LocalFileUploadConstraints.current
+    var enableRecording by retain { mutableStateOf(false) }
 
     val getMultipleContentsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -922,163 +938,293 @@ private fun MessageComposer(
         }
     }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        if (attachments.isNotEmpty()) ComposerAttachments(
-            attachments = attachments,
-            modifier = Modifier.fillMaxWidth()
-        )
-        editingMessage?.let { message ->
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background)
-                    .border(
-                        width = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+    AnimatedContent(
+        targetState = action != MessageComposerAction.Voice
+    ) { notRecording ->
+        if (notRecording) Column(
+            modifier = modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (attachments.isNotEmpty()) ComposerAttachments(
+                attachments = attachments,
+                modifier = Modifier.fillMaxWidth()
+            )
+            editingMessage?.let { message ->
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .border(
+                            width = 3.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = "You",
-                        fontWeight = FontWeight.Bold
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "You",
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            painter = painterResource(KonnektIcon.x),
+                            contentDescription = "cancel editing",
+                            modifier = Modifier
+                                .clickable(
+                                    interactionSource = null,
+                                    indication = null,
+                                    onClick = onCancelEditing
+                                )
+                        )
+                    }
+                    Column {
+                        if (message.attachments.isNotEmpty()) Text(
+                            text = "With ${message.attachments.size} attachments.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Gray,
+                                fontStyle = FontStyle.Italic
+                            )
+                        )
+                        Text(
+                            text = message.content,
+                            maxLines = 2,
+                            overflow = TextOverflow.StartEllipsis,
+                            color = Gray
+                        )
+                    }
+                }
+            }
+            ShadowedTextField(
+                value = message,
+                onValueChange = onMessageChange,
+                placeholder = "Message...",
+                actions = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        val iconSize = 24.dp
+                        fun iconModifier(
+                            clickEnabled: Boolean = true,
+                            onClick: () -> Unit
+                        ) = Modifier
+                            .size(iconSize)
+                            .clickable(
+                                enabled = clickEnabled,
+                                indication = null,
+                                interactionSource = null,
+                                onClick = onClick
+                            )
+
+                        Box {
+                            this@Row.AnimatedVisibility(editingMessage == null) {
+                                Icon(
+                                    painter = painterResource(KonnektIcon.paperclip),
+                                    contentDescription = "attachments",
+                                    modifier = iconModifier(sendEnabled) {
+                                        onActionChange(MessageComposerAction.Attachment)
+                                    },
+                                    tint = if (sendEnabled) LocalContentColor.current else DarkGray
+                                )
+                            }
+
+                            val density = LocalDensity.current
+                            if (action == MessageComposerAction.Attachment) {
+                                val startPadding = 48.dp
+
+                                Popup(
+                                    alignment = Alignment.BottomEnd,
+                                    offset = with(density) {
+                                        IntOffset(
+                                            x = startPadding.roundToPx(),
+                                            y = -iconSize.roundToPx() - 4.dp.roundToPx()
+                                        )
+                                    },
+                                    onDismissRequest = {
+                                        onActionChange(null)
+                                    }
+                                ) {
+                                    Attachments(
+                                        startPadding = startPadding,
+                                        onClick = {
+                                            getMultipleContentsLauncher.launch(
+                                                when (it) {
+                                                    AttachmentType.IMAGE -> "image/*"
+                                                    AttachmentType.VIDEO -> "video/*"
+                                                    AttachmentType.DOCUMENT -> "application/*"
+                                                    AttachmentType.AUDIO -> "audio/*"
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        AnimatedContent(
+                            targetState = message.isNotEmpty()
+                        ) {
+                            val enableSendMessage = it || attachments.isNotEmpty() || editingMessage != null
+
+                            if (!sendingMessage) Icon(
+                                painter = painterResource(
+                                    id = if (enableSendMessage) KonnektIcon.send else KonnektIcon.mic
+                                ),
+                                contentDescription = "attachments",
+                                modifier = iconModifier(
+                                    clickEnabled = sendEnabled
+                                ) {
+                                    if (enableSendMessage) onSend(message)
+                                    else onActionChange(MessageComposerAction.Voice)
+                                },
+                                tint = if (!sendEnabled) DarkGray else LocalContentColor.current
+                            ) else CircularProgressIndicator(
+                                modifier = Modifier.size(iconSize),
+                                color = Gray,
+                                trackColor = DarkGray,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                },
+                label = if (sendingMessage) "Sending..." else null,
+                style = TextFieldDefaults.defaultShadowedStyle(
+                    labelTextStyle = MaterialTheme.typography.bodySmall.copy(
+                        fontStyle = FontStyle.Italic,
+                        color = Gray
                     )
+                ),
+                singleLine = false,
+                maxLines = 5
+            )
+        } else AudioMessageComposer(
+            startRecording = enableRecording,
+            onCancelRecording = {
+                onActionChange(null)
+            },
+            onSendRecording = onSendRecording
+        )
+    }
+    if (action == MessageComposerAction.Voice)
+        RequestPermission(Manifest.permission.RECORD_AUDIO) {
+            enableRecording = true
+        }
+}
+
+@Composable
+fun AudioMessageComposer(
+    startRecording: Boolean,
+    onCancelRecording: () -> Unit,
+    onSendRecording: (FileUpload) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var second by retain { mutableIntStateOf(0) }
+    val clipShape = RoundedCornerShape(8.dp)
+    val context = LocalContext.current
+
+    LaunchedEffect(startRecording) {
+        if (startRecording) {
+            AudioRecorder.startRecording(context)
+            while (true) {
+                delay(1000)
+                second++
+            }
+        } else {
+            second = 0
+            AudioRecorder.flush()
+        }
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.background,
+                shape = clipShape
+            )
+            .border(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+                shape = clipShape
+            )
+            .padding(
+                bottom = 16.dp,
+                start = 16.dp,
+                top = 16.dp
+            )
+    ) {
+        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.primary) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val textStyle = LocalTextStyle.current.copy(
+                    fontStyle = FontStyle.Italic
+                )
+
+                Text(
+                    text = "Recording audio",
+                    style = textStyle
+                )
+                Icon(
+                    painter = painterResource(KonnektIcon.mic),
+                    contentDescription = "recording",
+                    modifier = Modifier.size(textStyle.fontSize.value.dp)
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "${second / 60}:${"%02d".format(second % 60)}",
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        AudioRecorder.flush()
+                        onCancelRecording()
+                    }
+                ) {
                     Icon(
                         painter = painterResource(KonnektIcon.x),
-                        contentDescription = "cancel editing",
-                        modifier = Modifier
-                            .clickable(
-                                interactionSource = null,
-                                indication = null,
-                                onClick = onCancelEditing
-                            )
+                        contentDescription = "cancel",
+                        tint = Red
                     )
                 }
-                Column {
-                    if (message.attachments.isNotEmpty()) Text(
-                        text = "With ${message.attachments.size} attachments.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Gray,
-                            fontStyle = FontStyle.Italic
-                        )
-                    )
-                    Text(
-                        text = message.content,
-                        maxLines = 2,
-                        overflow = TextOverflow.StartEllipsis,
-                        color = Gray
+                IconButton(
+                    onClick = {
+                        val output = AudioRecorder.stopRecording()
+
+                        output?.let { file ->
+                            onSendRecording(
+                                FileUpload(
+                                    fileName = now().toString(),
+                                    fileExtension = file.extension.ifEmpty { "m4a" },
+                                    content = file.readBytes()
+                                )
+                            )
+                            AudioRecorder.deleteTempAudioFile()
+                        }
+                        onCancelRecording()
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.send),
+                        contentDescription = "send",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         }
-        ShadowedTextField(
-            value = message,
-            onValueChange = onMessageChange,
-            placeholder = "Message...",
-            actions = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    val iconSize = 24.dp
-                    fun iconModifier(
-                        clickEnabled: Boolean = true,
-                        onClick: () -> Unit
-                    ) = Modifier
-                        .size(iconSize)
-                        .clickable(
-                            enabled = clickEnabled,
-                            indication = null,
-                            interactionSource = null,
-                            onClick = onClick
-                        )
-
-                    Box {
-                        this@Row.AnimatedVisibility(editingMessage == null) {
-                            Icon(
-                                painter = painterResource(KonnektIcon.paperclip),
-                                contentDescription = "attachments",
-                                modifier = iconModifier(sendEnabled) {
-                                    onActionChange(MessageComposerAction.Attachment)
-                                },
-                                tint = if (sendEnabled) LocalContentColor.current else DarkGray
-                            )
-                        }
-
-                        val density = LocalDensity.current
-                        if (action == MessageComposerAction.Attachment) {
-                            val startPadding = 48.dp
-
-                            Popup(
-                                alignment = Alignment.BottomEnd,
-                                offset = with(density) {
-                                    IntOffset(
-                                        x = startPadding.roundToPx(),
-                                        y = -iconSize.roundToPx() - 4.dp.roundToPx()
-                                    )
-                                },
-                                onDismissRequest = {
-                                    onActionChange(null)
-                                }
-                            ) {
-                                Attachments(
-                                    startPadding = startPadding,
-                                    onClick = {
-                                        getMultipleContentsLauncher.launch(
-                                            when (it) {
-                                                AttachmentType.IMAGE -> "image/*"
-                                                AttachmentType.VIDEO -> "video/*"
-                                                AttachmentType.DOCUMENT -> "application/*"
-                                                AttachmentType.AUDIO -> "audio/*"
-                                            }
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    AnimatedContent(
-                        targetState = message.isNotEmpty()
-                    ) {
-                        val enableSendMessage = it || attachments.isNotEmpty() || editingMessage != null
-
-                        if (!sendingMessage) Icon(
-                            painter = painterResource(
-                                id = if (enableSendMessage) KonnektIcon.send else KonnektIcon.mic
-                            ),
-                            contentDescription = "attachments",
-                            modifier = iconModifier(
-                                clickEnabled = enableSendMessage && sendEnabled
-                            ) {
-                                onSend(message)
-                            },
-                            tint = if (!sendEnabled) DarkGray else LocalContentColor.current
-                        ) else CircularProgressIndicator(
-                            modifier = Modifier.size(iconSize),
-                            color = Gray,
-                            trackColor = DarkGray,
-                            strokeWidth = 2.dp
-                        )
-                    }
-                }
-            },
-            label = if (sendingMessage) "Sending..." else null,
-            style = TextFieldDefaults.defaultShadowedStyle(
-                labelTextStyle = MaterialTheme.typography.bodySmall.copy(
-                    fontStyle = FontStyle.Italic,
-                    color = Gray
-                )
-            ),
-            singleLine = false,
-            maxLines = 5
-        )
     }
 }
 
@@ -1682,6 +1828,7 @@ private fun ConversationScreenPreview(
                 onDeleteForMeClick = {},
                 onDeleteClick = {},
                 onCancelEditing = {},
+                onSendAudioRecording = {},
                 contentPadding = it,
                 modifier = Modifier.padding(it),
                 peerLastActive = now()
