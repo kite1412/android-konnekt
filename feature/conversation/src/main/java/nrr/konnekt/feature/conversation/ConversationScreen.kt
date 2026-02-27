@@ -794,6 +794,8 @@ private fun AdjustedMessageBubble(
     applyTopPadding: Boolean = true,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
+    val clickable = !deletedByCurrentUser && !message.isHidden
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
@@ -803,6 +805,7 @@ private fun AdjustedMessageBubble(
                 else 0.dp
             )
             .combinedClickable(
+                enabled = clickable,
                 onClick = {
                     if (!isSelected) {
                         val visualAttachments = message.attachments.filter {
