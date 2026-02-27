@@ -112,6 +112,7 @@ import nrr.konnekt.feature.chats.util.PersonDropdownItems
 internal fun ChatsScreen(
     navigateToConversation: (id: String) -> Unit,
     navigateToTempConversation: (id: String) -> Unit,
+    navigateToProfile: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
@@ -175,6 +176,7 @@ internal fun ChatsScreen(
                     complete = { c -> navigateToConversation(c.id) }
                 )
             },
+            onAvatarClick = navigateToProfile,
             createActionEnabled = viewModel.createChatActionEnabled,
             modifier = modifier
         )
@@ -206,6 +208,7 @@ private fun ChatsScreen(
     onUserSearch: (String) -> Unit,
     onUserClick: (User) -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
+    onAvatarClick: () -> Unit,
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -224,6 +227,7 @@ private fun ChatsScreen(
             Header(
                 user = user,
                 onCreateChatClick = onCreateChatClick,
+                onAvatarClick = onAvatarClick,
                 modifier = Modifier
                     .padding(
                         start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
@@ -295,6 +299,7 @@ private fun ChatsScreen(
 private fun Header(
     user: User,
     onCreateChatClick: (ChatType) -> Unit,
+    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -360,7 +365,12 @@ private fun Header(
             AvatarIcon(
                 name = user.username,
                 iconPath = user.imagePath,
-                diameter = 50.dp
+                diameter = 50.dp,
+                modifier = Modifier.clickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = onAvatarClick
+                )
             )
         }
     }
@@ -941,7 +951,7 @@ private fun CreateGroupChat(
 @Composable
 private fun ChatsScreenPreview(
     @PreviewParameter(PreviewParameterDataProvider::class)
-    data: PreviewParameterData,
+    data: PreviewParameterData
 ) {
     var createChatType by remember { mutableStateOf<ChatType?>(ChatType.CHAT_ROOM) }
 
@@ -977,6 +987,7 @@ private fun ChatsScreenPreview(
                 onUserClick = {},
                 onUserSearch = {},
                 onCreateChatRoom = {},
+                onAvatarClick = {},
                 createActionEnabled = true,
                 modifier = Modifier.padding(it),
             )

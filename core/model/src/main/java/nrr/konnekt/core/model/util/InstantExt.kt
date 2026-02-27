@@ -30,6 +30,9 @@ fun Instant.toDateAndTimeString(dateFormat: String = "dd MMM yy") =
         "${date.toStringFormatted(dateFormat)} ${time.toStringIgnoreSecond()}"
     }
 
+fun Instant.toDateString(dateFormat: String = "dd MMM yy") =
+    currentLocalDateTime().date.toStringFormatted(dateFormat)
+
 fun LocalTime.toStringIgnoreSecond() =
     "%02d:%02d".format(hour, minute)
 

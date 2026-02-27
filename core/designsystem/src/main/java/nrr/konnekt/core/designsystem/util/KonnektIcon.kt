@@ -40,4 +40,5 @@ object KonnektIcon {
     val delete = R.drawable.delete
     val circleCheck = R.drawable.circle_check
     val trash = R.drawable.trash
+    val mail = R.drawable.mail
 }

@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.profile.navigation
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -12,10 +13,12 @@ data object ProfileRoute
 fun NavController.navigateToProfile() = navigate(ProfileRoute)
 
 fun NavGraphBuilder.profileScreen(
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    contentPadding: PaddingValues
 ) {
     composable<ProfileRoute> {
         ProfileScreen(
+            contentPadding = contentPadding,
             navigateBack = navigateBack
         )
     }

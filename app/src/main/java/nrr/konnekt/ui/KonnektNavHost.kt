@@ -17,6 +17,7 @@ import nrr.konnekt.feature.conversation.navigation.conversationScreen
 import nrr.konnekt.feature.conversation.navigation.navigateToConversation
 import nrr.konnekt.feature.conversation.navigation.navigateToTempPersonalConversation
 import nrr.konnekt.feature.conversation.util.IdType
+import nrr.konnekt.feature.profile.navigation.navigateToProfile
 import nrr.konnekt.feature.profile.navigation.profileScreen
 
 @Composable
@@ -37,6 +38,7 @@ internal fun KonnektNavHost(
         chatsScreen(
             navigateToConversation = navController::navigateToConversation,
             navigateToTempConversation = navController::navigateToTempPersonalConversation,
+            navigateToProfile = navController::navigateToProfile,
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         conversationScreen(
@@ -53,6 +55,9 @@ internal fun KonnektNavHost(
             navigateBack = navController::popBackStack,
             contentPadding = contentPadding(scaffoldPadding)
         )
-        profileScreen(navigateBack = navController::popBackStack)
+        profileScreen(
+            navigateBack = navController::popBackStack,
+            contentPadding = contentPadding(scaffoldPadding)
+        )
     }
 }
