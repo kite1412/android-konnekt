@@ -22,6 +22,7 @@ dependencies {
     implementation(projects.feature.chats)
     implementation(projects.feature.conversation)
     implementation(projects.feature.chatdetail)
+    implementation(projects.feature.profile)
 
     implementation(libs.androidx.hilt.navigation.compose)
 
