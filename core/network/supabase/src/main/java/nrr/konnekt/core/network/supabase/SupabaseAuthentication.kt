@@ -88,7 +88,7 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
     private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
 
     override fun getLoggedInUserOrNull(): User? =
-        client.auth.currentUserOrNull()?.toUser()
+        _loggedInUser.value
 
     override suspend fun login(
         email: String,
@@ -187,5 +187,9 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
             e.printStackTrace()
             return Error(AuthError.Unknown)
         }
+    }
+
+    override suspend fun updateCurrentUser(user: User) {
+        _loggedInUser.value = user
     }
 }

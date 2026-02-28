@@ -1,6 +1,6 @@
-package nrr.konnekt.feature.conversation.util
+package nrr.konnekt.core.ui.util
 
-internal sealed interface UiEvent {
+sealed interface UiEvent {
     data class ShowSnackbar(val message: String) : UiEvent
     object NavigateBack : UiEvent
 }

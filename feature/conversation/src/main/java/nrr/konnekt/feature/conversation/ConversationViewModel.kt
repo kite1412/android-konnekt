@@ -49,6 +49,7 @@ import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
@@ -57,7 +58,6 @@ import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.SelectedMessageAction
-import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.toFileUpload
 import javax.inject.Inject
 import kotlin.time.Instant

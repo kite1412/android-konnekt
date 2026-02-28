@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,6 +77,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.getFileName
 import nrr.konnekt.core.ui.util.uriToByteArray
 
@@ -87,12 +89,22 @@ internal fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val user by viewModel.currentUser.collectAsStateWithLifecycle()
+    val snackbarHostState = LocalSnackbarHostState.current
 
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is UiEvent.NavigateBack -> navigateBack()
+                is UiEvent.ShowSnackbar ->
+                    snackbarHostState.showSnackbar(event.message)
+            }
+        }
+    }
     user?.let { user ->
         ProfileScreen(
             user = user,
             contentPadding = contentPadding,
-            onUserChange = {},
+            onUserChange = viewModel::updateProfile,
             onNavigateBack = navigateBack,
             modifier = modifier
         )

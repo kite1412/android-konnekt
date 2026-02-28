@@ -133,6 +133,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.getAudioDurationMs
@@ -147,7 +148,6 @@ import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.SelectedMessageAction
-import nrr.konnekt.feature.conversation.util.UiEvent
 import nrr.konnekt.feature.conversation.util.attachments
 import nrr.konnekt.feature.conversation.util.dateHeaderString
 import nrr.konnekt.feature.conversation.util.mapToConversationItem

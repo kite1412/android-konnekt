@@ -17,7 +17,7 @@ import nrr.konnekt.core.network.supabase.util.perform
 import javax.inject.Inject
 
 internal class SupabaseUserRepository @Inject constructor(
-    authentication: Authentication,
+    private val authentication: Authentication,
     private val fileNameFormatter: SupabaseFileNameFormatter
 ) : UserRepository, SupabaseService(authentication) {
     override suspend fun getUsersByUsername(username: String): UserResult<List<User>> =
@@ -67,8 +67,8 @@ internal class SupabaseUserRepository @Inject constructor(
                             ext = profileImage.fileExtension
                         )
                         val path = createPath(
-                            fileName = fileName,
-                            rootFolder = user.id
+                            fileName = "${user.id}/$fileName",
+                            rootFolder = "person"
                         )
 
                         try {
@@ -88,15 +88,21 @@ internal class SupabaseUserRepository @Inject constructor(
                 update(
                     update = {
                         SupabaseUser::username setTo payload.username
-                        SupabaseUser::bio setTo payload.bio
-                        SupabaseUser::imagePath setTo imagePath
+                        if (payload.bio != null) SupabaseUser::bio setTo payload.bio
+                        if (imagePath != null) SupabaseUser::imagePath setTo imagePath
                     }
                 ) {
+                    filter {
+                        SupabaseUser::id eq user.id
+                    }
                     select()
                 }
                     .decodeSingleOrNull<SupabaseUser>()
                     ?.let(SupabaseUser::toUser)
                     ?.let(Result<User, Nothing>::Success)
+                    ?.also {
+                        authentication.updateCurrentUser(it.data)
+                    }
                     ?: Result.Error(UserError.Unknown)
             }
         }
