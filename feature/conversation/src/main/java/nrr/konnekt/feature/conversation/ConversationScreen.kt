@@ -127,7 +127,6 @@ import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
 import nrr.konnekt.core.ui.component.RequestPermission
-import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
@@ -907,7 +906,6 @@ private fun MessageComposer(
     val snackbarHostState = LocalSnackbarHostState.current
     val context = LocalContext.current
     val fileUploadValidator = LocalFileUploadValidator.current
-    val fileUploadConstrains = LocalFileUploadConstraints.current
     var recordingEnabled by retain { mutableStateOf(false) }
 
     val getMultipleContentsLauncher = rememberLauncherForActivityResult(

@@ -1,5 +1,6 @@
 package nrr.konnekt.core.domain.repository
 
+import nrr.konnekt.core.domain.model.UserEdit
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.User
@@ -26,7 +27,16 @@ interface UserRepository {
      */
     suspend fun getUserById(id: String): UserResult<User>
 
+    /**
+     * Update current user data.
+     *
+     * @param payload The user edit payload.
+     * @return The edited user.
+     */
+    suspend fun updateCurrentUser(payload: UserEdit): UserResult<User>
+
     sealed interface UserError : Error {
         object Unknown : UserError
+        object FileUploadError : UserError
     }
 }

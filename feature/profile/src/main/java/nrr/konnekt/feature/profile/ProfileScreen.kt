@@ -66,6 +66,8 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
+import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.domain.model.UserEdit
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.toDateString
 import nrr.konnekt.core.network.upload.util.ValidationResult
@@ -74,6 +76,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.getFileName
 import nrr.konnekt.core.ui.util.uriToByteArray
 
 @Composable
@@ -221,7 +224,7 @@ private fun ProfileImage(
     username: String,
     imagePath: String?,
     imageDiameter: Dp,
-    onProfileImageChange: (ByteArray) -> Unit,
+    onProfileImageChange: (FileUpload) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -232,7 +235,16 @@ private fun ProfileImage(
     ) { uri ->
         uri?.let { uri ->
             when (val result = fileUploadValidator(uri)) {
-                is ValidationResult.Valid -> onProfileImageChange(context.uriToByteArray(uri))
+                is ValidationResult.Valid -> {
+                    val fileName = context.getFileName(uri)
+                    onProfileImageChange(
+                        FileUpload(
+                            fileName = fileName,
+                            fileExtension = fileName.substringAfterLast("."),
+                            content = context.uriToByteArray(uri)
+                        )
+                    )
+                }
                 is ValidationResult.Invalid -> snackbarHostState.showSnackbar(
                     message = fileUploadValidator.getViolationReasonMessage(result.exception.reason)
                 )
