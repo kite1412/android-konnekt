@@ -42,4 +42,5 @@ object KonnektIcon {
     val trash = R.drawable.trash
     val mail = R.drawable.mail
     val check = R.drawable.check
+    val repeat = R.drawable.repeat
 }

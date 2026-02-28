@@ -44,6 +44,17 @@ class FileUploadValidator @Inject constructor(
         )
     }
 
+    fun getViolationReasonMessage(reason: ViolationReason) =
+        when (reason) {
+            ViolationReason.FILE_SIZE_TOO_LARGE ->
+                "Max file size exceeded, max size: ${
+                    getMB(constraints.maxSizeBytes).toInt()
+                } MB"
+            ViolationReason.FILE_SIZE_INVALID -> "Can't read file size"
+            ViolationReason.UNSUPPORTED_MIME_TYPE -> "Mime type not supported"
+            else -> "Can't resolve file"
+        }
+
     private fun Context.getFileSize(uri: Uri): Int {
         val cursor = contentResolver.query(uri, null, null, null, null)
         return cursor?.use {

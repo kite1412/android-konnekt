@@ -1,8 +1,11 @@
 package nrr.konnekt.feature.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.ButtonDefaults
@@ -40,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -49,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,9 +68,13 @@ import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.toDateString
+import nrr.konnekt.core.network.upload.util.ValidationResult
 import nrr.konnekt.core.ui.component.AvatarIcon
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
+import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.uriToByteArray
 
 @Composable
 internal fun ProfileScreen(
@@ -165,10 +175,11 @@ private fun UserInfo(
             fontWeight = FontWeight.Bold
         )
 
-        AvatarIcon(
-            name = user.username,
-            iconPath = user.imagePath,
-            diameter = (titleStyle.fontSize.value * 4).dp
+        ProfileImage(
+            username = user.username,
+            imagePath = user.imagePath,
+            imageDiameter = (titleStyle.fontSize.value * 4).dp,
+            onProfileImageChange = { onUserChange(userEdit.copy(profileImage = it)) }
         )
         Username(
             username = user.username,
@@ -202,6 +213,59 @@ private fun UserInfo(
                 iconId = KonnektIcon.calendar
             )
         }
+    }
+}
+
+@Composable
+private fun ProfileImage(
+    username: String,
+    imagePath: String?,
+    imageDiameter: Dp,
+    onProfileImageChange: (ByteArray) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val fileUploadValidator = LocalFileUploadValidator.current
+    val snackbarHostState = LocalSnackbarHostState.current
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { uri ->
+            when (val result = fileUploadValidator(uri)) {
+                is ValidationResult.Valid -> onProfileImageChange(context.uriToByteArray(uri))
+                is ValidationResult.Invalid -> snackbarHostState.showSnackbar(
+                    message = fileUploadValidator.getViolationReasonMessage(result.exception.reason)
+                )
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clickable(
+                interactionSource = null,
+                indication = null
+            ) {
+                launcher.launch("image/*")
+            }
+    ) {
+        AvatarIcon(
+            name = username,
+            iconPath = imagePath,
+            diameter = imageDiameter
+        )
+        Icon(
+            painter = painterResource(KonnektIcon.repeat),
+            contentDescription = "edit profile image",
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .background(
+                    color = MaterialTheme.colorScheme.background,
+                    shape = CircleShape
+                )
+                .padding(8.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

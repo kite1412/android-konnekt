@@ -117,9 +117,7 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
-import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
-import nrr.konnekt.core.network.upload.util.getMB
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
 import nrr.konnekt.core.ui.component.ChatHeader
@@ -930,15 +928,7 @@ private fun MessageComposer(
                 onAddAttachment(attachment)
             } catch (e: FileUploadConstraintViolationException) {
                 snackbarHostState.showSnackbar(
-                    message = when (e.reason) {
-                        ViolationReason.FILE_SIZE_TOO_LARGE ->
-                            "Max file size exceeded, max size: ${
-                                getMB(fileUploadConstrains.maxSizeBytes).toInt()
-                            } MB"
-                        ViolationReason.FILE_SIZE_INVALID -> "Can't read file size"
-                        ViolationReason.UNSUPPORTED_MIME_TYPE -> "Mime type not supported"
-                        else -> "Can't resolve file"
-                    }
+                    message = fileUploadValidator.getViolationReasonMessage(e.reason)
                 )
             } catch (e: UriException) {
                 snackbarHostState.showSnackbar(
