@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +42,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,11 +52,14 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.toDateString
 import nrr.konnekt.core.ui.component.AvatarIcon
@@ -71,6 +79,7 @@ internal fun ProfileScreen(
         ProfileScreen(
             user = user,
             contentPadding = contentPadding,
+            onUserChange = {},
             onNavigateBack = navigateBack,
             modifier = modifier
         )
@@ -81,6 +90,7 @@ internal fun ProfileScreen(
 internal fun ProfileScreen(
     user: User,
     contentPadding: PaddingValues,
+    onUserChange: (UserEdit) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -96,7 +106,8 @@ internal fun ProfileScreen(
         )
 
         UserInfo(
-            user = user
+            user = user,
+            onUserChange = onUserChange
         )
     }
 }
@@ -132,8 +143,19 @@ private fun Header(
 @Composable
 private fun UserInfo(
     user: User,
+    onUserChange: (UserEdit) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val userEdit by remember(user) {
+        derivedStateOf {
+            UserEdit(
+                username = user.username,
+                profileImage = null,
+                bio = user.bio
+            )
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -148,19 +170,15 @@ private fun UserInfo(
             iconPath = user.imagePath,
             diameter = (titleStyle.fontSize.value * 4).dp
         )
-        Text(
-            text = user.username,
-            style = titleStyle,
-            maxLines = 2,
-            textAlign = TextAlign.Center,
-            overflow = TextOverflow.Ellipsis
+        Username(
+            username = user.username,
+            onUsernameChange = { onUserChange(userEdit.copy(username = it)) },
+            textStyle = titleStyle
         )
-
         Bio(
             bio = user.bio,
-            onBioChange = {}
+            onBioChange = { onUserChange(userEdit.copy(bio = it)) }
         )
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -183,6 +201,103 @@ private fun UserInfo(
                 ),
                 iconId = KonnektIcon.calendar
             )
+        }
+    }
+}
+
+@Composable
+private fun Username(
+    username: String,
+    textStyle: TextStyle,
+    onUsernameChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isEditing by retain {
+        mutableStateOf(false)
+    }
+    var editableUsername by retain(username) {
+        mutableStateOf(username)
+    }
+
+    AnimatedContent(
+        targetState = isEditing,
+        modifier = modifier
+    ) {
+        if (!it) Box {
+            Text(
+                text = username,
+                modifier = Modifier.padding(horizontal = 24.dp),
+                style = textStyle,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis
+            )
+            Icon(
+                painter = painterResource(KonnektIcon.pencil),
+                contentDescription = "edit",
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(Alignment.TopEnd)
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) {
+                        isEditing = true
+                    },
+                tint = MaterialTheme.colorScheme.primary
+            )
+        } else Column(
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = "Change Username",
+                modifier = Modifier.align(Alignment.Start)
+            )
+            OutlinedTextField(
+                value = editableUsername,
+                onValueChange = { name -> editableUsername = name },
+                placeholder = "Enter your new username.",
+                singleLine = true,
+                errorIndicators = listOf(
+                    TextFieldErrorIndicator(
+                        error = editableUsername.isEmpty(),
+                        message = "Username can't be empty."
+                    )
+                ),
+                style = TextFieldDefaults.defaultOutlinedStyle(
+                    contentPadding = PaddingValues(12.dp)
+                )
+            )
+            Row {
+                IconButton(
+                    onClick = {
+                        isEditing = false
+                        editableUsername = username
+                    },
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = Red
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.x),
+                        contentDescription = "cancel"
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        onUsernameChange(editableUsername)
+                        isEditing = false
+                    },
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.check),
+                        contentDescription = "save"
+                    )
+                }
+            }
         }
     }
 }
@@ -274,7 +389,10 @@ private fun Bio(
                 AnimatedContent(isEditing) {
                     TextButton(
                         onClick = {
-                            if (it) onBioChange(editableBio)
+                            if (it) {
+                                onBioChange(editableBio)
+                                isEditing = false
+                            }
                             else {
                                 isEditing = true
                                 keyboardController?.show()
@@ -344,10 +462,11 @@ private fun ProfileScreenPreview(
         Scaffold {
             ProfileScreen(
                 user = data.user.copy(
-                    username = "a very long long long long long long long username",
+                    username = "kite1412",
                     bio = ""
                 ),
                 contentPadding = it,
+                onUserChange = {},
                 onNavigateBack = {}
             )
         }
