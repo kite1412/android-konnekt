@@ -507,7 +507,7 @@ private fun Header(
 }
 
 @Composable
-fun SelectedMessageActions(
+private fun SelectedMessageActions(
     isEditable: Boolean,
     isDeletable: Boolean,
     onActionClick: (SelectedMessageAction) -> Unit,
@@ -559,7 +559,7 @@ fun SelectedMessageActions(
 }
 
 @Composable
-fun SelectedMessageActionIconButton(
+private fun SelectedMessageActionIconButton(
     action: SelectedMessageAction,
     iconSize: Dp,
     onClick: (SelectedMessageAction) -> Unit,
@@ -587,7 +587,7 @@ fun SelectedMessageActionIconButton(
 }
 
 @Composable
-fun DeleteMessagesDialog(
+private fun DeleteMessagesDialog(
     isDeletable: Boolean,
     onDismissMessageAction: () -> Unit,
     onDeleteForMeClick: () -> Unit,
@@ -1135,7 +1135,7 @@ private fun MessageComposer(
 }
 
 @Composable
-fun AudioMessageComposer(
+private fun AudioMessageComposer(
     recordingEnabled: Boolean,
     onCancelRecording: () -> Unit,
     onSendRecording: (FileUpload) -> Unit,
