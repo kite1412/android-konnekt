@@ -2,6 +2,7 @@ package nrr.konnekt.core.network.supabase
 
 import android.util.Log
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthErrorCode
 import io.github.jan.supabase.auth.exception.AuthRestException
@@ -9,8 +10,10 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionSource
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.realtime.selectSingleValueAsFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +29,8 @@ import nrr.konnekt.core.domain.util.AuthStatus
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
+import nrr.konnekt.core.network.supabase.dto.response.toUser
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
@@ -34,7 +39,7 @@ import javax.inject.Inject
 internal class SupabaseAuthentication @Inject constructor() : Authentication {
     private val client: SupabaseClient = supabaseClient
     private val _authStatus = MutableStateFlow<AuthStatus>(AuthStatus.Loading)
-    private val _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
+    private var _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
 
     override val authStatus: Flow<AuthStatus>
         get() = _authStatus.asStateFlow()
@@ -53,19 +58,10 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                             ) {
                                 val user = client.auth
                                     .currentUserOrNull()
-                                    ?.toUser()
-                                    ?.let { u ->
-                                        client.postgrest.from(USERS).select {
-                                            filter {
-                                                User::id eq u.id
-                                            }
-                                        }.decodeSingleOrNull<User>()
+                                    ?.also { u ->
+                                        observeLoggedInUser(u.id)
                                     }
-                                logCurrentUser(user)
-                                if (user != null) {
-                                    _loggedInUser.value = user
-                                    _authStatus.value = AuthStatus.Authenticated(user)
-                                } else {
+                                if (user == null) {
                                     _authStatus.value = AuthStatus.Unauthenticated
                                 }
                             }
@@ -83,6 +79,24 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                 }
                 .launchIn(this)
         }
+    }
+
+    @OptIn(SupabaseExperimental::class)
+    private fun observeLoggedInUser(userId: String) {
+        client.postgrest.from(USERS).selectSingleValueAsFlow(
+            primaryKey = SupabaseUser::id
+        ) {
+            SupabaseUser::id eq userId
+        }
+            .onEach {
+                val user = it.toUser()
+                _loggedInUser.value = user
+                _authStatus.value = AuthStatus.Authenticated(user)
+                logCurrentUser(user)
+            }
+            .launchIn(
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            )
     }
 
     private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
@@ -187,9 +201,5 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
             e.printStackTrace()
             return Error(AuthError.Unknown)
         }
-    }
-
-    override suspend fun updateCurrentUser(user: User) {
-        _loggedInUser.value = user
     }
 }

@@ -100,9 +100,6 @@ internal class SupabaseUserRepository @Inject constructor(
                     .decodeSingleOrNull<SupabaseUser>()
                     ?.let(SupabaseUser::toUser)
                     ?.let(Result<User, Nothing>::Success)
-                    ?.also {
-                        authentication.updateCurrentUser(it.data)
-                    }
                     ?: Result.Error(UserError.Unknown)
             }
         }

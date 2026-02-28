@@ -58,14 +58,6 @@ interface Authentication {
      */
     suspend fun logout(): AuthResult<Boolean>
 
-    // TODO consider to delete this
-    /**
-     * Update the [loggedInUser].
-     *
-     * @param user The user to update.
-     */
-    suspend fun updateCurrentUser(user: User)
-
     sealed interface AuthError : Error {
         object InvalidCredentials : AuthError
         object UserAlreadyExists : AuthError
