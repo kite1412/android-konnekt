@@ -20,9 +20,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.UserPresenceManager
@@ -58,13 +56,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.DESTROYED) {
-                userPresenceManager.markUserInactive()
-            }
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
-                userPresenceManager.markUserActive()
-            }
+            userPresenceManager.markUserActive()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        lifecycleScope.launch {
+            userPresenceManager.markUserInactive()
         }
     }
 

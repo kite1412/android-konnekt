@@ -1,14 +1,17 @@
 package nrr.konnekt.core.network.supabase
 
 import android.util.Log
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.presenceDataFlow
+import io.github.jan.supabase.realtime.realtime
 import io.github.jan.supabase.realtime.track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -28,11 +31,21 @@ import javax.inject.Inject
 import kotlin.time.Instant
 
 internal class SupabaseUserPresenceManager @Inject constructor(
-    @AppCoroutineScope private val scope: CoroutineScope,
+    @param:AppCoroutineScope private val scope: CoroutineScope,
     private val authentication: Authentication
 ) : UserPresenceManager, SupabaseService(authentication) {
     private val _activeUsers  = MutableStateFlow<List<UserStatus>>(emptyList())
     val activeUsers = _activeUsers.asStateFlow()
+
+    private suspend fun <T> checkRealtimeConnection(
+        onConnected: suspend () -> UserPresenceResult<T>
+    ): UserPresenceResult<T> {
+        val connectionStatus = supabaseClient.realtime.status.firstOrNull()
+
+        return if (connectionStatus != null && connectionStatus == Realtime.Status.CONNECTED) {
+            onConnected()
+        } else Error(UserPresenceManagerError.Unknown)
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeUserPresence(userId: String): Flow<UserPresence?> {
@@ -58,29 +71,33 @@ internal class SupabaseUserPresenceManager @Inject constructor(
 
     override suspend fun markUserActive(): UserPresenceResult<UserStatus> =
         authentication.getLoggedInUserOrNull()?.let {
-            val userStatus = it.updateUserStatus()
-            if (presenceChannel.status.value != RealtimeChannel.Status.SUBSCRIBED) {
-                presenceChannel
-                    .presenceDataFlow<UserStatus>()
-                    .onEach { l ->
-                        Log.d(LOG_TAG, "active users: $l")
-                        _activeUsers.value = l
-                    }
-                    .launchIn(scope)
-                presenceChannel.subscribe(true)
-                presenceChannel.track(userStatus)
-                updateLastActiveAt()
+            checkRealtimeConnection {
+                val userStatus = it.updateUserStatus()
+                if (presenceChannel.status.value != RealtimeChannel.Status.SUBSCRIBED) {
+                    presenceChannel
+                        .presenceDataFlow<UserStatus>()
+                        .onEach { l ->
+                            Log.d(LOG_TAG, "active users: $l")
+                            _activeUsers.value = l
+                        }
+                        .launchIn(scope)
+                    updateLastActiveAt()
+                    presenceChannel.subscribe(true)
+                    presenceChannel.track(userStatus)
+                }
+                Success(userStatus)
             }
-            Success(userStatus)
         } ?: Error(UserPresenceManagerError.Unauthenticated)
 
     override suspend fun markUserInactive(): UserPresenceResult<UserStatus> =
         authentication.getLoggedInUserOrNull()?.let {
-            val userStatus = it.updateUserStatus()
-            presenceChannel.untrack()
-            presenceChannel.unsubscribe()
-            updateLastActiveAt()
-            Success(userStatus)
+            checkRealtimeConnection {
+                val userStatus = it.updateUserStatus()
+                presenceChannel.untrack()
+                presenceChannel.unsubscribe()
+                updateLastActiveAt()
+                Success(userStatus)
+            }
         } ?: Error(UserPresenceManagerError.Unauthenticated)
 
     override suspend fun updateLastActiveAt(): UserPresenceResult<UserStatus> =
