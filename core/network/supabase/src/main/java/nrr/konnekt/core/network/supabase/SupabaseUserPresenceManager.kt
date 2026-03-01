@@ -23,18 +23,21 @@ import nrr.konnekt.core.domain.UserPresenceResult
 import nrr.konnekt.core.domain.annotation.AppCoroutineScope
 import nrr.konnekt.core.domain.model.UserPresence
 import nrr.konnekt.core.domain.util.Error
+import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
-import nrr.konnekt.core.model.UserStatus
-import nrr.konnekt.core.model.updateUserStatus
+import nrr.konnekt.core.model.UserActivityStatus
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserActivityStatus
+import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
+import nrr.konnekt.core.network.supabase.util.updateSupabaseUserActivityStatus
 import javax.inject.Inject
-import kotlin.time.Instant
 
 internal class SupabaseUserPresenceManager @Inject constructor(
     @param:AppCoroutineScope private val scope: CoroutineScope,
-    private val authentication: Authentication
+    private val authentication: Authentication,
+    private val userRepository: SupabaseUserRepository
 ) : UserPresenceManager, SupabaseService(authentication) {
-    private val _activeUsers  = MutableStateFlow<List<UserStatus>>(emptyList())
+    private val _activeUsers  = MutableStateFlow<List<SupabaseUserActivityStatus>>(emptyList())
     val activeUsers = _activeUsers.asStateFlow()
 
     private suspend fun <T> checkRealtimeConnection(
@@ -52,30 +55,36 @@ internal class SupabaseUserPresenceManager @Inject constructor(
         return activeUsers
             .flatMapLatest { userStatuses ->
                 flowOf(
-                    UserPresence(
-                        isActive = userStatuses.firstOrNull { u -> u.userId == userId } != null,
-                        status = userStatuses {
-                            select {
-                                filter {
-                                    UserStatus::userId eq userId
-                                }
-                            }.decodeSingleOrNull<UserStatus>()
-                        } ?: UserStatus(
-                            userId = userId,
-                            lastActiveAt = Instant.DISTANT_PAST
-                        )
-                    )
+                    userActivityStatuses {
+                        select {
+                            filter {
+                                SupabaseUserActivityStatus::userId eq userId
+                            }
+                        }.decodeSingleOrNull<SupabaseUserActivityStatus>()
+                            ?.let {
+                                val res = userRepository.getUserById(userId)
+
+                                if (res is Result.Success) it.toModel(res.data)
+                                else null
+                            }
+                    }
+                        ?.let {
+                            UserPresence(
+                                isActive = userStatuses.firstOrNull { u -> u.userId == userId } != null,
+                                status = it
+                            )
+                        }
                 )
             }
     }
 
-    override suspend fun markUserActive(): UserPresenceResult<UserStatus> =
+    override suspend fun markUserActive(): UserPresenceResult<UserActivityStatus> =
         authentication.getLoggedInUserOrNull()?.let {
             checkRealtimeConnection {
-                val userStatus = it.updateUserStatus()
+                val userStatus = it.updateSupabaseUserActivityStatus()
                 if (presenceChannel.status.value != RealtimeChannel.Status.SUBSCRIBED) {
                     presenceChannel
-                        .presenceDataFlow<UserStatus>()
+                        .presenceDataFlow<SupabaseUserActivityStatus>()
                         .onEach { l ->
                             Log.d(LOG_TAG, "active users: $l")
                             _activeUsers.value = l
@@ -85,27 +94,27 @@ internal class SupabaseUserPresenceManager @Inject constructor(
                     presenceChannel.subscribe(true)
                     presenceChannel.track(userStatus)
                 }
-                Success(userStatus)
+                Success(userStatus.toModel(it))
             }
         } ?: Error(UserPresenceManagerError.Unauthenticated)
 
-    override suspend fun markUserInactive(): UserPresenceResult<UserStatus> =
+    override suspend fun markUserInactive(): UserPresenceResult<UserActivityStatus> =
         authentication.getLoggedInUserOrNull()?.let {
             checkRealtimeConnection {
-                val userStatus = it.updateUserStatus()
+                val userStatus = it.updateSupabaseUserActivityStatus()
                 presenceChannel.untrack()
                 presenceChannel.unsubscribe()
                 updateLastActiveAt()
-                Success(userStatus)
+                Success(userStatus.toModel(it))
             }
         } ?: Error(UserPresenceManagerError.Unauthenticated)
 
-    override suspend fun updateLastActiveAt(): UserPresenceResult<UserStatus> =
+    override suspend fun updateLastActiveAt(): UserPresenceResult<UserActivityStatus> =
         authentication.getLoggedInUserOrNull()?.let {
-            userStatuses {
-                upsert(it.updateUserStatus()) {
+            userActivityStatuses {
+                upsert(it.updateSupabaseUserActivityStatus()) {
                     select()
-                }.decodeSingleOrNull<UserStatus>()
-            }?.let { s -> Success(s) }
+                }.decodeSingleOrNull<SupabaseUserActivityStatus>()
+            }?.let { s -> Success(s.toModel(it)) }
         } ?: Error(UserPresenceManagerError.Unknown)
 }

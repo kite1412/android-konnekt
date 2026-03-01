@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -35,19 +36,19 @@ import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
 import nrr.konnekt.core.domain.usecase.EditMessageUseCase
 import nrr.konnekt.core.domain.usecase.HideMessagesUseCase
+import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
-import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
-import nrr.konnekt.core.domain.usecase.UpdateReadMarkerUseCase
+import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
-import nrr.konnekt.core.model.MessageStatus
-import nrr.konnekt.core.model.UserReadMarker
+import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
@@ -58,6 +59,7 @@ import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.SelectedMessageAction
+import nrr.konnekt.feature.conversation.util.UserReadMarker
 import nrr.konnekt.feature.conversation.util.toFileUpload
 import javax.inject.Inject
 import kotlin.time.Instant
@@ -67,18 +69,19 @@ class ConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     authentication: Authentication,
     private val observeMessagesUseCase: ObserveMessagesUseCase,
-    private val observeReadMarkersUseCase: ObserveReadMarkersUseCase,
+    private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
     private val userPresenceManager: UserPresenceManager,
     private val sendMessageUseCase: SendMessageUseCase,
-    private val updateReadMarkerUseCase: UpdateReadMarkerUseCase,
+    private val updateReadMarkerUseCase: UpdateChatParticipantStatusUseCase,
     private val createChatUseCase: CreateChatUseCase,
     private val deleteMessagesUseCase: DeleteMessagesUseCase,
     private val hideMessagesUseCase: HideMessagesUseCase,
     private val editMessageUseCase: EditMessageUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
+    private var latestCurrentUserChatParticipantStatus: ChatParticipantStatus? = null
     internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
     internal var fixedChatId: String? by mutableStateOf(null)
     internal val currentUser = authentication
@@ -195,11 +198,21 @@ class ConversationViewModel @Inject constructor(
                         ?.sender
                         ?.id
                         ?.let {
-                            if (id != it) updateReadMarkerUseCase(chatId, l.first().sentAt)
+                            if (id != it) latestCurrentUserChatParticipantStatus?.let { status ->
+                                updateReadMarkerUseCase(chatId, status)
+                            }
                         }
                 }
             }
-        readMarkers = observeReadMarkersUseCase(chatId)
+        readMarkers = observeChatParticipantsUseCase(chatId)
+            .map {
+                it.map { participant ->
+                    UserReadMarker(
+                        user = participant.user,
+                        lastReadAt = participant.status.lastReadAt
+                    )
+                }
+            }
             .onEach {
                 Log.d(LOG_TAG, "read markers: $it")
             }
@@ -235,11 +248,11 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-    private suspend fun hideMessages(ids: List<String>): MessageResult<List<MessageStatus>> {
+    private suspend fun hideMessages(ids: List<String>): MessageResult<List<UserMessageStatus>> {
         val res = hideMessagesUseCase(ids)
 
         if (res is Result.Success)
-            hiddenMessageIds.addAll(res.data.map(MessageStatus::messageId))
+            hiddenMessageIds.addAll(ids)
 
         return res
     }

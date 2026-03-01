@@ -12,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -22,32 +23,32 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
-import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
+import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
-import nrr.konnekt.core.model.Event
-import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.ParticipantRole
-import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
+import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatSetting
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
-import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
-import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
-import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
-import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserMessageStatus
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.toChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
@@ -55,6 +56,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toChat
 import nrr.konnekt.core.network.supabase.dto.response.toChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.response.toChatSetting
 import nrr.konnekt.core.network.supabase.dto.response.toMessage
+import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.dto.response.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.response.toSupabaseChatSetting
 import nrr.konnekt.core.network.supabase.util.Bucket
@@ -63,12 +65,12 @@ import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
-import nrr.konnekt.core.network.supabase.util.Tables.MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
+import nrr.konnekt.core.network.supabase.util.Tables.USER_MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
+import nrr.konnekt.core.network.supabase.util.toSupabaseEnum
 import javax.inject.Inject
-import kotlin.time.Instant
 
 internal class SupabaseChatRepository @Inject constructor(
     authentication: Authentication,
@@ -156,7 +158,7 @@ internal class SupabaseChatRepository @Inject constructor(
     private val personalChatParticipants by lazy {
         performAuthenticatedAction { u ->
             joinedChats.flatMapLatest { c ->
-                c.filter { it.type == ChatType.PERSONAL.toString() }
+                c.filter { it.type == ChatType.PERSONAL.toSupabaseEnum() }
                     .let { filtered ->
                         chatParticipants {
                             select {
@@ -169,7 +171,7 @@ internal class SupabaseChatRepository @Inject constructor(
                         }.let { p ->
                             if (p.isNotEmpty()) performOperation(USERS) {
                                 selectAsFlow(
-                                    primaryKey = User::id,
+                                    primaryKey = SupabaseUser::id,
                                     filter = FilterOperation(
                                         column = "id",
                                         operator = FilterOperator.IN,
@@ -211,7 +213,7 @@ internal class SupabaseChatRepository @Inject constructor(
             chats.map { c ->
                 c
                     .toChat(
-                        setting = if (c.type != ChatType.PERSONAL.toString()) settings
+                        setting = if (c.type != ChatType.PERSONAL.toSupabaseEnum()) settings
                             .firstOrNull { s -> s.first == c.id }
                             ?.second
                         else otherUsers
@@ -248,8 +250,7 @@ internal class SupabaseChatRepository @Inject constructor(
                             .distinctBy { m -> m.chatId }
 
                         messageAttachments = messages
-                            .chunked(10)
-                            .map { l ->
+                            .chunked(10).flatMap { l ->
                                 attachments {
                                     select {
                                         filter {
@@ -260,7 +261,6 @@ internal class SupabaseChatRepository @Inject constructor(
                                     .decodeList<SupabaseAttachment>()
                                     .distinctBy { l -> l.messageId }
                             }
-                            .flatMap { l -> l }
 
                         messages
                     }
@@ -270,13 +270,13 @@ internal class SupabaseChatRepository @Inject constructor(
     }
 
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
-    private val messageStatuses by lazy {
+    private val myMessageStatuses by lazy {
         messages.flatMapLatest { messages ->
-            performOperation(MESSAGE_STATUSES) {
+            performOperation(USER_MESSAGE_STATUSES) {
                 selectAsFlow(
                     primaryKeys = listOf(
-                        MessageStatus::messageId,
-                        MessageStatus::userId
+                        SupabaseUserMessageStatus::messageId,
+                        SupabaseUserMessageStatus::userId
                     ),
                     filter = FilterOperation(
                         column = "message_id",
@@ -294,6 +294,10 @@ internal class SupabaseChatRepository @Inject constructor(
         replay = 1
     )
 
+    /*
+        NOTE:
+        - only observes current user message statuses
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> =
         performAuthenticatedAction { u ->
@@ -302,9 +306,11 @@ internal class SupabaseChatRepository @Inject constructor(
                     users {
                         select {
                             filter {
-                                User::id isIn m.map { it.senderId }
+                                SupabaseUser::id isIn m.map { it.senderId }
                             }
-                        }.decodeList<User>()
+                        }
+                            .decodeList<SupabaseUser>()
+                            .map(SupabaseUser::toModel)
                     }
                 )
             }
@@ -313,8 +319,8 @@ internal class SupabaseChatRepository @Inject constructor(
                 flow = chats,
                 flow2 = messages,
                 flow3 = senders,
-                flow4 = messageStatuses
-            ) { chats, messages, senders, messageStatuses ->
+                flow4 = myMessageStatuses
+            ) { chats, messages, senders, myMessageStatuses ->
                 chats
                     .map { c ->
                         LatestChatMessage(
@@ -326,8 +332,13 @@ internal class SupabaseChatRepository @Inject constructor(
                                         .firstOrNull { u -> u.id == m.senderId }
                                         ?.let { s ->
                                             m.toMessage(s).copy(
-                                                messageStatuses = messageStatuses
-                                                    .filter { ms -> ms.messageId == m.id },
+                                                messageStatuses = myMessageStatuses
+                                                    .filter { ms ->
+                                                        ms.messageId == m.id && ms.userId == u.id
+                                                    }
+                                                    .map {
+                                                        it.toModel(user = u)
+                                                    },
                                                 attachments = messageAttachments.filter { a ->
                                                     a.messageId == m.id
                                                 }.map(SupabaseAttachment::toAttachment)
@@ -361,6 +372,19 @@ internal class SupabaseChatRepository @Inject constructor(
                         ?: emptyList()
                 )
             }
+
+    override fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>> =
+        emptyFlow()
+
+    override fun observeCurrentUserChatParticipant(): Flow<List<Pair<Chat, ChatParticipant>>> =
+        emptyFlow()
+
+    override suspend fun updateCurrentUserChatParticipantStatus(
+        chatId: String,
+        status: ChatParticipantStatus
+    ): MessageResult<ChatParticipantStatus> {
+        TODO("Not yet implemented")
+    }
 
     override suspend fun getChatById(chatId: String): ChatResult<Chat> =
         try {
@@ -419,10 +443,11 @@ internal class SupabaseChatRepository @Inject constructor(
                         users {
                             select {
                                 filter {
-                                    User::id eq it.userId
+                                    SupabaseUser::id eq it.userId
                                 }
                             }
-                                .decodeSingleOrNull<User>()
+                                .decodeSingleOrNull<SupabaseUser>()
+                                ?.toModel()
                                 ?.let { user ->
                                     ChatSetting(
                                         name = user.username,
@@ -450,10 +475,6 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
-    override suspend fun getChatDetail(chatId: String): ChatResult<ChatDetail> {
-        TODO("Not yet implemented")
-    }
-
     override suspend fun joinChat(chatId: String): ChatResult<ChatParticipant> {
         TODO("Not yet implemented")
     }
@@ -477,7 +498,7 @@ internal class SupabaseChatRepository @Inject constructor(
             )
 
         chats {
-            val newChat = insert(SupabaseCreateChat(type.toString())) {
+            val newChat = insert(SupabaseCreateChat(type.toSupabaseEnum())) {
                 select()
             }.decodeSingleOrNull<SupabaseChat>()
 
@@ -494,7 +515,7 @@ internal class SupabaseChatRepository @Inject constructor(
                         }
                         val path = createPath(
                             fileName = "${chat.id}.${fileUpload.fileExtension}",
-                            rootFolder = type.toString()
+                            rootFolder = type.toSupabaseEnum()
                         )
                         try {
                             perform {
@@ -521,14 +542,14 @@ internal class SupabaseChatRepository @Inject constructor(
                     val admin = SupabaseCreateChatParticipant(
                         chatId = chat.id,
                         userId = u.id,
-                        role = if (type != ChatType.PERSONAL) ParticipantRole.ADMIN.toString()
-                        else ParticipantRole.MEMBER.toString()
+                        role = if (type != ChatType.PERSONAL) ParticipantRole.ADMIN.toSupabaseEnum()
+                        else ParticipantRole.MEMBER.toSupabaseEnum()
                     )
                     val participants = participantIds?.map { uid ->
                         SupabaseCreateChatParticipant(
                             chatId = chat.id,
                             userId = uid,
-                            role = ParticipantRole.MEMBER.toString()
+                            role = ParticipantRole.MEMBER.toSupabaseEnum()
                         )
                     }
                     insert(listOf(admin) + (participants ?: emptyList()))
@@ -562,27 +583,5 @@ internal class SupabaseChatRepository @Inject constructor(
                 Success(chat.toChat(setting))
             }
         } ?: Error(ChatError.Unknown)
-    }
-
-    override suspend fun createEvent(
-        chatId: String,
-        title: String,
-        description: String?,
-        startsAt: Instant
-    ): ChatResult<Event> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun deleteEvent(eventId: String): ChatResult<Event> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun editEvent(
-        eventId: String,
-        title: String?,
-        description: String?,
-        startsAt: Instant
-    ): ChatResult<Event> {
-        TODO("Not yet implemented")
     }
 }

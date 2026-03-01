@@ -17,7 +17,7 @@ import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
-import nrr.konnekt.core.domain.usecase.ObserveReadMarkersUseCase
+import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -30,7 +30,7 @@ import javax.inject.Inject
 class ChatsViewModel @Inject constructor(
     authentication: Authentication,
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
-    observeReadMarkersUseCase: ObserveReadMarkersUseCase,
+    observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
     private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase,
     private val createChatUseCase: CreateChatUseCase
 ) : ViewModel() {
@@ -68,7 +68,7 @@ class ChatsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
         )
-    internal val myReadMarkers = observeReadMarkersUseCase.currentUser()
+    internal val myChatParticipants = observeChatParticipantsUseCase.currentUser()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),

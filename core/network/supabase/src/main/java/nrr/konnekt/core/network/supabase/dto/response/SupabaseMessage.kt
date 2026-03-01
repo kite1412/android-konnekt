@@ -25,7 +25,6 @@ internal data class SupabaseMessage(
 internal fun SupabaseMessage.toMessage(sender: User) =
     Message(
         id = id,
-        chatId = chatId,
         sender = sender,
         content = content,
         sentAt = sentAt,

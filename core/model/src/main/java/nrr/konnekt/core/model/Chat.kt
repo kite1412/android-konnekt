@@ -7,6 +7,5 @@ data class Chat(
     val type: ChatType,
     val createdAt: Instant,
     val setting: ChatSetting?,
-    val participants: List<ChatParticipant> = emptyList(),
-    val events: List<Event> = emptyList()
+    val participants: List<ChatParticipant> = emptyList()
 )

@@ -5,9 +5,7 @@ import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Message
-import nrr.konnekt.core.model.MessageStatus
-import nrr.konnekt.core.model.UserReadMarker
-import kotlin.time.Instant
+import nrr.konnekt.core.model.UserMessageStatus
 
 typealias MessageResult<T> = Result<T, MessageRepository.MessageError>
 
@@ -22,21 +20,6 @@ interface MessageRepository {
      * @return A flow of the messages in the chat.
      */
     fun observeMessages(chatId: String): Flow<List<Message>>
-
-    /**
-     * Observe user read markers for a chat, excluding current user's read marker.
-     *
-     * @param chatId The ID of the chat to get the user read markers for.
-     * @return The user read markers.
-     */
-    fun observeUserReadMarkers(chatId: String): Flow<List<UserReadMarker>>
-
-    /**
-     * Observe current user read markers.
-     *
-     * @return Current user read markers.
-     */
-    fun observeCurrentUserReadMarkers(): Flow<List<UserReadMarker>>
 
     /**
      * Send a message to a chat.
@@ -70,21 +53,12 @@ interface MessageRepository {
     suspend fun deleteMessages(messageIds: List<String>): MessageResult<List<Message>>
 
     /**
-     * Mark a message as read.
-     *
-     * @param chatId The ID of the chat to update the read marker for.
-     * @param instant The instant used to update the chat's read marker.
-     * @return The updated user read marker.
-     */
-    suspend fun updateUserReadMarker(chatId: String, instant: Instant? = null): MessageResult<UserReadMarker>
-
-    /**
      * Hide a message for the logged-in user.
      *
      * @param messageIds The IDs of the messages to hide.
      * @return The updated message statuses.
      */
-    suspend fun hideMessages(messageIds: List<String>): MessageResult<List<MessageStatus>>
+    suspend fun hideMessages(messageIds: List<String>): MessageResult<List<UserMessageStatus>>
 
     sealed interface MessageError : Error {
         object ChatNotFound : MessageError

@@ -70,7 +70,6 @@ import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
-import nrr.konnekt.core.model.Event
 import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.previewparameter.Conversation
@@ -309,7 +308,6 @@ private fun ChatInfo(
                 )
                 ChatType.GROUP -> GroupChatInfo(
                     isAdmin = isAdmin,
-                    events = chat.events,
                     participants = chat.participants,
                     messageNotificationEnabled = messageNotificationEnabled,
                     onMessageNotificationChange = onMessageNotificationChange,
@@ -407,7 +405,6 @@ private fun PersonalChatActions(
 @Composable
 private fun GroupChatInfo(
     isAdmin: Boolean,
-    events: List<Event>,
     participants: List<ChatParticipant>,
     messageNotificationEnabled: Boolean,
     onMessageNotificationChange: (Boolean) -> Unit,
@@ -419,24 +416,6 @@ private fun GroupChatInfo(
     onDeleteGroup: () -> Unit,
     onEventNotificationChange: (Boolean) -> Unit
 ) {
-    if (events.isNotEmpty()) ChatInfoSection(
-        title = "Events",
-        titleStyle = chatInfoTitleStyle().copy(
-            color = MaterialTheme.colorScheme.primary
-        )
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            events.forEach {
-                GroupEvent(
-                    title = it.title,
-                    startsAt = it.startsAt,
-                    desc = it.description
-                )
-            }
-        }
-    }
     ChatInfoSection(
         title = "Notifications",
         titleStyle = chatInfoTitleStyle().copy(

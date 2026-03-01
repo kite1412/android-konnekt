@@ -119,7 +119,7 @@ internal fun ChatsScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val chats by viewModel.chats.collectAsStateWithLifecycle()
-    val myReadMarkers by viewModel.myReadMarkers.collectAsStateWithLifecycle()
+    val myChatParticipants by viewModel.myChatParticipants.collectAsStateWithLifecycle()
 
     currentUser?.let {
         ChatsScreen(
@@ -132,10 +132,12 @@ internal fun ChatsScreen(
             messageUnreadByCurrentUser = { latestChatMessage ->
                 latestChatMessage.message?.let { message ->
                     if (message.sender.id != it.id || message.isHidden)
-                        myReadMarkers
-                            .firstOrNull { m -> m.chatId ==  latestChatMessage.chat.id }
-                            ?.let { m ->
-                                m.lastReadAt < message.sentAt
+                        myChatParticipants
+                            .firstOrNull { (chat, _) -> chat.id ==  latestChatMessage.chat.id }
+                            ?.let { (_, participant) ->
+                                participant.status.lastReadAt?.let { lastReadAt ->
+                                    lastReadAt < message.sentAt
+                                }
                             } ?: true
                     else false
                 } ?: false
@@ -525,7 +527,7 @@ private fun Chats(
                         it.message
                             ?.messageStatuses
                             ?.firstOrNull { s ->
-                                s.userId == user.id
+                                s.user.id == user.id
                             }?.isDeleted == true
                     },
                     dropdownItems = { dismiss, latestChatMessage ->

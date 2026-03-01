@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.model.ChatParticipantStatus
 import kotlin.time.Instant
 
 @Serializable
@@ -23,11 +24,9 @@ internal data class SupabaseChatParticipant(
     val leftAt: Instant?
 )
 
-internal fun SupabaseChatParticipant.toChatParticipant(user: User) =
+internal fun SupabaseChatParticipant.toChatParticipant(user: User, chatParticipantStatus: ChatParticipantStatus) =
     ChatParticipant(
-        chatId = chatId,
         user = user,
         role = ParticipantRole.valueOf(role.uppercase()),
-        joinedAt = joinedAt,
-        leftAt = leftAt
+        status = chatParticipantStatus
     )

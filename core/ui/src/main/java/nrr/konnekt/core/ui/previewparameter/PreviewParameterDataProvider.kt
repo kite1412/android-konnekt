@@ -9,8 +9,8 @@ import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
-import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -28,6 +28,42 @@ class PreviewParameterDataProvider
             PreviewParameterData(latestChatMessages, user)
         )
 
+    val user1 = User(
+        id = "u1",
+        email = "alice@example.com",
+        username = "Alice",
+        bio = "Loves coffee",
+        imagePath = "/images/alice.png",
+        createdAt = Instant.parse("2024-07-01T09:00:00Z")
+    )
+
+    val user2 = User(
+        id = "u2",
+        email = "bob@example.com",
+        username = "Bob",
+        bio = "Guitar player",
+        imagePath = "/images/bob.png",
+        createdAt = Instant.parse("2024-10-15T08:00:00Z")
+    )
+
+    val user3 = User(
+        id = "u3",
+        email = "charlie@example.com",
+        username = "Charlie",
+        bio = null,
+        imagePath = null,
+        createdAt = Instant.parse("2025-01-10T09:00:00Z")
+    )
+
+    val user4 = User(
+        id = "u4",
+        email = "diana@example.com",
+        username = "Diana",
+        bio = "Traveler ✈️",
+        imagePath = "/images/diana.png",
+        createdAt = Instant.parse("2025-05-15T08:00:00Z")
+    )
+
     val latestChatMessages = listOf(
         LatestChatMessage(
             chat = Chat(
@@ -43,22 +79,14 @@ class PreviewParameterDataProvider
             ),
             message = Message(
                 id = "m1",
-                chatId = "c1",
-                sender = User(
-                    id = "u1",
-                    email = "alice@example.com",
-                    username = "Alice",
-                    bio = "Loves coffee",
-                    imagePath = "/images/alice.png",
-                    createdAt = Instant.parse("2024-07-01T09:00:00Z")
-                ),
+                sender = user1,
                 content = "",
                 sentAt = now(),
                 editedAt = Instant.parse("2025-07-10T15:00:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m1", "u1", false),
-                    MessageStatus("m1", "u2", false)
+                    UserMessageStatus(user1, false),
+                    UserMessageStatus(user2, false)
                 ),
                 attachments = listOf(
                     Attachment(
@@ -91,23 +119,15 @@ class PreviewParameterDataProvider
             ),
             message = Message(
                 id = "m2",
-                chatId = "c2",
-                sender = User(
-                    id = "u2",
-                    email = "bob@example.com",
-                    username = "Bob",
-                    bio = "Guitar player",
-                    imagePath = "/images/bob.png",
-                    createdAt = Instant.parse("2024-10-15T08:00:00Z")
-                ),
+                sender = user2,
                 content = "Don’t forget our meeting at 7 PM!",
                 sentAt = now() - 1.days,
                 editedAt = now(),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m2", "u1", false),
-                    MessageStatus("m2", "u2", false),
-                    MessageStatus("m2", "u3", false)
+                    UserMessageStatus(user1, false),
+                    UserMessageStatus(user2, false),
+                    UserMessageStatus(user3, false)
                 )
             )
         ),
@@ -134,22 +154,14 @@ class PreviewParameterDataProvider
             ),
             message = Message(
                 id = "m3",
-                chatId = "c4",
-                sender = User(
-                    id = "u3",
-                    email = "charlie@example.com",
-                    username = "Charlie",
-                    bio = null,
-                    imagePath = null,
-                    createdAt = Instant.parse("2025-01-10T09:00:00Z")
-                ),
+                sender = user3,
                 content = "Are we still on for tonight?",
                 sentAt = Instant.parse("2025-07-21T17:30:00Z"),
                 editedAt = Instant.parse("2025-07-21T17:30:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m3", "u3", false),
-                    MessageStatus("m3", "u4", false)
+                    UserMessageStatus(user3, false),
+                    UserMessageStatus(user4, false)
                 )
             )
         ),
@@ -191,24 +203,16 @@ class PreviewParameterDataProvider
             ),
             message = Message(
                 id = "m4",
-                chatId = "c7",
-                sender = User(
-                    id = "u4",
-                    email = "diana@example.com",
-                    username = "Diana",
-                    bio = "Traveler ✈️",
-                    imagePath = "/images/diana.png",
-                    createdAt = Instant.parse("2025-05-15T08:00:00Z")
-                ),
+                sender = user4,
                 content = "I’ve booked the cabin! 🏕️",
                 sentAt = Instant.parse("2025-07-26T09:00:00Z"),
                 editedAt = Instant.parse("2025-07-26T09:00:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m4", "u1", false),
-                    MessageStatus("m4", "u2", false),
-                    MessageStatus("m4", "u3", false),
-                    MessageStatus("m4", "u4", false)
+                    UserMessageStatus(user1, false),
+                    UserMessageStatus(user2, false),
+                    UserMessageStatus(user3, false),
+                    UserMessageStatus(user4, false)
                 )
             )
         ),
@@ -246,23 +250,15 @@ class PreviewParameterDataProvider
             ),
             message = Message(
                 id = "m5",
-                chatId = "c10",
-                sender = User(
-                    id = "u1",
-                    email = "alice@example.com",
-                    username = "Alice",
-                    bio = "Loves coffee",
-                    imagePath = "/images/alice.png",
-                    createdAt = Instant.parse("2024-07-01T09:00:00Z")
-                ),
+                sender = user1,
                 content = "Push your code to GitHub before 10 PM!",
                 sentAt = Instant.parse("2025-07-01T18:00:00Z"),
                 editedAt = Instant.parse("2025-07-01T18:00:00Z"),
                 isHidden = false,
                 messageStatuses = listOf(
-                    MessageStatus("m5", "u1", false),
-                    MessageStatus("m5", "u2", false),
-                    MessageStatus("m5", "u3", false)
+                    UserMessageStatus(user1, false),
+                    UserMessageStatus(user2, false),
+                    UserMessageStatus(user3, false)
                 )
             )
         )

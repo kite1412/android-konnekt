@@ -114,7 +114,6 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
-import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
 import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
@@ -148,6 +147,7 @@ import nrr.konnekt.feature.conversation.util.LOG_TAG
 import nrr.konnekt.feature.conversation.util.MessageAction
 import nrr.konnekt.feature.conversation.util.MessageComposerAction
 import nrr.konnekt.feature.conversation.util.SelectedMessageAction
+import nrr.konnekt.feature.conversation.util.UserReadMarker
 import nrr.konnekt.feature.conversation.util.attachments
 import nrr.konnekt.feature.conversation.util.dateHeaderString
 import nrr.konnekt.feature.conversation.util.mapToConversationItem
@@ -210,7 +210,7 @@ internal fun ConversationScreen(
                             first.sender.id == currentUser?.id &&
                                     !first.isHidden &&
                                     !first.messageStatuses.any { status ->
-                                        status.userId == currentUser?.id && status.isDeleted
+                                        status.user.id == currentUser?.id && status.isDeleted
                                     } &&
                                     !viewModel.hiddenMessageIds.contains(first.id)
                         }
@@ -220,13 +220,13 @@ internal fun ConversationScreen(
                 },
                 isSelectionHidable = viewModel.selectedMessages.any { message ->
                     !(message.messageStatuses.any { status ->
-                        status.userId == currentUser?.id && status.isDeleted
+                        status.user.id == currentUser?.id && status.isDeleted
                     }) && !message.isHidden && !viewModel.hiddenMessageIds.contains(message.id)
                 },
                 onMessageInputChange = { viewModel.messageInput = it },
                 deletedByCurrentUser = { m ->
                     m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
-                        status.userId == currentUser?.id && status.isDeleted
+                        status.user.id == currentUser?.id && status.isDeleted
                     } || viewModel.hiddenMessageIds.contains(m.id)
                 },
                 composerAttachments = viewModel.composerAttachments,
@@ -677,8 +677,9 @@ private fun Conversation(
             ?.let {
                 if (!readMarkers.isNullOrEmpty()) {
                     it.firstOrNull { m ->
-                        (m as ConversationItem.MessageItem).message.sentAt <=
-                                readMarkers.maxBy { m -> m.lastReadAt }.lastReadAt
+                        val latest: Instant? = readMarkers.maxBy { m -> m.lastReadAt ?: Instant.DISTANT_PAST }.lastReadAt
+
+                        latest != null && (m as ConversationItem.MessageItem).message.sentAt <= latest
                     }
                 } else null
             }
@@ -760,7 +761,7 @@ private fun Conversation(
                                             GroupSeenIndicator(
                                                 seenBy = l
                                                     .filter { m ->
-                                                        m.lastReadAt >= item.message.sentAt
+                                                        m.lastReadAt != null && m.lastReadAt >= item.message.sentAt
                                                     }
                                                     .sortedByDescending { m -> m.lastReadAt }
                                                     .map(UserReadMarker::user)
@@ -1834,7 +1835,7 @@ private fun ConversationScreenPreview(
                 onMessageInputChange = { v -> messageInput = v },
                 deletedByCurrentUser = { m ->
                     m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
-                        status.userId == user.id && status.isDeleted
+                        status.user.id == user.id && status.isDeleted
                     }
                 },
                 composerAttachments = emptyList(),
