@@ -1,4 +1,4 @@
-package nrr.konnekt.core.network.supabase.dto
+package nrr.konnekt.core.network.supabase.dto.response
 
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName

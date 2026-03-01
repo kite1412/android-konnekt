@@ -128,6 +128,16 @@ CREATE TABLE IF NOT EXISTS events (
     edited_at timestamptz NOT NULL DEFAULT now(),
     start_time timestamptz NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS user_chat_statuses (
+    user_id uuid NOT NULL REFERENCES users(id),
+    chat_id uuid NOT NULL REFERENCES chats(id),
+    cleared_at timestamptz,
+    left_at timestamptz,
+    archived_at timestamptz,
+    last_read_at timestamptz,
+    PRIMARY KEY (user_id, chat_id)
+);
 ```
 
 ## Enable realtime for tables:
@@ -187,7 +197,7 @@ $$;
 ```
 
 ### get_chat_participants
-```
+```sql
 create or replace function get_chat_participants(
   _chat_id uuid
 )

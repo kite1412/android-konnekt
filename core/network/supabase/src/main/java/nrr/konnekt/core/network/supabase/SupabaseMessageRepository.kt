@@ -22,13 +22,13 @@ import nrr.konnekt.core.model.MessageStatus
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserReadMarker
 import nrr.konnekt.core.model.util.now
-import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
-import nrr.konnekt.core.network.supabase.dto.SupabaseUserReadMarker
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserReadMarker
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
-import nrr.konnekt.core.network.supabase.dto.toMessage
-import nrr.konnekt.core.network.supabase.dto.toUserReadMarker
+import nrr.konnekt.core.network.supabase.dto.response.toMessage
+import nrr.konnekt.core.network.supabase.dto.response.toUserReadMarker
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.USER_READ_MARKERS

@@ -23,6 +23,7 @@ import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
+import nrr.konnekt.core.network.supabase.util.Tables.USER_CHAT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USER_READ_MARKERS
 import nrr.konnekt.core.network.supabase.util.Tables.USER_STATUSES
 
@@ -85,6 +86,8 @@ internal abstract class SupabaseService(
     protected suspend fun <R> userReadMarkers(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(USER_READ_MARKERS, operation)
 
+    protected suspend fun <R> userChatStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(USER_CHAT_STATUSES, operation)
 
     protected inner class Rpc {
         private suspend inline fun <reified R : Any> call(
