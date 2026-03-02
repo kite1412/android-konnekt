@@ -383,6 +383,7 @@ private fun ConversationScreen(
             if (!isLoadingMessages) Conversation(
                 items = conversationItems,
                 readMarkers = readMarkers,
+                currentUser = currentUser,
                 chatType = chat.type,
                 isOnSelectionMode = isOnMessagesSelectionMode,
                 sentByCurrentUser = { m -> m.sender.id == currentUser.id },
@@ -657,6 +658,7 @@ private fun LoadingMessages(modifier: Modifier = Modifier) {
 private fun Conversation(
     items: List<ConversationItem>,
     readMarkers: List<UserReadMarker>?,
+    currentUser: User,
     chatType: ChatType,
     isOnSelectionMode: Boolean,
     sentByCurrentUser: (Message) -> Boolean,
@@ -677,7 +679,9 @@ private fun Conversation(
             ?.let {
                 if (!readMarkers.isNullOrEmpty()) {
                     it.firstOrNull { m ->
-                        val latest: Instant? = readMarkers.maxBy { m -> m.lastReadAt ?: Instant.DISTANT_PAST }.lastReadAt
+                        val latest: Instant? = readMarkers
+                            .filter { marker -> marker.user.id != currentUser.id }
+                            .maxBy { m -> m.lastReadAt ?: Instant.DISTANT_PAST }.lastReadAt
 
                         latest != null && (m as ConversationItem.MessageItem).message.sentAt <= latest
                     }

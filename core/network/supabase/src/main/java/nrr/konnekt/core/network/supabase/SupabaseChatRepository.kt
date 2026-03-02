@@ -27,6 +27,7 @@ import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
+import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
@@ -38,12 +39,14 @@ import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.ParticipantRole
+import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChat
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipantStatus
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatSetting
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
@@ -62,6 +65,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toSupabaseChatSetting
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
+import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
@@ -70,6 +74,7 @@ import nrr.konnekt.core.network.supabase.util.Tables.USER_MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.toSupabaseEnum
+import nrr.konnekt.core.network.supabase.util.toSupabaseModel
 import javax.inject.Inject
 
 internal class SupabaseChatRepository @Inject constructor(
@@ -373,17 +378,92 @@ internal class SupabaseChatRepository @Inject constructor(
                 )
             }
 
-    override fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>> =
-        emptyFlow()
+    @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
+    override fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>> {
+        val participants = performOperation(CHAT_PARTICIPANTS) {
+            selectAsFlow(
+                primaryKeys = listOf(
+                    SupabaseChatParticipant::userId,
+                    SupabaseChatParticipant::chatId
+                ),
+                filter = FilterOperation(
+                    column = "chat_id",
+                    operator = FilterOperator.EQ,
+                    value = chatId
+                )
+            )
+        }
+        val participantStatuses = performOperation(CHAT_PARTICIPANT_STATUSES) {
+            selectAsFlow(
+                primaryKeys = listOf(
+                    SupabaseChatParticipantStatus::chatId,
+                    SupabaseChatParticipantStatus::userId
+                ),
+                filter = FilterOperation(
+                    column = "chat_id",
+                    operator = FilterOperator.EQ,
+                    value = chatId
+                )
+            )
+        }
+        val users = participants.flatMapLatest { participants ->
+            performOperation(USERS) {
+                selectAsFlow(
+                    primaryKey = SupabaseUser::id,
+                    filter = FilterOperation(
+                        column = "id",
+                        operator = FilterOperator.IN,
+                        value = participants.map(SupabaseChatParticipant::userId)
+                    )
+                )
+                    .map { list ->
+                        list.map(SupabaseUser::toModel)
+                    }
+            }
+        }
 
+        return combine(
+            flow = participants,
+            flow2 = participantStatuses,
+            flow3 = users
+        ) { participants, statuses, users ->
+            participants.map { participant ->
+                participant.toModel(
+                    user = users.first { u -> u.id == participant.userId },
+                    chatParticipantStatus = statuses
+                        .first { status ->
+                            status.userId == participant.userId
+                        }
+                        .toModel()
+                )
+            }
+        }
+    }
     override fun observeCurrentUserChatParticipant(): Flow<List<Pair<Chat, ChatParticipant>>> =
         emptyFlow()
 
     override suspend fun updateCurrentUserChatParticipantStatus(
         chatId: String,
         status: ChatParticipantStatus
-    ): MessageResult<ChatParticipantStatus> {
-        TODO("Not yet implemented")
+    ): MessageResult<ChatParticipantStatus> = performSuspendingAuthenticatedAction { user ->
+        chatParticipantStatuses {
+            upsert(
+                value = status.toSupabaseModel(
+                    userId = user.id,
+                    chatId = chatId
+                )
+            ) {
+                filter {
+                    SupabaseChatParticipantStatus::chatId eq chatId
+                    SupabaseChatParticipantStatus::userId eq user.id
+                }
+                select()
+            }
+                .decodeSingleOrNull<SupabaseChatParticipantStatus>()
+                ?.toModel()
+                ?.let(Result<ChatParticipantStatus, Nothing>::Success)
+                ?: Error(MessageRepository.MessageError.Unknown)
+        }
     }
 
     override suspend fun getChatById(chatId: String): ChatResult<Chat> =
@@ -545,14 +625,27 @@ internal class SupabaseChatRepository @Inject constructor(
                         role = if (type != ChatType.PERSONAL) ParticipantRole.ADMIN.toSupabaseEnum()
                         else ParticipantRole.MEMBER.toSupabaseEnum()
                     )
-                    val participants = participantIds?.map { uid ->
+                    val members = participantIds?.map { uid ->
                         SupabaseCreateChatParticipant(
                             chatId = chat.id,
                             userId = uid,
                             role = ParticipantRole.MEMBER.toSupabaseEnum()
                         )
                     }
-                    insert(listOf(admin) + (participants ?: emptyList()))
+                    val chatParticipants = listOf(admin) + (members ?: emptyList())
+                    insert(chatParticipants)
+
+                    chatParticipantStatuses {
+                        insert(
+                            chatParticipants.map { participant ->
+                                SupabaseChatParticipantStatus(
+                                    userId = participant.userId,
+                                    chatId = participant.chatId,
+                                    joinedAt = now()
+                                )
+                            }
+                        )
+                    }
                 }
                 val setting = if (type != ChatType.PERSONAL) chatSetting?.let { cs ->
                     val chatSetting = chatSettings {

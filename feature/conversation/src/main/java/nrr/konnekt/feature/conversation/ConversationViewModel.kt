@@ -74,7 +74,7 @@ class ConversationViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val userPresenceManager: UserPresenceManager,
     private val sendMessageUseCase: SendMessageUseCase,
-    private val updateReadMarkerUseCase: UpdateChatParticipantStatusUseCase,
+    private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase,
     private val createChatUseCase: CreateChatUseCase,
     private val deleteMessagesUseCase: DeleteMessagesUseCase,
     private val hideMessagesUseCase: HideMessagesUseCase,
@@ -199,12 +199,28 @@ class ConversationViewModel @Inject constructor(
                         ?.id
                         ?.let {
                             if (id != it) latestCurrentUserChatParticipantStatus?.let { status ->
-                                updateReadMarkerUseCase(chatId, status)
+                                val res = updateChatParticipantStatusUseCase(
+                                    chatId = chatId,
+                                    status = status.copy(
+                                        lastReadAt = now()
+                                    )
+                                )
+
+                                if (res is Result.Success) {
+                                    latestCurrentUserChatParticipantStatus = res.data
+                                }
                             }
                         }
                 }
             }
         readMarkers = observeChatParticipantsUseCase(chatId)
+            .onEach {
+                latestCurrentUserChatParticipantStatus = it
+                    .firstOrNull { participant ->
+                        participant.user.id == currentUser.first()?.id
+                    }
+                    ?.status
+            }
             .map {
                 it.map { participant ->
                     UserReadMarker(

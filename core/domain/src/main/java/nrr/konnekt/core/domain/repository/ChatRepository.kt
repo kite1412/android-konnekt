@@ -37,7 +37,7 @@ interface ChatRepository {
     fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>>
 
     /**
-     * Observe chat participants for a chat, excluding current user.
+     * Observe chat participants for a chat.
      *
      * @param chatId The ID of the chat to get the chat participants for.
      * @return The chat participants.

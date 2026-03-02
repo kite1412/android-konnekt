@@ -18,12 +18,12 @@ import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
+import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.Tables.USER_ACTIVITY_STATUSES
-import nrr.konnekt.core.network.supabase.util.Tables.USER_CHAT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USER_MESSAGE_STATUSES
 
 internal abstract class SupabaseService(
@@ -82,8 +82,8 @@ internal abstract class SupabaseService(
     protected suspend fun <R> attachments(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(ATTACHMENTS, operation)
 
-    protected suspend fun <R> userChatStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
-        performSuspendingOperation(USER_CHAT_STATUSES, operation)
+    protected suspend fun <R> chatParticipantStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(CHAT_PARTICIPANT_STATUSES, operation)
 
     protected inner class Rpc {
         private suspend inline fun <reified R : Any> call(
