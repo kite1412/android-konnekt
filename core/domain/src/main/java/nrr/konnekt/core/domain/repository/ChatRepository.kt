@@ -5,6 +5,7 @@ import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
@@ -46,11 +47,11 @@ interface ChatRepository {
     fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>>
 
     /**
-     * Observes all chat participation of the current user.
+     * Observes all chat participations of the current user.
      *
      * @return A flow emitting the list of Chat and ChatParticipant entries for the current user.
      */
-    fun observeCurrentUserChatParticipant(): Flow<List<Pair<Chat, ChatParticipant>>>
+    fun observeCurrentUserChatParticipations(): Flow<List<UserChatParticipation>>
 
     /**
      * Get a chat by its ID.

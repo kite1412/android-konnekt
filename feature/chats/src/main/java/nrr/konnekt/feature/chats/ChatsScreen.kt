@@ -133,7 +133,7 @@ internal fun ChatsScreen(
                 latestChatMessage.message?.let { message ->
                     if (message.sender.id != it.id || message.isHidden)
                         myChatParticipants
-                            .firstOrNull { (chat, _) -> chat.id ==  latestChatMessage.chat.id }
+                            .firstOrNull { participation -> participation.chatId ==  latestChatMessage.chat.id }
                             ?.let { (_, participant) ->
                                 participant.status.lastReadAt?.let { lastReadAt ->
                                     lastReadAt < message.sentAt

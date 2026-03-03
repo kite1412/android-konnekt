@@ -9,5 +9,5 @@ class ObserveChatParticipantsUseCase @Inject constructor(
     operator fun invoke(chatId: String) =
         chatRepository.observeChatParticipants(chatId)
 
-    fun currentUser() = chatRepository.observeCurrentUserChatParticipant()
+    fun currentUser() = chatRepository.observeCurrentUserChatParticipations()
 }

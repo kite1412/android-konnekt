@@ -120,75 +120,6 @@ internal class SupabaseMessageRepository @Inject constructor(
                 }
         }
 
-//    @OptIn(SupabaseExperimental::class)
-//    override fun observeUserReadMarkers(chatId: String): Flow<List<UserReadMarker>> =
-//        performAuthenticatedAction { u ->
-//            performOperation(USER_READ_MARKERS) {
-//                selectAsFlow(
-//                    primaryKeys = listOf(
-//                        SupabaseUserReadMarker::userId,
-//                        SupabaseUserReadMarker::chatId
-//                    ),
-//                    filter = FilterOperation(
-//                        column = "chat_id",
-//                        operator = FilterOperator.EQ,
-//                        value = chatId
-//                    )
-//                )
-//                    .map {
-//                        val filtered = it.filter { m -> m.userId != u.id }
-//                        val markers = mutableListOf<UserReadMarker>()
-//                        filtered
-//                            .chunked(10)
-//                            .forEach { l ->
-//                                val users = users {
-//                                    select {
-//                                        filter {
-//                                            User::id isIn l.map { m -> m.userId }
-//                                        }
-//                                    }
-//                                        .decodeList<User>()
-//                                }
-//                                markers.addAll(
-//                                    users.mapNotNull { u ->
-//                                        l.firstOrNull { m -> m.userId == u.id }
-//                                            ?.lastReadAt
-//                                            ?.let { lastReadAt ->
-//                                                UserReadMarker(
-//                                                    user = u,
-//                                                    chatId = chatId,
-//                                                    lastReadAt = lastReadAt
-//                                                )
-//                                            }
-//                                    }
-//                                )
-//                            }
-//
-//                        markers
-//                    }
-//            }
-//        }
-
-//    @OptIn(SupabaseExperimental::class)
-//    override fun observeCurrentUserReadMarkers(): Flow<List<UserReadMarker>> =
-//        performAuthenticatedAction {  u ->
-//            performOperation(USER_READ_MARKERS) {
-//                selectAsFlow(
-//                    primaryKey = SupabaseUserReadMarker::chatId,
-//                    filter = FilterOperation(
-//                        column = "user_id",
-//                        operator = FilterOperator.EQ,
-//                        value = u.id
-//                    )
-//                )
-//                    .map {
-//                        it.map { m ->
-//                            m.toUserReadMarker(u)
-//                        }
-//                    }
-//            }
-//        }
-
     override suspend fun sendMessage(
         chatId: String,
         content: String,
@@ -320,34 +251,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                     )
                 } ?: Error(MessageError.Unknown)
         }
-
-//    override suspend fun updateUserReadMarker(
-//        chatId: String,
-//        instant: Instant?
-//    ): MessageResult<UserReadMarker> = performSuspendingAuthenticatedAction { u ->
-//        userReadMarkers {
-//            upsert(
-//                value = SupabaseUserReadMarker(
-//                    userId = u.id,
-//                    chatId = chatId,
-//                    lastReadAt = instant ?: now()
-//                )
-//            ) {
-//                select()
-//            }
-//        }
-//            .decodeSingleOrNull<SupabaseUserReadMarker>()
-//            ?.let {
-//                Success(
-//                    UserReadMarker(
-//                        user = u,
-//                        chatId = chatId,
-//                        lastReadAt = it.lastReadAt
-//                    )
-//                )
-//            } ?: Error(MessageError.Unknown)
-//    }
-
+    
     override suspend fun hideMessages(messageIds: List<String>): MessageResult<List<UserMessageStatus>> =
         performSuspendingAuthenticatedAction { user ->
             userMessageStatuses {

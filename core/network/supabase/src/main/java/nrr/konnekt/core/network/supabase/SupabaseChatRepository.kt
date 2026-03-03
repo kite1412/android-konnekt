@@ -12,7 +12,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -25,6 +24,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
@@ -61,6 +61,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toMessage
 import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.dto.response.toSupabaseChatPermissionSettings
 import nrr.konnekt.core.network.supabase.dto.response.toSupabaseChatSetting
+import nrr.konnekt.core.network.supabase.dto.response.toUserChatParticipation
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
@@ -81,34 +82,42 @@ internal class SupabaseChatRepository @Inject constructor(
 ) : ChatRepository, SupabaseService(authentication) {
     @OptIn(SupabaseExperimental::class)
     private val participatedIn by lazy {
-        performAuthenticatedAction { u ->
-            performOperation(CHAT_PARTICIPANTS) {
-                selectAsFlow(
-                    primaryKeys = listOf(
-                        SupabaseChatParticipant::userId,
-                        SupabaseChatParticipant::chatId
-                    ),
-                    filter = FilterOperation(
-                        column = "user_id",
-                        operator = FilterOperator.EQ,
-                        value = u.id
-                    )
+        performOperation(CHAT_PARTICIPANTS) { u ->
+            selectAsFlow(
+                primaryKeys = listOf(
+                    SupabaseChatParticipant::userId,
+                    SupabaseChatParticipant::chatId
+                ),
+                filter = FilterOperation(
+                    column = "user_id",
+                    operator = FilterOperator.EQ,
+                    value = u.id
                 )
-                    .map { l ->
-                        l
-                            .filter { it.leftAt == null }
-                            .map {
-                                JoinedChat(
-                                    chatId = it.chatId,
-                                    userId = it.userId
-                                )
-                            }
-                    }
-                    .onEach {
-                        Log.d(LOG_TAG, "joined chats: $it")
-                    }
-                    .share()
-            }
+            )
+                .map { l ->
+                    val statuses = getCurrentUserChatParticipantStatuses()
+
+                    l
+                        .filter { participant ->
+                            statuses
+                                .firstOrNull { status ->
+                                    participant.chatId == status.chatId
+                                }
+                                ?.let { status ->
+                                    status.leftAt == null
+                                } ?: true
+                        }
+                        .map {
+                            JoinedChat(
+                                chatId = it.chatId,
+                                userId = it.userId
+                            )
+                        }
+                }
+                .onEach {
+                    Log.d(LOG_TAG, "joined chats: $it")
+                }
+                .share()
         }
     }
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -291,12 +300,6 @@ internal class SupabaseChatRepository @Inject constructor(
         }
     }
 
-    private fun <T> Flow<T>.share() = shareIn(
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        started = SharingStarted.WhileSubscribed(5_000),
-        replay = 1
-    )
-
     /*
         NOTE:
         - only observes current user message statuses
@@ -428,7 +431,7 @@ internal class SupabaseChatRepository @Inject constructor(
             participants.map { participant ->
                 participant.toModel(
                     user = users.first { u -> u.id == participant.userId },
-                    chatParticipantStatus = statuses
+                    status = statuses
                         .first { status ->
                             status.userId == participant.userId
                         }
@@ -437,8 +440,43 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         }
     }
-    override fun observeCurrentUserChatParticipant(): Flow<List<Pair<Chat, ChatParticipant>>> =
-        emptyFlow()
+
+    @OptIn(SupabaseExperimental::class)
+    override fun observeCurrentUserChatParticipations(): Flow<List<UserChatParticipation>> =
+        performOperation(CHAT_PARTICIPANTS) { user ->
+            selectAsFlow(
+                primaryKeys = listOf(
+                    SupabaseChatParticipant::userId,
+                    SupabaseChatParticipant::chatId
+                ),
+                filter = FilterOperation(
+                    column = "user_id",
+                    operator = FilterOperator.EQ,
+                    value = user.id
+                )
+            )
+                .map { list ->
+                    val statuses = chatParticipantStatuses {
+                        select {
+                            filter {
+                                SupabaseChatParticipantStatus::userId eq user.id
+                            }
+                        }
+                    }
+                        .decodeList<SupabaseChatParticipantStatus>()
+
+                    list.map { participant ->
+                        participant.toUserChatParticipation(
+                            user = user,
+                            status = statuses
+                                .first { status ->
+                                    status.chatId == participant.chatId
+                                }
+                                .toModel()
+                        )
+                    }
+                }
+        }
 
     override suspend fun updateCurrentUserChatParticipantStatus(
         update: UpdateChatParticipantStatus
@@ -495,36 +533,6 @@ internal class SupabaseChatRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             Error(ChatError.Unknown)
-        }
-
-    private suspend fun getPersonalChatSetting(chatId: String) =
-        performSuspendingAuthenticatedAction { u ->
-            chatParticipants {
-                select {
-                    filter {
-                        SupabaseChatParticipant::chatId eq chatId
-                        SupabaseChatParticipant::userId neq u.id
-                    }
-                }
-                    .decodeSingleOrNull<SupabaseChatParticipant>()
-                    ?.let {
-                        users {
-                            select {
-                                filter {
-                                    SupabaseUser::id eq it.userId
-                                }
-                            }
-                                .decodeSingleOrNull<SupabaseUser>()
-                                ?.toModel()
-                                ?.let { user ->
-                                    ChatSetting(
-                                        name = user.username,
-                                        iconPath = user.imagePath
-                                    )
-                                }
-                        }
-                    }
-            }
         }
 
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
@@ -665,4 +673,52 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         } ?: Error(ChatError.Unknown)
     }
+
+    private suspend fun getPersonalChatSetting(chatId: String) =
+        performSuspendingAuthenticatedAction { u ->
+            chatParticipants {
+                select {
+                    filter {
+                        SupabaseChatParticipant::chatId eq chatId
+                        SupabaseChatParticipant::userId neq u.id
+                    }
+                }
+                    .decodeSingleOrNull<SupabaseChatParticipant>()
+                    ?.let {
+                        users {
+                            select {
+                                filter {
+                                    SupabaseUser::id eq it.userId
+                                }
+                            }
+                                .decodeSingleOrNull<SupabaseUser>()
+                                ?.toModel()
+                                ?.let { user ->
+                                    ChatSetting(
+                                        name = user.username,
+                                        iconPath = user.imagePath
+                                    )
+                                }
+                        }
+                    }
+            }
+        }
+
+    private suspend fun getCurrentUserChatParticipantStatuses() =
+        performSuspendingAuthenticatedAction { user ->
+            chatParticipantStatuses {
+                select {
+                    filter {
+                        SupabaseChatParticipantStatus::userId eq user.id
+                    }
+                }
+            }
+                .decodeList<SupabaseChatParticipantStatus>()
+        }
+
+    private fun <T> Flow<T>.share() = shareIn(
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        started = SharingStarted.WhileSubscribed(5_000),
+        replay = 1
+    )
 }
