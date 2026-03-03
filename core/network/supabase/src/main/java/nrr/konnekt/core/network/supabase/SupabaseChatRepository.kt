@@ -24,11 +24,10 @@ import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
-import nrr.konnekt.core.domain.repository.MessageRepository
-import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
@@ -74,7 +73,6 @@ import nrr.konnekt.core.network.supabase.util.Tables.USER_MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.toSupabaseEnum
-import nrr.konnekt.core.network.supabase.util.toSupabaseModel
 import javax.inject.Inject
 
 internal class SupabaseChatRepository @Inject constructor(
@@ -443,27 +441,17 @@ internal class SupabaseChatRepository @Inject constructor(
         emptyFlow()
 
     override suspend fun updateCurrentUserChatParticipantStatus(
-        chatId: String,
-        status: ChatParticipantStatus
-    ): MessageResult<ChatParticipantStatus> = performSuspendingAuthenticatedAction { user ->
-        chatParticipantStatuses {
-            upsert(
-                value = status.toSupabaseModel(
-                    userId = user.id,
-                    chatId = chatId
-                )
-            ) {
-                filter {
-                    SupabaseChatParticipantStatus::chatId eq chatId
-                    SupabaseChatParticipantStatus::userId eq user.id
-                }
-                select()
-            }
-                .decodeSingleOrNull<SupabaseChatParticipantStatus>()
-                ?.toModel()
-                ?.let(Result<ChatParticipantStatus, Nothing>::Success)
-                ?: Error(MessageRepository.MessageError.Unknown)
-        }
+        update: UpdateChatParticipantStatus
+    ): ChatResult<ChatParticipantStatus> = with(update) {
+        rpc.updateChatParticipantStatus(
+            chatId = chatId,
+            updateLeftAt = updateLeftAt,
+            updateClearedAt = updateClearedAt,
+            updateArchivedAt = updateArchivedAt,
+            updateLastReadAt = updateLastReadAt
+        )
+            ?.let(Result<ChatParticipantStatus, Nothing>::Success)
+            ?: Error(ChatError.Unknown)
     }
 
     override suspend fun getChatById(chatId: String): ChatResult<Chat> =

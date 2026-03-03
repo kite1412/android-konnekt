@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
@@ -109,11 +110,10 @@ interface ChatRepository {
     /**
      * Update current user chat participant status.
      *
-     * @param chatId The ID of the chat to update the status for.
-     * @param status The new status of the chat participant.
+     * @param update The update payload.
      * @return The updated user read marker.
      */
-    suspend fun updateCurrentUserChatParticipantStatus(chatId: String, status: ChatParticipantStatus): MessageResult<ChatParticipantStatus>
+    suspend fun updateCurrentUserChatParticipantStatus(update: UpdateChatParticipantStatus): ChatResult<ChatParticipantStatus>
 
     sealed interface ChatError : Error {
         object ChatNotFound : ChatError

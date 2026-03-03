@@ -226,6 +226,37 @@ end;
 $$;
 ```
 
+### update_chat_participant_status
+```sql
+create or replace function update_chat_participant_status(
+    _user_id uuid,
+    _chat_id uuid,
+    _update_cleared_at boolean default false,
+    _update_left_at boolean default false,
+    _update_archived_at boolean default false,
+    _update_last_read_at boolean default false
+)
+returns chat_participant_statuses
+language plpgsql
+as $$
+declare
+    _result chat_participant_statuses;
+begin
+    update chat_participant_statuses
+    set
+        cleared_at   = case when _update_cleared_at   then now() else cleared_at end,
+        left_at      = case when _update_left_at      then now() else left_at end,
+        archived_at  = case when _update_archived_at  then now() else archived_at end,
+        last_read_at = case when _update_last_read_at then now() else last_read_at end
+    where user_id = _user_id
+      and chat_id = _chat_id
+    returning * into _result;
+
+    return _result;
+end;
+$$;
+```
+
 ## Buckets
 - icon
 - chat-media

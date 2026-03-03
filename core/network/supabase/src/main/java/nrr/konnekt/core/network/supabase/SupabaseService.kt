@@ -10,6 +10,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
@@ -137,6 +138,26 @@ internal abstract class SupabaseService(
                 function = "get_chat_participants",
                 parameters = {
                     put("_chat_id", chatId)
+                }
+            )
+        }
+
+        suspend fun updateChatParticipantStatus(
+            chatId: String,
+            updateClearedAt: Boolean = false,
+            updateLeftAt: Boolean = false,
+            updateArchivedAt: Boolean = false,
+            updateLastReadAt: Boolean = false
+        ): ChatParticipantStatus? = performSuspendingAuthenticatedAction { user ->
+            call(
+                function = "update_chat_participant_status",
+                parameters = {
+                    put("_user_id", user.id)
+                    put("_chat_id", chatId)
+                    put("_update_cleared_at", updateClearedAt)
+                    put("_update_left_at", updateLeftAt)
+                    put("_update_archived_at", updateArchivedAt)
+                    put("_update_last_read_at", updateLastReadAt)
                 }
             )
         }

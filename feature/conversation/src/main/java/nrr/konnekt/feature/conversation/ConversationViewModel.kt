@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
@@ -200,9 +201,9 @@ class ConversationViewModel @Inject constructor(
                         ?.let {
                             if (id != it) latestCurrentUserChatParticipantStatus?.let { status ->
                                 val res = updateChatParticipantStatusUseCase(
-                                    chatId = chatId,
-                                    status = status.copy(
-                                        lastReadAt = now()
+                                    UpdateChatParticipantStatus(
+                                        chatId = chatId,
+                                        updateLastReadAt = true
                                     )
                                 )
 
