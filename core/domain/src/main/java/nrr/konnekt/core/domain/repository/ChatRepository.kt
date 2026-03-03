@@ -3,15 +3,15 @@ package nrr.konnekt.core.domain.repository
 import kotlinx.coroutines.flow.Flow
 import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
-import nrr.konnekt.core.domain.model.ChatDetail
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatType
-import nrr.konnekt.core.model.Event
-import kotlin.time.Instant
 
 typealias ChatResult<T> = Result<T, ChatRepository.ChatError>
 
@@ -23,7 +23,7 @@ typealias ChatResult<T> = Result<T, ChatRepository.ChatError>
  */
 interface ChatRepository {
     /**
-     * Observe the latest message in each chat the logged in user joined to,
+     * Observe the latest message in each chat the logged-in user joined to,
      * and listen to their changes.
      *
      * @return A flow of the latest chat messages.
@@ -37,6 +37,21 @@ interface ChatRepository {
      * @return A flow of active participants in the chat.
      */
     fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>>
+
+    /**
+     * Observe chat participants for a chat.
+     *
+     * @param chatId The ID of the chat to get the chat participants for.
+     * @return The chat participants.
+     */
+    fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>>
+
+    /**
+     * Observes all chat participations of the current user.
+     *
+     * @return A flow emitting the list of Chat and ChatParticipant entries for the current user.
+     */
+    fun observeCurrentUserChatParticipations(): Flow<List<UserChatParticipation>>
 
     /**
      * Get a chat by its ID.
@@ -63,14 +78,6 @@ interface ChatRepository {
     suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>>
 
     /**
-     * Get the detail of a chat.
-     *
-     * @param chatId The ID of the chat to get the detail for.
-     * @return The detail of the chat.
-     */
-    suspend fun getChatDetail(chatId: String): ChatResult<ChatDetail>
-
-    /**
      * Join a chat.
      *
      * @param chatId The ID of the chat to subscribe to.
@@ -82,7 +89,7 @@ interface ChatRepository {
      * Leave a chat.
      *
      * @param chatId The ID of the chat to leave.
-     * @return Participant of the left chat with [ChatParticipant.leftAt] set.
+     * @return Participant of the left chat with [ChatParticipantStatus.leftAt] set.
      */
     suspend fun leaveChat(chatId: String): ChatResult<ChatParticipant>
 
@@ -100,45 +107,14 @@ interface ChatRepository {
         participantIds: List<String>? = null
     ): ChatResult<Chat>
 
-    /**
-     * Create an event in a chat.
-     *
-     * @param chatId The ID of the chat to create the event in.
-     * @param title The title of the event.
-     * @param description The description of the event.
-     * @param startsAt The start time of the event.
-     * @return The created event.
-     */
-    suspend fun createEvent(
-        chatId: String,
-        title: String,
-        description: String? = null ,
-        startsAt: Instant
-    ): ChatResult<Event>
 
     /**
-     * Delete an event
+     * Update current user chat participant status.
      *
-     * @param eventId The ID of the event to delete.
-     * @return The deleted event.
+     * @param update The update payload.
+     * @return The updated user read marker.
      */
-    suspend fun deleteEvent(eventId: String): ChatResult<Event>
-
-    /**
-     * Edit an event
-     *
-     * @param eventId The ID of the event to edit.
-     * @param title The new title of the event.
-     * @param description The new description of the event.
-     * @param startsAt The new start time of the event.
-     * @return The edited event.
-     */
-    suspend fun editEvent(
-        eventId: String,
-        title: String?,
-        description: String? = null,
-        startsAt: Instant
-    ): ChatResult<Event>
+    suspend fun updateCurrentUserChatParticipantStatus(update: UpdateChatParticipantStatus): ChatResult<ChatParticipantStatus>
 
     sealed interface ChatError : Error {
         object ChatNotFound : ChatError

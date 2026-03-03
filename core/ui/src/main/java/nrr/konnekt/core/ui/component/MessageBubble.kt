@@ -845,7 +845,6 @@ private fun MessageBubblePreview(
 ) {
     val message = Message(
         id = "m1",
-        chatId = "c1",
         sender = User(
             id = "u1",
             username = "Mock",

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
@@ -18,13 +19,13 @@ import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
+import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
-import nrr.konnekt.core.network.supabase.util.Tables.MESSAGE_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
-import nrr.konnekt.core.network.supabase.util.Tables.USER_READ_MARKERS
-import nrr.konnekt.core.network.supabase.util.Tables.USER_STATUSES
+import nrr.konnekt.core.network.supabase.util.Tables.USER_ACTIVITY_STATUSES
+import nrr.konnekt.core.network.supabase.util.Tables.USER_MESSAGE_STATUSES
 
 internal abstract class SupabaseService(
     private val authentication: Authentication
@@ -73,18 +74,17 @@ internal abstract class SupabaseService(
     protected suspend fun <R> messages(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(MESSAGES, operation)
 
-    protected suspend fun <R> messageStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
-        performSuspendingOperation(MESSAGE_STATUSES, operation)
+    protected suspend fun <R> userMessageStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(USER_MESSAGE_STATUSES, operation)
 
-    protected suspend fun <R> userStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
-        performSuspendingOperation(USER_STATUSES, operation)
+    protected suspend fun <R> userActivityStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(USER_ACTIVITY_STATUSES, operation)
 
     protected suspend fun <R> attachments(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(ATTACHMENTS, operation)
 
-    protected suspend fun <R> userReadMarkers(operation: suspend PostgrestQueryBuilder.() -> R) =
-        performSuspendingOperation(USER_READ_MARKERS, operation)
-
+    protected suspend fun <R> chatParticipantStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
+        performSuspendingOperation(CHAT_PARTICIPANT_STATUSES, operation)
 
     protected inner class Rpc {
         private suspend inline fun <reified R : Any> call(
@@ -138,6 +138,26 @@ internal abstract class SupabaseService(
                 function = "get_chat_participants",
                 parameters = {
                     put("_chat_id", chatId)
+                }
+            )
+        }
+
+        suspend fun updateChatParticipantStatus(
+            chatId: String,
+            updateClearedAt: Boolean = false,
+            updateLeftAt: Boolean = false,
+            updateArchivedAt: Boolean = false,
+            updateLastReadAt: Boolean = false
+        ): ChatParticipantStatus? = performSuspendingAuthenticatedAction { user ->
+            call(
+                function = "update_chat_participant_status",
+                parameters = {
+                    put("_user_id", user.id)
+                    put("_chat_id", chatId)
+                    put("_update_cleared_at", updateClearedAt)
+                    put("_update_left_at", updateLeftAt)
+                    put("_update_archived_at", updateArchivedAt)
+                    put("_update_last_read_at", updateLastReadAt)
                 }
             )
         }

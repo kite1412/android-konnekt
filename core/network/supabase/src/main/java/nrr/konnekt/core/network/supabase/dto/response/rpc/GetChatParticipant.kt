@@ -3,11 +3,13 @@ package nrr.konnekt.core.network.supabase.dto.response.rpc
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
-import nrr.konnekt.core.network.supabase.dto.response.toUser
+import nrr.konnekt.core.network.supabase.dto.response.toModel
 import kotlin.time.Instant
 
+// TODO update model to include ChatParticipant.status
 @Serializable
 internal data class GetChatParticipant(
     @SerialName("chat_id")
@@ -22,9 +24,10 @@ internal data class GetChatParticipant(
 
 internal fun GetChatParticipant.toChatParticipant() =
     ChatParticipant(
-        chatId = chatId,
-        user = user.toUser(),
+        user = user.toModel(),
         role = ParticipantRole.valueOf(role.uppercase()),
-        joinedAt = joinedAt,
-        leftAt = leftAt
+        status = ChatParticipantStatus(
+            joinedAt = joinedAt,
+            leftAt = leftAt
+        )
     )

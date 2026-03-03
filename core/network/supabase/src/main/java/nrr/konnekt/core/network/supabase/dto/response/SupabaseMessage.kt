@@ -1,4 +1,4 @@
-package nrr.konnekt.core.network.supabase.dto
+package nrr.konnekt.core.network.supabase.dto.response
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -25,7 +25,6 @@ internal data class SupabaseMessage(
 internal fun SupabaseMessage.toMessage(sender: User) =
     Message(
         id = id,
-        chatId = chatId,
         sender = sender,
         content = content,
         sentAt = sentAt,

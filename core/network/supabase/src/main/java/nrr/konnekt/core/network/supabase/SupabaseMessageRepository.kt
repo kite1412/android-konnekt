@@ -18,25 +18,22 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Message
-import nrr.konnekt.core.model.MessageStatus
-import nrr.konnekt.core.model.User
-import nrr.konnekt.core.model.UserReadMarker
+import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
-import nrr.konnekt.core.network.supabase.dto.SupabaseMessage
-import nrr.konnekt.core.network.supabase.dto.SupabaseUserReadMarker
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserMessageStatus
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
-import nrr.konnekt.core.network.supabase.dto.toMessage
-import nrr.konnekt.core.network.supabase.dto.toUserReadMarker
+import nrr.konnekt.core.network.supabase.dto.response.toMessage
+import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
-import nrr.konnekt.core.network.supabase.util.Tables.USER_READ_MARKERS
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.resolveFileType
 import javax.inject.Inject
-import kotlin.time.Instant
 
 internal class SupabaseMessageRepository @Inject constructor(
     authentication: Authentication,
@@ -58,10 +55,11 @@ internal class SupabaseMessageRepository @Inject constructor(
                     val senders = users {
                         select {
                             filter {
-                                User::id isIn m.map { it.senderId }
+                                SupabaseUser::id isIn m.map { it.senderId }
                             }
                         }
-                            .decodeList<User>()
+                            .decodeList<SupabaseUser>()
+                            .map(SupabaseUser::toModel)
                     }
                     val attachments = attachments {
                         select {
@@ -73,15 +71,23 @@ internal class SupabaseMessageRepository @Inject constructor(
                     }
                     // TODO make it observable
                     // only get statuses with isDeleted == true
-                    val statuses = messageStatuses {
+                    val statuses = userMessageStatuses {
                         select {
                             filter {
-                                MessageStatus::isDeleted eq true
-                                MessageStatus::userId eq user.id
-                                MessageStatus::messageId isIn m.map(SupabaseMessage::id)
+                                SupabaseUserMessageStatus::isDeleted eq true
+                                SupabaseUserMessageStatus::userId eq user.id
+                                SupabaseUserMessageStatus::messageId isIn m.map(SupabaseMessage::id)
                             }
                         }
-                            .decodeList<MessageStatus>()
+                            .decodeList<SupabaseUserMessageStatus>()
+                    }
+                    val usersWithStatus = users {
+                        select {
+                            filter {
+                                SupabaseUser::id isIn statuses.map(SupabaseUserMessageStatus::userId)
+                            }
+                        }
+                            .decodeList<SupabaseUser>()
                     }
 
                     m
@@ -90,9 +96,19 @@ internal class SupabaseMessageRepository @Inject constructor(
                                 .firstOrNull { s -> s.id == it.senderId }
                                 ?.let(it::toMessage)
                                 ?.copy(
-                                    messageStatuses = statuses.filter { statuses ->
-                                        statuses.messageId == it.id
-                                    },
+                                    messageStatuses = statuses
+                                        .filter { statuses ->
+                                            statuses.messageId == it.id
+                                        }
+                                        .map { status ->
+                                            status.toModel(
+                                                user = usersWithStatus
+                                                    .first { user ->
+                                                        user.id == status.userId
+                                                    }
+                                                    .toModel()
+                                            )
+                                        },
                                     attachments = attachments
                                         .filter { m ->
                                             m.messageId == it.id
@@ -102,75 +118,6 @@ internal class SupabaseMessageRepository @Inject constructor(
                         }
                         .sortedByDescending { it.sentAt }
                 }
-        }
-
-    @OptIn(SupabaseExperimental::class)
-    override fun observeUserReadMarkers(chatId: String): Flow<List<UserReadMarker>> =
-        performAuthenticatedAction { u ->
-            performOperation(USER_READ_MARKERS) {
-                selectAsFlow(
-                    primaryKeys = listOf(
-                        SupabaseUserReadMarker::userId,
-                        SupabaseUserReadMarker::chatId
-                    ),
-                    filter = FilterOperation(
-                        column = "chat_id",
-                        operator = FilterOperator.EQ,
-                        value = chatId
-                    )
-                )
-                    .map {
-                        val filtered = it.filter { m -> m.userId != u.id }
-                        val markers = mutableListOf<UserReadMarker>()
-                        filtered
-                            .chunked(10)
-                            .forEach { l ->
-                                val users = users {
-                                    select {
-                                        filter {
-                                            User::id isIn l.map { m -> m.userId }
-                                        }
-                                    }
-                                        .decodeList<User>()
-                                }
-                                markers.addAll(
-                                    users.mapNotNull { u ->
-                                        l.firstOrNull { m -> m.userId == u.id }
-                                            ?.lastReadAt
-                                            ?.let { lastReadAt ->
-                                                UserReadMarker(
-                                                    user = u,
-                                                    chatId = chatId,
-                                                    lastReadAt = lastReadAt
-                                                )
-                                            }
-                                    }
-                                )
-                            }
-
-                        markers
-                    }
-            }
-        }
-
-    @OptIn(SupabaseExperimental::class)
-    override fun observeCurrentUserReadMarkers(): Flow<List<UserReadMarker>> =
-        performAuthenticatedAction {  u ->
-            performOperation(USER_READ_MARKERS) {
-                selectAsFlow(
-                    primaryKey = SupabaseUserReadMarker::chatId,
-                    filter = FilterOperation(
-                        column = "user_id",
-                        operator = FilterOperator.EQ,
-                        value = u.id
-                    )
-                )
-                    .map {
-                        it.map { m ->
-                            m.toUserReadMarker(u)
-                        }
-                    }
-            }
         }
 
     override suspend fun sendMessage(
@@ -304,40 +251,13 @@ internal class SupabaseMessageRepository @Inject constructor(
                     )
                 } ?: Error(MessageError.Unknown)
         }
-
-    override suspend fun updateUserReadMarker(
-        chatId: String,
-        instant: Instant?
-    ): MessageResult<UserReadMarker> = performSuspendingAuthenticatedAction { u ->
-        userReadMarkers {
-            upsert(
-                value = SupabaseUserReadMarker(
-                    userId = u.id,
-                    chatId = chatId,
-                    lastReadAt = instant ?: now()
-                )
-            ) {
-                select()
-            }
-        }
-            .decodeSingleOrNull<SupabaseUserReadMarker>()
-            ?.let {
-                Success(
-                    UserReadMarker(
-                        user = u,
-                        chatId = chatId,
-                        lastReadAt = it.lastReadAt
-                    )
-                )
-            } ?: Error(MessageError.Unknown)
-    }
-
-    override suspend fun hideMessages(messageIds: List<String>): MessageResult<List<MessageStatus>> =
+    
+    override suspend fun hideMessages(messageIds: List<String>): MessageResult<List<UserMessageStatus>> =
         performSuspendingAuthenticatedAction { user ->
-            messageStatuses {
+            userMessageStatuses {
                 upsert(
                     values = messageIds.map { messageId ->
-                        MessageStatus(
+                        SupabaseUserMessageStatus(
                             userId = user.id,
                             messageId = messageId,
                             isDeleted = true
@@ -347,9 +267,12 @@ internal class SupabaseMessageRepository @Inject constructor(
                     select()
                 }
             }
-                .decodeList<MessageStatus>()
+                .decodeList<SupabaseUserMessageStatus>()
                 .takeIf { l -> l.isNotEmpty() }
-                ?.let(Result<List<MessageStatus>, Nothing>::Success)
+                ?.map {
+                    it.toModel(user)
+                }
+                ?.let(Result<List<UserMessageStatus>, Nothing>::Success)
                 ?: Result.Error(MessageError.Unknown)
         }
 }

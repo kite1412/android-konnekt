@@ -74,6 +74,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+
+        lifecycleScope.launch {
+            userPresenceManager.markUserInactive()
+        }
+    }
+
     @Composable
     private fun StatusBarProtection(
         color: Color,

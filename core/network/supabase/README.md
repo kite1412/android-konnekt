@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS users (
     image_path varchar(100)
 );
 
-CREATE TABLE IF NOT EXISTS user_statuses (
+CREATE TABLE IF NOT EXISTS user_activity_statuses (
     user_id uuid PRIMARY KEY REFERENCES users(id),
     last_active_at timestamptz NOT NULL
 );
@@ -71,8 +71,6 @@ CREATE TABLE IF NOT EXISTS chat_participants (
     chat_id uuid NOT NULL REFERENCES chats(id),
     user_id uuid NOT NULL REFERENCES users(id),
     role participant_role NOT NULL,
-    joined_at timestamptz NOT NULL DEFAULT now(),
-    left_at timestamptz,
     PRIMARY KEY (chat_id, user_id)
 );
 
@@ -86,14 +84,7 @@ CREATE TABLE IF NOT EXISTS messages (
     is_hidden boolean NOT NULL DEFAULT false
 );
 
-CREATE TABLE IF NOT EXISTS user_read_markers (
-    user_id uuid NOT NULL REFERENCES users(id),
-    chat_id uuid NOT NULL REFERENCES chats(id),
-    last_read_at timestamptz,
-    PRIMARY KEY (user_id, chat_id)
-);
-
-CREATE TABLE IF NOT EXISTS message_statuses (
+CREATE TABLE IF NOT EXISTS user_message_statuses (
     message_id uuid NOT NULL REFERENCES messages(id),
     user_id uuid NOT NULL REFERENCES users(id),
     is_deleted boolean NOT NULL DEFAULT false,
@@ -118,15 +109,14 @@ CREATE TABLE IF NOT EXISTS attachment_metadata (
     mime_type varchar(200)
 );
 
-CREATE TABLE IF NOT EXISTS events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_by uuid REFERENCES users(id),
+CREATE TABLE IF NOT EXISTS chat_participant_statuses (
+    user_id uuid NOT NULL REFERENCES users(id),
     chat_id uuid NOT NULL REFERENCES chats(id),
-    title varchar(50) NOT NULL,
-    description varchar(200),
-    created_at timestamptz NOT NULL DEFAULT now(),
-    edited_at timestamptz NOT NULL DEFAULT now(),
-    start_time timestamptz NOT NULL
+    cleared_at timestamptz,
+    left_at timestamptz,
+    archived_at timestamptz,
+    last_read_at timestamptz,
+    PRIMARY KEY (user_id, chat_id)
 );
 ```
 
@@ -135,9 +125,9 @@ CREATE TABLE IF NOT EXISTS events (
 - chat_settings
 - chat_permission_settings
 - chat_participants
+- chat_participant_statuses
 - messages
-- user_read_markers
-- message_statuses
+- user_message_statuses
 
 ## RPCs
 ### send_message_with_attachments
@@ -187,7 +177,7 @@ $$;
 ```
 
 ### get_chat_participants
-```
+```sql
 create or replace function get_chat_participants(
   _chat_id uuid
 )
@@ -212,6 +202,37 @@ begin
   where cp.chat_id = _chat_id and cp.left_at is null;
 
   return coalesce(result, '[]'::jsonb);
+end;
+$$;
+```
+
+### update_chat_participant_status
+```sql
+create or replace function update_chat_participant_status(
+    _user_id uuid,
+    _chat_id uuid,
+    _update_cleared_at boolean default false,
+    _update_left_at boolean default false,
+    _update_archived_at boolean default false,
+    _update_last_read_at boolean default false
+)
+returns chat_participant_statuses
+language plpgsql
+as $$
+declare
+    _result chat_participant_statuses;
+begin
+    update chat_participant_statuses
+    set
+        cleared_at   = case when _update_cleared_at   then now() else cleared_at end,
+        left_at      = case when _update_left_at      then now() else left_at end,
+        archived_at  = case when _update_archived_at  then now() else archived_at end,
+        last_read_at = case when _update_last_read_at then now() else last_read_at end
+    where user_id = _user_id
+      and chat_id = _chat_id
+    returning * into _result;
+
+    return _result;
 end;
 $$;
 ```

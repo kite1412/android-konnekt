@@ -10,14 +10,14 @@ import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
-import nrr.konnekt.core.network.supabase.dto.response.toUser
+import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import javax.inject.Inject
 
 internal class SupabaseUserRepository @Inject constructor(
-    private val authentication: Authentication,
+    authentication: Authentication,
     private val fileNameFormatter: SupabaseFileNameFormatter
 ) : UserRepository, SupabaseService(authentication) {
     override suspend fun getUsersByUsername(username: String): UserResult<List<User>> =
@@ -26,10 +26,12 @@ internal class SupabaseUserRepository @Inject constructor(
                 val res = users {
                     select {
                         filter {
-                            User::username like "%$username%"
-                            User::email neq it.email
+                            SupabaseUser::username like "%$username%"
+                            SupabaseUser::email neq it.email
                         }
-                    }.decodeList<User>()
+                    }
+                        .decodeList<SupabaseUser>()
+                        .map(SupabaseUser::toModel)
                 }
                 Success(res)
             } catch (e: Exception) {
@@ -44,9 +46,11 @@ internal class SupabaseUserRepository @Inject constructor(
                 val res = users {
                     select {
                         filter {
-                            User::id eq id
+                            SupabaseUser::id eq id
                         }
-                    }.decodeSingle<User>()
+                    }
+                        .decodeSingle<SupabaseUser>()
+                        .toModel()
                 }
                 Success(res)
             } catch (e: Exception) {
@@ -98,7 +102,7 @@ internal class SupabaseUserRepository @Inject constructor(
                     select()
                 }
                     .decodeSingleOrNull<SupabaseUser>()
-                    ?.let(SupabaseUser::toUser)
+                    ?.let(SupabaseUser::toModel)
                     ?.let(Result<User, Nothing>::Success)
                     ?: Result.Error(UserError.Unknown)
             }

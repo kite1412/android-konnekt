@@ -17,7 +17,7 @@ internal data class SupabaseUser(
     val imagePath: String?
 )
 
-internal fun SupabaseUser.toUser() =
+internal fun SupabaseUser.toModel() =
     User(
         id = id,
         username = username,

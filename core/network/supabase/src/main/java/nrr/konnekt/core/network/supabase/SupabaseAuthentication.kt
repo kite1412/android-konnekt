@@ -30,7 +30,7 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
-import nrr.konnekt.core.network.supabase.dto.response.toUser
+import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
@@ -89,7 +89,7 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
             SupabaseUser::id eq userId
         }
             .onEach {
-                val user = it.toUser()
+                val user = it.toModel()
                 _loggedInUser.value = user
                 _authStatus.value = AuthStatus.Authenticated(user)
                 logCurrentUser(user)
