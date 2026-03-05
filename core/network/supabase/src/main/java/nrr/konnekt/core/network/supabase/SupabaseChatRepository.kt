@@ -438,7 +438,7 @@ internal class SupabaseChatRepository @Inject constructor(
     @OptIn(SupabaseExperimental::class)
     override fun observeCurrentUserChatParticipations(): Flow<List<UserChatParticipation>> =
         performOperation(CHAT_PARTICIPANTS) { user ->
-            selectAsFlow(
+            val participants = selectAsFlow(
                 primaryKeys = listOf(
                     SupabaseChatParticipant::userId,
                     SupabaseChatParticipant::chatId
@@ -449,27 +449,37 @@ internal class SupabaseChatRepository @Inject constructor(
                     value = user.id
                 )
             )
-                .map { list ->
-                    val statuses = chatParticipantStatuses {
-                        select {
-                            filter {
-                                SupabaseChatParticipantStatus::userId eq user.id
-                            }
-                        }
-                    }
-                        .decodeList<SupabaseChatParticipantStatus>()
+            val statuses = performOperation(CHAT_PARTICIPANT_STATUSES) {
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        SupabaseChatParticipantStatus::userId,
+                        SupabaseChatParticipantStatus::chatId
+                    ),
+                    filter = FilterOperation(
+                        column = "user_id",
+                        operator = FilterOperator.EQ,
+                        value = user.id
+                    )
+                )
+            }
 
-                    list.map { participant ->
-                        participant.toUserChatParticipation(
-                            user = user,
-                            status = statuses
-                                .first { status ->
-                                    status.chatId == participant.chatId
-                                }
-                                .toModel()
-                        )
-                    }
+            combine(
+                flow = participants,
+                flow2 = statuses
+            ) { participants, statuses ->
+                participants.mapNotNull { participant ->
+                    statuses
+                        .firstOrNull { status ->
+                            status.chatId == participant.chatId
+                        }
+                        ?.let { status ->
+                            participant.toUserChatParticipation(
+                                user = user,
+                                status = status.toModel()
+                            )
+                        }
                 }
+            }
         }
 
     override suspend fun updateCurrentUserChatParticipantStatus(

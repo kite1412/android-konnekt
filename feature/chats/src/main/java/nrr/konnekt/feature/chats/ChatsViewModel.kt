@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
+import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -32,7 +34,8 @@ class ChatsViewModel @Inject constructor(
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
     observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
     private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase,
-    private val createChatUseCase: CreateChatUseCase
+    private val createChatUseCase: CreateChatUseCase,
+    private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase
 ) : ViewModel() {
     internal var chatFilter by mutableStateOf(ChatFilter.ALL)
     internal var searchValue by mutableStateOf("")
@@ -149,6 +152,24 @@ class ChatsViewModel @Inject constructor(
             createGroupChatSetting = CreateGroupChatSetting()
             createChatActionEnabled = true
             if (res is Result.Success) complete(res.data.id)
+        }
+    }
+
+    internal fun updateUserStatus(
+        chat: Chat,
+        updateLeftAt: Boolean = false,
+        updateArchivedAt: Boolean = false,
+        updateClearAt: Boolean = false
+    ) {
+        viewModelScope.launch {
+            updateChatParticipantStatusUseCase(
+                update = UpdateChatParticipantStatus(
+                    chatId = chat.id,
+                    updateLeftAt = updateLeftAt,
+                    updateArchivedAt = updateArchivedAt,
+                    updateClearedAt = updateClearAt
+                )
+            )
         }
     }
 }

@@ -129,6 +129,17 @@ internal fun ChatsScreen(
             createChatType = viewModel.createChatType,
             usersByIdentifier = viewModel.usersByIdentifier,
             contentPadding = contentPadding,
+            hideChat = { chat ->
+                myChatParticipants
+                    .firstOrNull { userParticipation ->
+                        userParticipation.chatId == chat.id
+                    }
+                    ?.let { userParticipation ->
+                        with(userParticipation.participation.status) {
+                            archivedAt != null || leftAt != null
+                        }
+                    } ?: false
+            },
             messageUnreadByCurrentUser = { latestChatMessage ->
                 latestChatMessage.message?.let { message ->
                     if (message.sender.id != it.id || message.isHidden)
@@ -145,10 +156,25 @@ internal fun ChatsScreen(
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
             onChatClick = { c -> navigateToConversation(c.id) },
-            onArchiveChat = {},
+            onArchiveChat = { c ->
+                viewModel.updateUserStatus(
+                    chat = c,
+                    updateArchivedAt = true
+                )
+            },
             onClearChat = {},
-            onLeaveChat = {},
-            onBlockChat = {},
+            onLeaveChat = { c ->
+                viewModel.updateUserStatus(
+                    chat = c,
+                    updateLeftAt = true
+                )
+            },
+            onBlockChat = { c ->
+                viewModel.updateUserStatus(
+                    chat = c,
+                    updateLeftAt = true
+                )
+            },
             chatFilter = viewModel.chatFilter,
             onFilterChange = { f -> viewModel.chatFilter = f },
             dismissPopup = {
@@ -193,6 +219,7 @@ private fun ChatsScreen(
     createChatType: ChatType?,
     usersByIdentifier: List<User>?,
     contentPadding: PaddingValues,
+    hideChat: (Chat) -> Boolean,
     messageUnreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
@@ -240,9 +267,10 @@ private fun ChatsScreen(
             chats?.let {
                 Chats(
                     user = user,
-                    chats = it,
+                    latestChatMessages = it,
                     searchValue = searchValue,
                     chatFilter = chatFilter,
+                    hideChat = hideChat,
                     unreadByCurrentUser = messageUnreadByCurrentUser,
                     onChatClick = onChatClick,
                     onArchiveChat = onArchiveChat,
@@ -454,9 +482,10 @@ private fun TypeFilter(
 @Composable
 private fun Chats(
     user: User,
-    chats: List<LatestChatMessage>,
+    latestChatMessages: List<LatestChatMessage>,
     searchValue: String,
     chatFilter: ChatFilter,
+    hideChat: (Chat) -> Boolean,
     unreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onFilterChange: (ChatFilter) -> Unit,
     onSearchValueChange: (String) -> Unit,
@@ -480,6 +509,9 @@ private fun Chats(
                 return Offset.Zero
             }
         }
+    }
+    val filteredChats = latestChatMessages.filter { data ->
+        !hideChat(data.chat)
     }
 
     Column(
@@ -508,7 +540,7 @@ private fun Chats(
                     end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
                 )
             )
-            if (chats.isNotEmpty()) LazyColumn(
+            if (filteredChats.isNotEmpty()) LazyColumn(
                 contentPadding = PaddingValues(
                     bottom = contentPadding.calculateBottomPadding(),
                     start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
@@ -517,7 +549,7 @@ private fun Chats(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 chats(
-                    latestChatMessages = chats,
+                    latestChatMessages = filteredChats,
                     onClick = { onChatClick(it.chat) },
                     sentByCurrentUser = {
                         user.id == it.message?.sender?.id
@@ -548,7 +580,7 @@ private fun Chats(
                                     onClearChat = { onClearChat(this) },
                                     onLeaveChat = { onLeaveChat(this) }
                                 )
-                                else -> null
+                                else -> Unit
                             }
                         }
                     }
@@ -641,7 +673,7 @@ private fun CreateChatPopup(
                 ChatType.GROUP -> CreateGroupChat(
                     setting = createGroupChatSetting,
                     onSettingChange = onCreateGroupChatSettingChange,
-                    onCreate = { dismissOnAction { onCreateGroupChat() } },
+                    onCreate = { dismissOnAction(onCreateGroupChat) },
                     enabled = createActionEnabled
                 )
             }
@@ -970,6 +1002,7 @@ private fun ChatsScreenPreview(
                     }
                 }.toList(),
                 contentPadding = PaddingValues(16.dp),
+                hideChat = { false },
                 messageUnreadByCurrentUser = { false },
                 onSearchValueChange = {},
                 onCreateChatClick = { t ->
