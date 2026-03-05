@@ -203,7 +203,6 @@ private val groupConversation = Conversation(
             permissionSettings = ChatPermissionSettings(
                 editChatInfo = true,
                 sendMessages = true,
-                createEvents = true,
                 manageMembers = true
             )
         ),

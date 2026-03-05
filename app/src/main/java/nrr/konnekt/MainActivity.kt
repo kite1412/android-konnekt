@@ -69,14 +69,16 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
 
-        lifecycleScope.launch {
-            userPresenceManager.markUserInactive()
-        }
+        markUserInactive()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
+        markUserInactive()
+    }
+
+    private fun markUserInactive() {
         lifecycleScope.launch {
             userPresenceManager.markUserInactive()
         }

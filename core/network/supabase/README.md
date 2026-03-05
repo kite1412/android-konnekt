@@ -130,6 +130,154 @@ CREATE TABLE IF NOT EXISTS chat_participant_statuses (
 - user_message_statuses
 
 ## RPCs
+### create_chat
+```sql
+create or replace function create_chat(
+    _type text,
+    _participant_ids text[],
+    _name text default null,
+    _description text default null,
+    _icon_path text default null,
+    _permission_settings jsonb default null
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+    _user_id uuid := auth.uid();
+    _chat_id uuid;
+    _chat_row record;
+    _setting_row chat_settings;
+    _personal_setting jsonb;
+    _permission_row chat_permission_settings;
+    _pid text;
+    _participant_count integer;
+    _participants jsonb;
+begin
+    _participant_count := array_length(_participant_ids, 1);
+
+    if _type = 'personal' and (_participant_count is null or _participant_count != 1) then
+        raise exception 'personal chats must have exactly one other participant'
+        using errcode = 'P0001';
+    end if;
+
+    if _type != 'personal' and _name is null then
+        raise exception 'group/broadcast chats require a name'
+        using errcode = 'P0002';
+    end if;
+
+    insert into chats (type, created_at)
+    values (_type::chat_type, now())
+    returning id, type, created_at
+    into _chat_row;
+
+    _chat_id := _chat_row.id;
+
+    insert into chat_participants (chat_id, user_id, role)
+    values (
+        _chat_id,
+        _user_id,
+        case
+            when _type = 'personal' then 'member'::participant_role
+            else 'admin'::participant_role
+        end
+    );
+
+    foreach _pid in array _participant_ids
+    loop
+        insert into chat_participants (chat_id, user_id, role)
+        values (_chat_id, _pid::uuid, 'member'::participant_role);
+    end loop;
+
+    insert into chat_participant_statuses (chat_id, user_id, joined_at)
+    select _chat_id, user_id, now()
+    from chat_participants
+    where chat_id = _chat_id;
+
+    if _type = 'personal' then
+        select jsonb_build_object(
+            'chat_id', _chat_id,
+            'name', u.username,
+            'description', u.bio,
+            'icon_path', u.image_path,
+            'permission_settings', null
+        )
+        into _personal_setting
+        from users u
+        where u.id = (
+            select cp.user_id
+            from chat_participants cp
+            where cp.chat_id = _chat_id
+            and cp.user_id != _user_id
+            limit 1
+        );
+    end if;
+
+
+    select jsonb_agg(
+        jsonb_build_object(
+            'user', to_jsonb(u),
+            'role', cp.role,
+            'status', to_jsonb(cps)
+        )
+    )
+    into _participants
+    from chat_participants cp
+    join users u
+        on u.id = cp.user_id
+    join chat_participant_statuses cps
+        on cps.user_id = cp.user_id
+      and cps.chat_id = cp.chat_id
+    where cp.chat_id = _chat_id;
+
+    if _type != 'personal' then
+        insert into chat_settings (chat_id, name, description, icon_path)
+        values (_chat_id, _name, _description, _icon_path)
+        returning * into _setting_row;
+
+        if _type = 'group' then
+            insert into chat_permission_settings (
+                chat_id,
+                manage_members,
+                send_messages,
+                edit_chat_info
+            )
+            values (
+                _chat_id,
+                coalesce((_permission_settings->>'manage_members')::boolean, false),
+                coalesce((_permission_settings->>'send_messages')::boolean, true),
+                coalesce((_permission_settings->>'edit_chat_info')::boolean, false)
+            )
+            returning * into _permission_row;
+        end if;
+    end if;
+
+    return jsonb_build_object(
+        'id', _chat_id,
+        'type', _chat_row.type,
+        'created_at', _chat_row.created_at,
+        'participants', _participants,
+        'setting',
+        case
+            when _type = 'personal' then _personal_setting
+            else jsonb_build_object(
+                'chat_id', _setting_row.chat_id,
+                'name', _setting_row.name,
+                'description', _setting_row.description,
+                'icon_path', _setting_row.icon_path,
+                'permission_settings',
+                case
+                    when _permission_row.chat_id is not null
+                    then to_jsonb(_permission_row)
+                    else null
+                end
+            )
+        end
+    );
+end;
+$$;
+```
+
 ### send_message_with_attachments
 ```sql
 create or replace function send_message_with_attachments(

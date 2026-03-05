@@ -251,7 +251,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                     )
                 } ?: Error(MessageError.Unknown)
         }
-    
+
     override suspend fun hideMessages(messageIds: List<String>): MessageResult<List<UserMessageStatus>> =
         performSuspendingAuthenticatedAction { user ->
             userMessageStatuses {

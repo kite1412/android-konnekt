@@ -5,14 +5,19 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.PostgrestQueryBuilder
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.model.ChatParticipantStatus
+import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
+import nrr.konnekt.core.network.supabase.dto.response.rpc.CreateChat
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.SendMessageWithAttachments
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
@@ -102,6 +107,37 @@ internal abstract class SupabaseService(
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+
+        suspend fun createChat(
+            type: String,
+            participantIds: List<String>,
+            name: String? = null,
+            description: String? = null,
+            iconPath: String? = null,
+            permissionSettings: ChatPermissionSettings? = null
+        ): CreateChat? = performSuspendingAuthenticatedAction { _ ->
+            call<CreateChat>(
+                function = "create_chat",
+                parameters = {
+                    put("_type", type)
+                    putJsonArray("_participant_ids") {
+                        participantIds.forEach {
+                            add(it)
+                        }
+                    }
+                    put("_name", name)
+                    put("_description", description)
+                    put("_icon_path", iconPath)
+                    permissionSettings?.let {
+                        putJsonObject("_permission_settings") {
+                            put("edit_chat_info", it.editChatInfo)
+                            put("manage_members", it.manageMembers)
+                            put("send_messages", it.sendMessages)
+                        }
+                    }
+                }
+            )
         }
 
         suspend fun sendMessageWithAttachments(

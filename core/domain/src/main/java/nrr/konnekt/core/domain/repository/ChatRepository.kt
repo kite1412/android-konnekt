@@ -31,7 +31,7 @@ interface ChatRepository {
     fun observeLatestChatMessages(): Flow<List<LatestChatMessage>>
 
     /**
-     * Observe the number of active participants in a chat.
+     * Observe active participants in a chat.
      *
      * @param chatId The ID of the chat to observe active participants for.
      * @return A flow of active participants in the chat.
@@ -47,7 +47,7 @@ interface ChatRepository {
     fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>>
 
     /**
-     * Observes all chat participations of the current user.
+     * Observes all chat participation of the current user.
      *
      * @return A flow emitting the list of Chat and ChatParticipant entries for the current user.
      */
