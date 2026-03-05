@@ -6,6 +6,8 @@ val GreenPrimary = Color(0xFF78DD56)
 val GreenPrimaryDarken = Color(0xFF49B924)
 val Lime = Color(0xFFB4DD56)
 val Navy = Color(0xFF142541)
+val DarkNavy = Color(0xFF0C1A2E)
+
 val Gray = Color(0xFF838383)
 val DarkGray = Color(0xFF4C4C4C)
 val Purple = Color(0xFFA356DD)

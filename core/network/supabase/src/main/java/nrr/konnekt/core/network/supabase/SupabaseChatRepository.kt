@@ -96,10 +96,7 @@ internal class SupabaseChatRepository @Inject constructor(
                             statuses
                                 .firstOrNull { status ->
                                     participant.chatId == status.chatId
-                                }
-                                ?.let { status ->
-                                    status.leftAt == null
-                                } ?: true
+                                } != null
                         }
                         .map {
                             JoinedChat(

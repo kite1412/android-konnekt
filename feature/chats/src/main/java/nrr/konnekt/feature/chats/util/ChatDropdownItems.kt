@@ -8,7 +8,7 @@ import nrr.konnekt.core.ui.component.DropdownItem
 
 private val destructiveActionColor = Red
 
-val clickWrapper = {
+private val clickWrapper = {
     dismiss: () -> Unit,
     action: () -> Unit
     ->

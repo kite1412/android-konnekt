@@ -12,7 +12,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,21 +27,20 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,15 +58,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -90,6 +85,7 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.upload.util.ValidationResult
 import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.ui.UriException
+import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownItem
@@ -136,8 +132,17 @@ internal fun ChatsScreen(
                     }
                     ?.let { userParticipation ->
                         with(userParticipation.participation.status) {
-                            archivedAt != null || leftAt != null
+                            archivedAt != null || (leftAt != null && chat.type != ChatType.PERSONAL)
                         }
+                    } ?: false
+            },
+            isPersonalChatBlocked = { chat ->
+                myChatParticipants
+                    .firstOrNull { userParticipation ->
+                        userParticipation.chatId == chat.id
+                    }
+                    ?.let { userParticipation ->
+                        userParticipation.participation.status.leftAt != null
                     } ?: false
             },
             messageUnreadByCurrentUser = { latestChatMessage ->
@@ -162,14 +167,20 @@ internal fun ChatsScreen(
                     updateArchivedAt = true
                 )
             },
-            onClearChat = {},
+            onClearChat = { c ->
+                viewModel.updateUserStatus(
+                    chat = c,
+                    updateClearedAt = true
+                )
+            },
             onLeaveChat = { c ->
                 viewModel.updateUserStatus(
                     chat = c,
                     updateLeftAt = true
                 )
             },
-            onBlockChat = { c ->
+            // TODO handle unblock
+            onBlockChatChange = { c, _ ->
                 viewModel.updateUserStatus(
                     chat = c,
                     updateLeftAt = true
@@ -211,6 +222,9 @@ internal fun ChatsScreen(
     }
 }
 
+private fun getChatName(chat: Chat) =
+    chat.setting?.name ?: ""
+
 @Composable
 private fun ChatsScreen(
     user: User,
@@ -220,6 +234,7 @@ private fun ChatsScreen(
     usersByIdentifier: List<User>?,
     contentPadding: PaddingValues,
     hideChat: (Chat) -> Boolean,
+    isPersonalChatBlocked: (Chat) -> Boolean,
     messageUnreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
@@ -227,7 +242,7 @@ private fun ChatsScreen(
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
-    onBlockChat: (Chat) -> Unit,
+    onBlockChatChange: (Chat, Boolean) -> Unit,
     chatFilter: ChatFilter,
     onFilterChange: (ChatFilter) -> Unit,
     dismissPopup: () -> Unit,
@@ -241,6 +256,20 @@ private fun ChatsScreen(
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
+    var alertTitle by remember { mutableStateOf<String?>(null) }
+    var alertMessage by retain { mutableStateOf<String?>(null) }
+    var chatAction by retain { mutableStateOf({}) }
+    val chatActionWrapper = { title: String, message: String, action: () -> Unit ->
+        alertTitle = title
+        alertMessage = message
+        chatAction = action
+    }
+    val resetAlert = {
+        alertMessage = null
+        alertTitle = null
+        chatAction = {}
+    }
+
     Box(
         modifier = modifier
             .topRadialGradient()
@@ -271,12 +300,41 @@ private fun ChatsScreen(
                     searchValue = searchValue,
                     chatFilter = chatFilter,
                     hideChat = hideChat,
+                    isPersonalChatBlocked = isPersonalChatBlocked,
                     unreadByCurrentUser = messageUnreadByCurrentUser,
                     onChatClick = onChatClick,
-                    onArchiveChat = onArchiveChat,
-                    onClearChat = onClearChat,
-                    onLeaveChat = onLeaveChat,
-                    onBlockChat = onBlockChat,
+                    onArchiveChat = { c ->
+                        chatActionWrapper(
+                            "Archive Chat",
+                            "Archive ${getChatName(c)}?"
+                        ) {
+                            onArchiveChat(c)
+                        }
+                    },
+                    onClearChat = { c ->
+                        chatActionWrapper(
+                            "Clear Messages",
+                            "Clear all messages in ${getChatName(c)}?"
+                        ) {
+                            onClearChat(c)
+                        }
+                    },
+                    onLeaveChat = { c ->
+                        chatActionWrapper(
+                            "Leave Chat",
+                            "Leave ${getChatName(c)}?"
+                        ) {
+                            onLeaveChat(c)
+                        }
+                    },
+                    onBlockChatChange = { c, b ->
+                        chatActionWrapper(
+                            "${if (!b) "Unblock" else "Block"} Chat",
+                            "${if (!b) "Unblock" else "Block"} ${getChatName(c)}?"
+                        ) {
+                            onBlockChatChange(c, b)
+                        }
+                    },
                     onSearchValueChange = onSearchValueChange,
                     onFilterChange = onFilterChange,
                     contentPadding = contentPadding
@@ -321,6 +379,34 @@ private fun ChatsScreen(
             onCreateChatRoom = onCreateChatRoom,
             usersByIdentifier = usersByIdentifier,
             createActionEnabled = createActionEnabled
+        )
+        if (
+            !alertMessage.isNullOrBlank() &&
+            !alertTitle.isNullOrBlank()
+        ) AlertDialog(
+            onDismissRequest = resetAlert,
+            title = alertTitle,
+            message = alertMessage,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        chatAction()
+                        resetAlert()
+                    }
+                ) {
+                    Text("Confirm")
+                }
+            },
+            cancelButton = {
+                TextButton(
+                    onClick = resetAlert
+                ) {
+                    Text(
+                        text = "Cancel",
+                        color = Red
+                    )
+                }
+            }
         )
     }
 }
@@ -486,6 +572,7 @@ private fun Chats(
     searchValue: String,
     chatFilter: ChatFilter,
     hideChat: (Chat) -> Boolean,
+    isPersonalChatBlocked: (Chat) -> Boolean,
     unreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onFilterChange: (ChatFilter) -> Unit,
     onSearchValueChange: (String) -> Unit,
@@ -493,7 +580,7 @@ private fun Chats(
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
-    onBlockChat: (Chat) -> Unit,
+    onBlockChatChange: (Chat, blocked: Boolean) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -567,11 +654,11 @@ private fun Chats(
                             when (type) {
                                 ChatType.PERSONAL -> PersonDropdownItems(
                                     archived = false,
-                                    blocked = false,
+                                    blocked = isPersonalChatBlocked(this),
                                     dismiss = dismiss,
                                     onArchive = { onArchiveChat(this) },
                                     onClearChat = { onClearChat(this) },
-                                    onBlockChange = { onBlockChat(this) }
+                                    onBlockChange = { onBlockChatChange(this, it) }
                                 )
                                 ChatType.GROUP -> GroupDropdownItems(
                                     dismiss = dismiss,
@@ -610,73 +697,34 @@ private fun CreateChatPopup(
         action()
     }
 
-    Dialog(
+    AlertDialog(
         onDismissRequest = dismiss,
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true,
-            usePlatformDefaultWidth = false
-        ),
+        modifier = modifier,
+        title = when (type) {
+            ChatType.PERSONAL -> "Add person"
+            ChatType.CHAT_ROOM -> "Create a chat room"
+            else -> "Create a new group"
+        }
     ) {
-        Column(
-            modifier = modifier
-                .sizeIn(
-                    maxWidth = 400.dp
-                )
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.background)
-                .clickable(false) {}
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = when (type) {
-                        ChatType.PERSONAL -> "Add person"
-                        ChatType.CHAT_ROOM -> "Create a chat room"
-                        else -> "Create a new group"
-                    },
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Medium
-                    )
-                )
-                IconButton(
-                    onClick = dismiss,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(KonnektIcon.x),
-                        contentDescription = "cancel",
-                        tint = Red
-                    )
-                }
-            }
-            when (type) {
-                ChatType.PERSONAL -> SearchUser(
-                    identifier = userIdentifier,
-                    onIdentifierChange = { i -> userIdentifier = i },
-                    onUserClick = { dismissOnAction { onUserClick(it) } },
-                    onSearch = onSearch,
-                    users = usersByIdentifier,
-                    clickUserEnabled = createActionEnabled
-                )
-                ChatType.CHAT_ROOM -> CreateChatRoom(
-                    onCreate = { dismissOnAction { onCreateChatRoom(it) } },
-                    enabled = createActionEnabled
-                )
-                ChatType.GROUP -> CreateGroupChat(
-                    setting = createGroupChatSetting,
-                    onSettingChange = onCreateGroupChatSettingChange,
-                    onCreate = { dismissOnAction(onCreateGroupChat) },
-                    enabled = createActionEnabled
-                )
-            }
+        when (type) {
+            ChatType.PERSONAL -> SearchUser(
+                identifier = userIdentifier,
+                onIdentifierChange = { i -> userIdentifier = i },
+                onUserClick = { dismissOnAction { onUserClick(it) } },
+                onSearch = onSearch,
+                users = usersByIdentifier,
+                clickUserEnabled = createActionEnabled
+            )
+            ChatType.CHAT_ROOM -> CreateChatRoom(
+                onCreate = { dismissOnAction { onCreateChatRoom(it) } },
+                enabled = createActionEnabled
+            )
+            ChatType.GROUP -> CreateGroupChat(
+                setting = createGroupChatSetting,
+                onSettingChange = onCreateGroupChatSettingChange,
+                onCreate = { dismissOnAction(onCreateGroupChat) },
+                enabled = createActionEnabled
+            )
         }
     }
 }
@@ -1003,6 +1051,7 @@ private fun ChatsScreenPreview(
                 }.toList(),
                 contentPadding = PaddingValues(16.dp),
                 hideChat = { false },
+                isPersonalChatBlocked = { false },
                 messageUnreadByCurrentUser = { false },
                 onSearchValueChange = {},
                 onCreateChatClick = { t ->
@@ -1012,7 +1061,7 @@ private fun ChatsScreenPreview(
                 onArchiveChat = {},
                 onClearChat = {},
                 onLeaveChat = {},
-                onBlockChat = {},
+                onBlockChatChange = { _, _ -> },
                 chatFilter = ChatFilter.ALL,
                 onFilterChange = {},
                 dismissPopup = { createChatType = null },
