@@ -8,7 +8,6 @@ import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipantSta
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
 import nrr.konnekt.core.network.supabase.dto.response.toModel
 
-// TODO update model to include ChatParticipant.status
 @Serializable
 internal data class GetChatParticipant(
     @SerialName("chat_id")

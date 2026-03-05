@@ -33,6 +33,7 @@ internal interface SupabaseModule {
     ): Authentication
 
     @Binds
+    @Singleton
     fun bindChatRepository(
         supabaseChatRepository: SupabaseChatRepository
     ): ChatRepository

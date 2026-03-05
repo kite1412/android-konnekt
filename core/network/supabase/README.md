@@ -278,6 +278,68 @@ end;
 $$;
 ```
 
+### join_chat
+```sql
+create or replace function join_chat(
+    _chat_id uuid
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+    _user_id uuid := auth.uid();
+    _role participant_role;
+    _user_record users;
+    _status_record chat_participant_statuses;
+begin
+    insert into chat_participants (
+        chat_id,
+        user_id,
+        role
+    )
+    values (
+        _chat_id,
+        _user_id,
+        'member'
+    )
+    on conflict (chat_id, user_id) do nothing;
+
+    insert into chat_participant_statuses (
+        chat_id,
+        user_id
+    )
+    values (
+        _chat_id,
+        _user_id
+    )
+    on conflict (chat_id, user_id) do nothing;
+
+    select role
+    into _role
+    from chat_participants
+    where chat_id = _chat_id
+      and user_id = _user_id;
+
+    select *
+    into _user_record
+    from users
+    where id = _user_id;
+
+    select *
+    into _status_record
+    from chat_participant_statuses
+    where chat_id = _chat_id
+      and user_id = _user_id;
+
+    return jsonb_build_object(
+        'role', _role,
+        'user', to_jsonb(_user_record),
+        'status', to_jsonb(_status_record)
+    );
+end;
+$$;
+```
+
 ### send_message_with_attachments
 ```sql
 create or replace function send_message_with_attachments(

@@ -47,6 +47,7 @@ import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserMessageStatus
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.toModel
 import nrr.konnekt.core.network.supabase.dto.response.rpc.toChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.toModel
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
@@ -544,13 +545,36 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
-    override suspend fun joinChat(chatId: String): ChatResult<ChatParticipant> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun joinChat(chatId: String): ChatResult<ChatParticipant> =
+        performSuspendingAuthenticatedAction {
+            val res = rpc.joinChat(chatId)
 
-    override suspend fun leaveChat(chatId: String): ChatResult<ChatParticipant> {
-        TODO("Not yet implemented")
-    }
+            res
+                ?.toModel()
+                ?.let(Result<ChatParticipant, Nothing>::Success)
+                ?: Error(ChatError.Unknown)
+        }
+
+    override suspend fun leaveChat(chatId: String): ChatResult<ChatParticipant> =
+        performSuspendingAuthenticatedAction { user ->
+            val res = rpc.updateChatParticipantStatus(
+                chatId = chatId,
+                updateLeftAt = true
+            )
+
+            res?.let { status ->
+                val participant = getCurrentUserChatParticipation(chatId)
+
+                participant?.let {
+                    Success(
+                        data = participant.toModel(
+                            user = user,
+                            status = status
+                        )
+                    )
+                }
+            } ?: Error(ChatError.Unknown)
+        }
 
     override suspend fun createChat(
         type: ChatType,
@@ -676,6 +700,20 @@ internal class SupabaseChatRepository @Inject constructor(
                 }
             }
                 .decodeList<SupabaseChatParticipantStatus>()
+        }
+
+    private suspend fun getCurrentUserChatParticipation(chatId: String) =
+        performSuspendingAuthenticatedAction { user ->
+            chatParticipants {
+                select {
+                    filter {
+                        SupabaseChatParticipant::userId eq user.id
+                        SupabaseChatParticipant::chatId eq chatId
+                    }
+                    limit(1)
+                }
+            }
+                .decodeSingleOrNull<SupabaseChatParticipant>()
         }
 
     private fun <T> Flow<T>.share() = shareIn(

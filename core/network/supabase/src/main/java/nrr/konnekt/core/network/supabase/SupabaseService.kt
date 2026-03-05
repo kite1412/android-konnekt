@@ -20,6 +20,7 @@ import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.rpc.CreateChat
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.SendMessageWithAttachments
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatParticipantRpc
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
@@ -197,5 +198,15 @@ internal abstract class SupabaseService(
                 }
             )
         }
+
+        suspend fun joinChat(chatId: String): SupabaseChatParticipantRpc? =
+            performSuspendingAuthenticatedAction {
+                call<SupabaseChatParticipantRpc>(
+                    function = "join_chat",
+                    parameters = {
+                        put("_chat_id", chatId)
+                    }
+                )
+            }
     }
 }
