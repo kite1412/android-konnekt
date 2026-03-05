@@ -679,11 +679,13 @@ private fun Conversation(
             ?.let {
                 if (!readMarkers.isNullOrEmpty()) {
                     it.firstOrNull { m ->
-                        val latest: Instant? = readMarkers
+                        val latest = readMarkers
                             .filter { marker -> marker.user.id != currentUser.id }
-                            .maxBy { m -> m.lastReadAt ?: Instant.DISTANT_PAST }.lastReadAt
+                            .takeIf { markers -> markers.isNotEmpty() }
+                            ?.maxBy { m -> m.lastReadAt ?: Instant.DISTANT_PAST }
+                            ?.lastReadAt ?: return@let null
 
-                        latest != null && (m as ConversationItem.MessageItem).message.sentAt <= latest
+                        (m as ConversationItem.MessageItem).message.sentAt <= latest
                     }
                 } else null
             }

@@ -189,8 +189,8 @@ begin
         values (_chat_id, _pid::uuid, 'member'::participant_role);
     end loop;
 
-    insert into chat_participant_statuses (chat_id, user_id, joined_at)
-    select _chat_id, user_id, now()
+    insert into chat_participant_statuses (chat_id, user_id, joined_at, last_read_at)
+    select _chat_id, user_id, now(), now()
     from chat_participants
     where chat_id = _chat_id;
 
@@ -340,14 +340,14 @@ begin
       'chat_id', _chat_id,
       'user', to_jsonb(u),
       'role', cp.role,
-      'joined_at', cp.joined_at,
-      'left_at', cp.left_at
+      'status', to_jsonb(cps)
     )
   )
   into result
   from chat_participants cp
   join users u on u.id = cp.user_id
-  where cp.chat_id = _chat_id and cp.left_at is null;
+  join chat_participant_statuses cps on cps.user_id = cp.user_id
+  where cp.chat_id = _chat_id and cps.left_at is null and cps.chat_id = _chat_id;
 
   return coalesce(result, '[]'::jsonb);
 end;
