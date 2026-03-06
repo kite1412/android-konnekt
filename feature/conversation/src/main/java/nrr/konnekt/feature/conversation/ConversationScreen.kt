@@ -1164,21 +1164,27 @@ private fun MessageComposer(
                         AnimatedContent(
                             targetState = message.isNotEmpty()
                         ) {
-                            val enableSendMessage = it || attachments.isNotEmpty() || editingMessage != null
-
-                            if (!sendingMessage) Icon(
-                                painter = painterResource(
-                                    id = if (enableSendMessage) KonnektIcon.send else KonnektIcon.mic
-                                ),
-                                contentDescription = "attachments",
-                                modifier = iconModifier(
-                                    clickEnabled = sendEnabled
-                                ) {
-                                    if (enableSendMessage) onSend(message)
-                                    else onActionChange(MessageComposerAction.Voice)
-                                },
-                                tint = if (!sendEnabled) DarkGray else LocalContentColor.current
-                            ) else CircularProgressIndicator(
+                            if (!sendingMessage) {
+                                val sendEnabled = it || attachments.isNotEmpty()
+                                if (sendEnabled || editingMessage != null) {
+                                    Icon(
+                                        painter = painterResource(KonnektIcon.send),
+                                        contentDescription = "send",
+                                        modifier = iconModifier(
+                                            clickEnabled = sendEnabled
+                                        ) {
+                                            if (sendEnabled) onSend(message)
+                                        },
+                                        tint = if (!sendEnabled) DarkGray else LocalContentColor.current
+                                    )
+                                } else Icon(
+                                    painter = painterResource(KonnektIcon.mic),
+                                    contentDescription = "send audio",
+                                    modifier = iconModifier(true) {
+                                        onActionChange(MessageComposerAction.Voice)
+                                    }
+                                )
+                            } else CircularProgressIndicator(
                                 modifier = Modifier.size(iconSize),
                                 color = Gray,
                                 trackColor = DarkGray,
