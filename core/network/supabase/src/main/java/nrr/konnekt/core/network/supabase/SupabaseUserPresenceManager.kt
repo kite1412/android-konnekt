@@ -31,7 +31,9 @@ import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.updateSupabaseUserActivityStatus
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 internal class SupabaseUserPresenceManager @Inject constructor(
     @param:AppCoroutineScope private val scope: CoroutineScope,
     private val authentication: Authentication,

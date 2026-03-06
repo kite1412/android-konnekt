@@ -21,19 +21,16 @@ import nrr.konnekt.core.network.upload.domain.FileNameFormatter
 import nrr.konnekt.core.network.upload.domain.FileResolver
 import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
 import nrr.konnekt.core.network.upload.util.annotation.DelegateResolver
-import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface SupabaseModule {
     @Binds
-    @Singleton
     fun bindAuthentication(
         supabaseAuthentication: SupabaseAuthentication
     ): Authentication
 
     @Binds
-    @Singleton
     fun bindChatRepository(
         supabaseChatRepository: SupabaseChatRepository
     ): ChatRepository
@@ -49,7 +46,6 @@ internal interface SupabaseModule {
     ): MessageRepository
 
     @Binds
-    @Singleton
     fun bindUserPresenceManager(
         supabaseUserPresenceManager: SupabaseUserPresenceManager
     ): UserPresenceManager
@@ -61,13 +57,11 @@ internal interface SupabaseModule {
     ): FileResolver
 
     @Binds
-    @Singleton
     fun bindFileUploadConstraints(
         supabaseFileUploadConstraints: SupabaseFileUploadConstraints
     ): FileUploadConstraints
 
     @Binds
-    @Singleton
     fun bindFileNameFormatter(
         supabaseFileNameFormatter: SupabaseFileNameFormatter
     ): FileNameFormatter

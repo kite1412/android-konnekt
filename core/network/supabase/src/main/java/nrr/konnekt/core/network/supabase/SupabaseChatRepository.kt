@@ -12,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -69,7 +70,9 @@ import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.toSupabaseEnum
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 internal class SupabaseChatRepository @Inject constructor(
     authentication: Authentication,
     private val userPresenceManager: SupabaseUserPresenceManager
@@ -360,14 +363,14 @@ internal class SupabaseChatRepository @Inject constructor(
     override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> =
         userPresenceManager.activeUsers
             .flatMapLatest { userStatuses ->
-                flowOf(
+                if (userStatuses.isNotEmpty()) flowOf(
                     rpc.getChatParticipants(chatId)
                         ?.filter { p ->
                             userStatuses.firstOrNull { us -> us.userId == p.user.id } != null
                         }
                         ?.map(GetChatParticipant::toChatParticipant)
                         ?: emptyList()
-                )
+                ) else emptyFlow()
             }
 
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)

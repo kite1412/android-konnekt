@@ -35,7 +35,9 @@ import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 internal class SupabaseAuthentication @Inject constructor() : Authentication {
     private val client: SupabaseClient = supabaseClient
     private val _authStatus = MutableStateFlow<AuthStatus>(AuthStatus.Loading)

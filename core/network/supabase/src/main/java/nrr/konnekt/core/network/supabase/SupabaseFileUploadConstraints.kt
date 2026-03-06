@@ -4,7 +4,9 @@ import nrr.konnekt.core.model.util.DefaultAllowedFileType
 import nrr.konnekt.core.model.util.FileType
 import nrr.konnekt.core.network.upload.domain.FileUploadConstraints
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class SupabaseFileUploadConstraints @Inject constructor() : FileUploadConstraints {
     // 50 MB
     override val maxSizeBytes: Long = 1_048_576L * 50

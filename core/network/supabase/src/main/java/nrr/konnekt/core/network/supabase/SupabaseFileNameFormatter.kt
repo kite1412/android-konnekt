@@ -3,7 +3,9 @@ package nrr.konnekt.core.network.supabase
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.upload.domain.FileNameFormatter
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 internal class SupabaseFileNameFormatter @Inject constructor()
     : FileNameFormatter {
     override fun format(rawName: String, ext: String): String =

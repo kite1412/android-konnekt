@@ -131,7 +131,9 @@ class ConversationViewModel @Inject constructor(
                 return@scope
             }
             if (peerId != null) idType = IdType.USER
+
             var peerId = peerId
+
             if (chatId != null) {
                 fixedChatId = chatId
 
@@ -174,21 +176,32 @@ class ConversationViewModel @Inject constructor(
                     )
                 }
             }
-            if (
-                _chat.value != null &&
-                _chat.value?.type == ChatType.PERSONAL &&
-                peerId != null
-            ) {
-                userPresenceManager
-                    .observeUserPresence(peerId)
-                    .onEach { np ->
-                        np?.let { p ->
-                            _totalActiveParticipants.value =
-                                if (p.isActive) 1 else 0
-                            _peerLastActive.value = p.status.lastActiveAt
+            _chat.value?.let { chat ->
+                if (chat.type == ChatType.PERSONAL && peerId != null)
+                    userPresenceManager
+                        .observeUserPresence(peerId)
+                        .onEach { peerPresence ->
+                            peerPresence?.let { p ->
+                                _totalActiveParticipants.value =
+                                    if (p.isActive) 1 else 0
+                                _peerLastActive.value = p.status.lastActiveAt
+                            }
                         }
-                    }
-                    .launchIn(viewModelScope)
+                        .launchIn(viewModelScope)
+                else {
+                    observeChatParticipantsUseCase
+                        .activeParticipants(chat.id)
+                        .onEach { chatParticipants ->
+                            val currentUser = currentUser.first()
+
+                            _totalActiveParticipants.value = chatParticipants
+                                .filter { participant ->
+                                    currentUser?.id != participant.user.id
+                                }
+                                .size
+                        }
+                        .launchIn(viewModelScope)
+                }
             }
         }
     }
@@ -226,12 +239,18 @@ class ConversationViewModel @Inject constructor(
                     ?.status
             }
             .map {
-                it.map { participant ->
-                    UserReadMarker(
-                        user = participant.user,
-                        lastReadAt = participant.status.lastReadAt
-                    )
-                }
+                val currentUser = currentUser.first()
+
+                it
+                    .filter { participant ->
+                        participant.user.id != currentUser?.id
+                    }
+                    .map { participant ->
+                        UserReadMarker(
+                            user = participant.user,
+                            lastReadAt = participant.status.lastReadAt
+                        )
+                    }
             }
             .onEach {
                 Log.d(LOG_TAG, "read markers: $it")
