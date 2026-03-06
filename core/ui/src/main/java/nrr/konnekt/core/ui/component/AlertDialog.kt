@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import nrr.konnekt.core.designsystem.theme.DarkNavy
-import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 
 @Composable
@@ -75,8 +74,8 @@ fun AlertDialog(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = if (title != null) Arrangement.SpaceBetween
+                        else Arrangement.End
                 ) {
                     title?.let { title ->
                         Text(
@@ -85,7 +84,6 @@ fun AlertDialog(
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Medium
                             ),
-                            maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -93,12 +91,10 @@ fun AlertDialog(
                         onClick = onDismissRequest,
                         modifier = Modifier
                             .size(32.dp)
-                            .weight(0.1f)
                     ) {
                         Icon(
                             painter = painterResource(KonnektIcon.x),
-                            contentDescription = "cancel",
-                            tint = Red
+                            contentDescription = "cancel"
                         )
                     }
                 }

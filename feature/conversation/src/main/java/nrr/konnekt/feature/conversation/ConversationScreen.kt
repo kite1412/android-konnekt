@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -117,9 +116,11 @@ import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
+import nrr.konnekt.core.network.upload.util.FileUploadValidator
 import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
+import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownMenu
@@ -127,6 +128,7 @@ import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
 import nrr.konnekt.core.ui.component.RequestPermission
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
@@ -142,6 +144,7 @@ import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
+import nrr.konnekt.feature.conversation.util.ConversationActions
 import nrr.konnekt.feature.conversation.util.ConversationItem
 import nrr.konnekt.feature.conversation.util.IdType
 import nrr.konnekt.feature.conversation.util.LOG_TAG
@@ -264,6 +267,9 @@ internal fun ConversationScreen(
                 onDeleteClick = viewModel::deleteSelectedMessages,
                 onCancelEditing = viewModel::cancelEditing,
                 onSendAudioRecording = viewModel::sendAudioRecording,
+                onClearChat = {},
+                onLeaveChat = {},
+                onBlockChange = {},
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -308,10 +314,29 @@ private fun ConversationScreen(
     onDeleteClick: () -> Unit,
     onCancelEditing: () -> Unit,
     onSendAudioRecording: (FileUpload) -> Unit,
+    onClearChat: () -> Unit,
+    onLeaveChat: () -> Unit,
+    onBlockChange: (blocked: Boolean) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
+    var alertTitle by retain { mutableStateOf<String?>(null) }
+    var conversationAction by retain { mutableStateOf({}) }
+    val resetAlert = {
+        alertTitle = null
+        conversationAction = {}
+    }
+    val actionAlertWrapper = { title: String, action: () -> Unit ->
+        {
+            alertTitle = title
+            conversationAction = {
+                action()
+                resetAlert()
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -323,13 +348,21 @@ private fun ConversationScreen(
         AnimatedContent(targetState = isOnMessagesSelectionMode) {
             if (!it) Header(
                 chat = chat,
+                currentUserChatParticipation = currentUserChatParticipation,
                 totalActiveParticipants = totalActiveParticipants,
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
+                onClearChat = actionAlertWrapper("Clear messages for this chat?", onClearChat),
+                onLeaveChat = actionAlertWrapper("Leave this chat?", onLeaveChat),
+                onBlockChange = { blocked ->
+                    actionAlertWrapper(
+                        "${if (blocked) "Block" else "Unblock"} this chat?"
+                    ) {
+                        onBlockChange(blocked)
+                    }
+                },
                 peerLastActive = peerLastActive
-            ) {
-
-            } else SelectedMessageActions(
+            ) else SelectedMessageActions(
                 isEditable = isSelectionEditable,
                 isDeletable = isSelectionHidable,
                 onActionClick = onSelectedMessageActionClick,
@@ -462,17 +495,38 @@ private fun ConversationScreen(
             onDeleteForMeClick = onDeleteForMeClick,
             onDeleteClick = onDeleteClick
         )
+
+    if (!alertTitle.isNullOrBlank()) AlertDialog(
+        onDismissRequest = resetAlert,
+        title = alertTitle,
+        confirmButton = {
+            TextButton(conversationAction) {
+                Text("Confirm")
+            }
+        },
+        cancelButton = {
+            TextButton(resetAlert) {
+                Text(
+                    text = "Cancel",
+                    color = Red
+                )
+            }
+        }
+    )
 }
 
 @Composable
 private fun Header(
     chat: Chat,
+    currentUserChatParticipation: UserChatParticipation?,
     totalActiveParticipants: Int,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
+    onClearChat: () -> Unit,
+    onLeaveChat: () -> Unit,
+    onBlockChange: (blocked: Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    peerLastActive: Instant? = null,
-    dropdownContent: @Composable ColumnScope.() -> Unit
+    peerLastActive: Instant? = null
 ) {
     val chatNameOrId = chat.setting?.name ?: chat.id
 
@@ -517,7 +571,15 @@ private fun Header(
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false }
                 ) {
-                    dropdownContent(this)
+                    ConversationActions(
+                        blocked = chat.type == ChatType.PERSONAL &&
+                                currentUserChatParticipation?.participation?.status?.leftAt != null,
+                        chatType = chat.type,
+                        dismiss = { dropdownExpanded = false },
+                        onClearChat = onClearChat,
+                        onBlockChange = onBlockChange,
+                        onLeaveChat = onLeaveChat
+                    )
                 }
             }
         }
@@ -1839,54 +1901,65 @@ private fun ConversationScreenPreview(
         email = "kite@example.com",
         createdAt = now()
     )
+    val context = LocalContext.current
     var messageInput by remember { mutableStateOf("") }
     var composerAction by remember { mutableStateOf<MessageComposerAction?>(null) }
 
     KonnektTheme {
         Scaffold {
-            ConversationScreen(
-                currentUser = user,
-                chat = conversation.chat,
-                currentUserChatParticipation = null,
-                isLoadingMessages = false,
-                messages = conversation.messages,
-                readMarkers = null,
-                selectedMessageIds = emptyList(),
-                messageInput = messageInput,
-                messageAction = null,
-                selectedMessageAction = null,
-                isSelectionEditable = true,
-                isSelectionDeletable = true,
-                isSelectionHidable = true,
-                editingMessage = null,
-                onMessageInputChange = { v -> messageInput = v },
-                deletedByCurrentUser = { m ->
-                    m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
-                        status.user.id == user.id && status.isDeleted
-                    }
-                },
-                composerAttachments = emptyList(),
-                onAddComposerAttachment = {},
-                composerAction = composerAction,
-                onComposerActionChange = { a -> composerAction = a },
-                onSend = {},
-                sendingMessage = false,
-                onNavigateBack = {},
-                totalActiveParticipants = 0,
-                isOnMessagesSelectionMode = false,
-                onChatClick = {},
-                onMessageAction = {},
-                onDismissMessageAction = {},
-                onSelectedMessageActionClick = {},
-                onCancelMessagesSelection = {},
-                onDeleteForMeClick = {},
-                onDeleteClick = {},
-                onCancelEditing = {},
-                onSendAudioRecording = {},
-                contentPadding = it,
-                modifier = Modifier.padding(it),
-                peerLastActive = now()
-            )
+            CompositionLocalProvider(
+                LocalFileUploadValidator provides FileUploadValidator(
+                    context = context,
+                    constraints = LocalFileUploadConstraints.current
+                )
+            ) {
+                ConversationScreen(
+                    currentUser = user,
+                    chat = conversation.chat,
+                    currentUserChatParticipation = null,
+                    isLoadingMessages = false,
+                    messages = conversation.messages,
+                    readMarkers = null,
+                    selectedMessageIds = emptyList(),
+                    messageInput = messageInput,
+                    messageAction = null,
+                    selectedMessageAction = null,
+                    isSelectionEditable = true,
+                    isSelectionDeletable = true,
+                    isSelectionHidable = true,
+                    editingMessage = null,
+                    onMessageInputChange = { v -> messageInput = v },
+                    deletedByCurrentUser = { m ->
+                        m.messageStatuses.isNotEmpty() && m.messageStatuses.any { status ->
+                            status.user.id == user.id && status.isDeleted
+                        }
+                    },
+                    composerAttachments = emptyList(),
+                    onAddComposerAttachment = {},
+                    composerAction = composerAction,
+                    onComposerActionChange = { a -> composerAction = a },
+                    onSend = {},
+                    sendingMessage = false,
+                    onNavigateBack = {},
+                    totalActiveParticipants = 0,
+                    isOnMessagesSelectionMode = false,
+                    onChatClick = {},
+                    onMessageAction = {},
+                    onDismissMessageAction = {},
+                    onSelectedMessageActionClick = {},
+                    onCancelMessagesSelection = {},
+                    onDeleteForMeClick = {},
+                    onDeleteClick = {},
+                    onCancelEditing = {},
+                    onSendAudioRecording = {},
+                    onClearChat = {},
+                    onLeaveChat = {},
+                    onBlockChange = {},
+                    contentPadding = it,
+                    modifier = Modifier.padding(it),
+                    peerLastActive = now()
+                )
+            }
         }
     }
 }
