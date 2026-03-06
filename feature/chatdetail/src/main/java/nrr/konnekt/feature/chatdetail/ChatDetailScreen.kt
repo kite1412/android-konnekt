@@ -102,6 +102,7 @@ internal fun ChatDetailScreen(
         ChatDetailScreen(
             chat = chat,
             totalActiveParticipants = totalActiveParticipants ?: 0,
+            peerGroupsInCommon = viewModel.peerGroupsInCommon,
             onNavigateBack = navigateBack,
             onShare = {},
             onDescChange = {},
@@ -115,13 +116,13 @@ internal fun ChatDetailScreen(
 private fun ChatDetailScreen(
     chat: Chat,
     totalActiveParticipants: Int,
+    peerGroupsInCommon: List<Chat>,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     onDescChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
-    peerGroupsInCommon: List<Chat> = emptyList(),
     pushNotificationEnabled: Boolean = false,
     onPushNotificationChange: (Boolean) -> Unit = {}
 ) {
@@ -149,11 +150,8 @@ private fun ChatDetailScreen(
                     messageNotificationEnabled = pushNotificationEnabled,
                     onMessageNotificationChange = onPushNotificationChange,
                     onClearChat = {},
-                    eventNotificationEnabled = true,
-                    onEventNotificationChange = {},
                     onLeaveChat = {},
                     onAddMember = {},
-                    onCreateEvent = {},
                     onDeleteGroup = {},
                 )
             }
@@ -214,11 +212,8 @@ private fun ChatInfo(
     peerGroupsInCommon: List<Chat>,
     messageNotificationEnabled: Boolean,
     onMessageNotificationChange: (Boolean) -> Unit,
-    eventNotificationEnabled: Boolean,
-    onEventNotificationChange: (Boolean) -> Unit,
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
-    onCreateEvent: () -> Unit,
     onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -311,13 +306,10 @@ private fun ChatInfo(
                     participants = chat.participants,
                     messageNotificationEnabled = messageNotificationEnabled,
                     onMessageNotificationChange = onMessageNotificationChange,
-                    eventNotificationEnabled = eventNotificationEnabled,
                     onClearChat = onClearChat,
                     onLeaveChat = onLeaveChat,
                     onAddMember = onAddMember,
-                    onCreateEvent = onCreateEvent,
                     onDeleteGroup = onDeleteGroup,
-                    onEventNotificationChange = onEventNotificationChange
                 )
                 else -> Unit
             }
@@ -408,13 +400,10 @@ private fun GroupChatInfo(
     participants: List<ChatParticipant>,
     messageNotificationEnabled: Boolean,
     onMessageNotificationChange: (Boolean) -> Unit,
-    eventNotificationEnabled: Boolean,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
-    onCreateEvent: () -> Unit,
-    onDeleteGroup: () -> Unit,
-    onEventNotificationChange: (Boolean) -> Unit
+    onDeleteGroup: () -> Unit
 ) {
     ChatInfoSection(
         title = "Notifications",
@@ -427,18 +416,12 @@ private fun GroupChatInfo(
             checked = messageNotificationEnabled,
             onCheckedChange = onMessageNotificationChange
         )
-        ToggleSetting(
-            desc = "Events",
-            checked = eventNotificationEnabled,
-            onCheckedChange = onEventNotificationChange
-        )
     }
     GroupChatActions(
         isAdmin = isAdmin,
         onClearChat = onClearChat,
         onLeaveChat = onLeaveChat,
         onAddMember = onAddMember,
-        onCreateEvent = onCreateEvent,
         onDeleteGroup = onDeleteGroup
     )
 }
@@ -449,7 +432,6 @@ private fun GroupChatActions(
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
-    onCreateEvent: () -> Unit,
     onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier,
 ) = ActionsLayout(modifier = modifier) {
@@ -460,12 +442,6 @@ private fun GroupChatActions(
             iconId = KonnektIcon.userAdd,
             name = "Add Member",
             onClick = onAddMember,
-            contentColor = contentColor
-        )
-        Action(
-            iconId = KonnektIcon.calendar,
-            name = "Create Event",
-            onClick = onCreateEvent,
             contentColor = contentColor
         )
     }
