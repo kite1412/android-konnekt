@@ -105,6 +105,7 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.media.AudioRecorder
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.media.PlaybackState
@@ -167,6 +168,7 @@ internal fun ConversationScreen(
     val chat by viewModel.chat.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle(null)
     val readMarkers by viewModel.readMarkers.collectAsStateWithLifecycle(null)
+    val currentUserChatParticipation by viewModel.currentUserChatParticipation.collectAsStateWithLifecycle(null)
     val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
@@ -197,6 +199,7 @@ internal fun ConversationScreen(
             ConversationScreen(
                 currentUser = u,
                 chat = c,
+                currentUserChatParticipation = currentUserChatParticipation,
                 isLoadingMessages = messages == null && viewModel.fixedChatId != null,
                 messages = messages ?: emptyList(),
                 readMarkers = readMarkers,
@@ -273,6 +276,7 @@ internal fun ConversationScreen(
 private fun ConversationScreen(
     currentUser: User,
     chat: Chat,
+    currentUserChatParticipation: UserChatParticipation?,
     isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
     isOnMessagesSelectionMode: Boolean,
@@ -410,21 +414,37 @@ private fun ConversationScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
         }
-        MessageComposer(
-            message = messageInput,
-            sendingMessage = sendingMessage,
-            sendEnabled = !isLoadingMessages,
-            onMessageChange = onMessageInputChange,
-            attachments = composerAttachments,
-            onAddAttachment = onAddComposerAttachment,
-            action = composerAction,
-            onActionChange = onComposerActionChange,
-            onSend = onSend,
-            onCancelEditing = onCancelEditing,
-            onSendRecording = onSendAudioRecording,
-            modifier = Modifier.imePadding(),
-            editingMessage = editingMessage
-        )
+        AnimatedContent(
+            !isLoadingMessages &&
+                    currentUserChatParticipation?.participation?.status?.leftAt == null
+        ) { sendEnabled ->
+            if (sendEnabled) MessageComposer(
+                message = messageInput,
+                sendingMessage = sendingMessage,
+                sendEnabled = true,
+                onMessageChange = onMessageInputChange,
+                attachments = composerAttachments,
+                onAddAttachment = onAddComposerAttachment,
+                action = composerAction,
+                onActionChange = onComposerActionChange,
+                onSend = onSend,
+                onCancelEditing = onCancelEditing,
+                onSendRecording = onSendAudioRecording,
+                modifier = Modifier.imePadding(),
+                editingMessage = editingMessage
+            ) else if (!isLoadingMessages) Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (chat.type == ChatType.PERSONAL) "You blocked this chat."
+                    else "You left this chat.",
+                    color = Gray
+                )
+            }
+        }
     }
     if (messageAction?.type == ActionType.FOCUS_ATTACHMENTS)
         MessageAttachmentsFocused(
@@ -1827,6 +1847,7 @@ private fun ConversationScreenPreview(
             ConversationScreen(
                 currentUser = user,
                 chat = conversation.chat,
+                currentUserChatParticipation = null,
                 isLoadingMessages = false,
                 messages = conversation.messages,
                 readMarkers = null,

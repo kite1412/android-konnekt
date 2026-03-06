@@ -433,6 +433,59 @@ internal class SupabaseChatRepository @Inject constructor(
     }
 
     @OptIn(SupabaseExperimental::class)
+    override fun observeCurrentUserChatParticipation(chatId: String): Flow<UserChatParticipation?> =
+        performAuthenticatedAction { user ->
+            val participation = performOperation(CHAT_PARTICIPANTS) {
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        SupabaseChatParticipant::userId,
+                        SupabaseChatParticipant::chatId
+                    ),
+                    filter = FilterOperation(
+                        column = "user_id",
+                        operator = FilterOperator.EQ,
+                        value = user.id
+                    )
+                )
+                    .map { participants ->
+                        participants.firstOrNull { status ->
+                            status.chatId == chatId
+                        }
+                    }
+            }
+            val status = performOperation(CHAT_PARTICIPANT_STATUSES) {
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        SupabaseChatParticipantStatus::userId,
+                        SupabaseChatParticipantStatus::chatId
+                    ),
+                    filter = FilterOperation(
+                        column = "user_id",
+                        operator = FilterOperator.EQ,
+                        value = user.id
+                    )
+                )
+                    .map { statuses ->
+                        statuses.firstOrNull { status ->
+                            status.chatId == chatId
+                        }
+                    }
+            }
+
+            combine(
+                flow = participation,
+                flow2 = status
+            ) { participation, status ->
+                status?.let { status ->
+                    participation?.toUserChatParticipation(
+                        user = user,
+                        status = status.toModel()
+                    )
+                }
+            }
+        }
+
+    @OptIn(SupabaseExperimental::class)
     override fun observeCurrentUserChatParticipations(): Flow<List<UserChatParticipation>> =
         performOperation(CHAT_PARTICIPANTS) { user ->
             val participants = selectAsFlow(

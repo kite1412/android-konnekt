@@ -28,6 +28,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
@@ -94,6 +95,7 @@ class ConversationViewModel @Inject constructor(
         )
     internal var messages = emptyFlow<List<Message>>()
     internal var readMarkers = emptyFlow<List<UserReadMarker>>()
+    internal var currentUserChatParticipation = emptyFlow<UserChatParticipation?>()
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
@@ -214,6 +216,7 @@ class ConversationViewModel @Inject constructor(
                         }
                 }
             }
+        currentUserChatParticipation = observeChatParticipantsUseCase.currentUser(chatId)
         readMarkers = observeChatParticipantsUseCase(chatId)
             .onEach {
                 latestCurrentUserChatParticipantStatus = it

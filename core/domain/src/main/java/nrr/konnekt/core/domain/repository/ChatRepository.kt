@@ -47,6 +47,14 @@ interface ChatRepository {
     fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>>
 
     /**
+     * Observe the current user's chat participation in a chat.
+     *
+     * @param chatId The ID of the chat to get the current user's chat participation for.
+     * @return The current user's chat participation.
+     */
+    fun observeCurrentUserChatParticipation(chatId: String): Flow<UserChatParticipation?>
+
+    /**
      * Observes all chat participation of the current user.
      *
      * @return A flow emitting the list of Chat and ChatParticipant entries for the current user.

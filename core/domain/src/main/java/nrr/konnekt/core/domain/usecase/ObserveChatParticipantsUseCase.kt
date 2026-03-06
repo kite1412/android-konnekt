@@ -10,4 +10,6 @@ class ObserveChatParticipantsUseCase @Inject constructor(
         chatRepository.observeChatParticipants(chatId)
 
     fun currentUser() = chatRepository.observeCurrentUserChatParticipations()
+
+    fun currentUser(chatId: String) = chatRepository.observeCurrentUserChatParticipation(chatId)
 }
