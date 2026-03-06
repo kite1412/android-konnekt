@@ -649,6 +649,10 @@ private fun Chats(
                                 s.user.id == user.id
                             }?.isDeleted == true
                     },
+                    blockedByCurrentUser = { latestChatMessage ->
+                        latestChatMessage.chat.type == ChatType.PERSONAL &&
+                                isPersonalChatBlocked(latestChatMessage.chat)
+                    },
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
                             when (type) {

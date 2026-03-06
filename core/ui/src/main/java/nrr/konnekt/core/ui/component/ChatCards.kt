@@ -71,6 +71,7 @@ fun LazyListScope.chats(
     sentByCurrentUser: (LatestChatMessage) -> Boolean,
     unreadByCurrentUser: (LatestChatMessage) -> Boolean,
     deletedByCurrentUser: (LatestChatMessage) -> Boolean,
+    blockedByCurrentUser: (LatestChatMessage) -> Boolean,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
     items(
@@ -84,6 +85,7 @@ fun LazyListScope.chats(
                 sentByCurrentUser = sentByCurrentUser(this),
                 unreadByCurrentUser = unreadByCurrentUser(this),
                 deletedByCurrentUser = deletedByCurrentUser(this),
+                blockedByCurrentUser = blockedByCurrentUser(this),
                 dropdownItems = dropdownItems?.let { c ->
                     { dismiss ->
                         c(this, dismiss, this@with)
@@ -101,6 +103,7 @@ private fun ChatCard(
     sentByCurrentUser: Boolean,
     unreadByCurrentUser: Boolean,
     deletedByCurrentUser: Boolean,
+    blockedByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
     iconDiameter: Dp = 40.dp,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null
@@ -146,12 +149,29 @@ private fun ChatCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        val smallIconSize = iconDiameter / 4
+
                         Box {
-                            if (chat.type != ChatType.CHAT_ROOM) AvatarIcon(
-                                name = chat.setting?.name ?: chat.id,
-                                iconPath = chat.setting?.iconPath,
-                                diameter = iconDiameter
-                            ) else Icon(
+                            if (chat.type != ChatType.CHAT_ROOM) Box {
+                                AvatarIcon(
+                                    name = chat.setting?.name ?: chat.id,
+                                    iconPath = chat.setting?.iconPath,
+                                    diameter = iconDiameter
+                                )
+                                if (blockedByCurrentUser) Icon(
+                                    painter = painterResource(KonnektIcon.circleOff),
+                                    contentDescription = "blocked",
+                                    modifier = Modifier
+                                        .background(
+                                            color = Red,
+                                            shape = CircleShape
+                                        )
+                                        .padding(4.dp)
+                                        .size(smallIconSize)
+                                        .align(Alignment.BottomEnd),
+                                    tint = Color.White
+                                )
+                            } else Icon(
                                 painter = painterResource(KonnektIcon.messageDashed),
                                 contentDescription = "chat room",
                                 modifier = Modifier
@@ -173,7 +193,7 @@ private fun ChatCard(
                                         shape = CircleShape
                                     )
                                     .padding(4.dp)
-                                    .size(iconDiameter / 4)
+                                    .size(smallIconSize)
                                     .align(Alignment.BottomEnd)
                             )
                         }
@@ -190,7 +210,7 @@ private fun ChatCard(
                                 LocalTextStyle provides MaterialTheme.typography.bodySmall
                             ) {
                                 message?.let { m ->
-                                    Row(
+                                    if (!blockedByCurrentUser) Row(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
@@ -267,7 +287,11 @@ private fun ChatCard(
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                         }
-                                    }
+                                    } else Text(
+                                        text = "You blocked this chat.",
+                                        fontStyle = FontStyle.Italic,
+                                        color = DarkGray
+                                    )
                                 } ?: Text(
                                     text = "Start a message...",
                                     style = LocalTextStyle.current.copy(
@@ -345,6 +369,7 @@ private fun ChatCardsPreview(
                     sentByCurrentUser = { false },
                     unreadByCurrentUser = { false },
                     deletedByCurrentUser = { false },
+                    blockedByCurrentUser = { false },
                     dropdownItems = { dismiss, chat ->
                         DropdownItem(
                             text = "Clear Chat",
