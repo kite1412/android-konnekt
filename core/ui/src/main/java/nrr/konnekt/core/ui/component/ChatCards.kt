@@ -6,6 +6,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -144,11 +146,37 @@ private fun ChatCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AvatarIcon(
-                            name = chat.setting?.name ?: chat.id,
-                            iconPath = chat.setting?.iconPath,
-                            diameter = iconDiameter
-                        )
+                        Box {
+                            if (chat.type != ChatType.CHAT_ROOM) AvatarIcon(
+                                name = chat.setting?.name ?: chat.id,
+                                iconPath = chat.setting?.iconPath,
+                                diameter = iconDiameter
+                            ) else Icon(
+                                painter = painterResource(KonnektIcon.messageDashed),
+                                contentDescription = "chat room",
+                                modifier = Modifier
+                                    .size(iconDiameter)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    )
+                                    .padding(4.dp)
+                            )
+
+                            if (chat.type == ChatType.GROUP) Icon(
+                                painter = painterResource(KonnektIcon.users),
+                                contentDescription = "group",
+                                modifier = Modifier
+                                    .offset(x = 4.dp, y = 4.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape
+                                    )
+                                    .padding(4.dp)
+                                    .size(iconDiameter / 4)
+                                    .align(Alignment.BottomEnd)
+                            )
+                        }
                         Column(
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
