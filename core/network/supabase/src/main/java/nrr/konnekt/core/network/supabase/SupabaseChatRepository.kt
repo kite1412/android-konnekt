@@ -48,9 +48,9 @@ import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserMessageStatus
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.toModel
 import nrr.konnekt.core.network.supabase.dto.response.rpc.toChatParticipant
-import nrr.konnekt.core.network.supabase.dto.response.rpc.toModel
 import nrr.konnekt.core.network.supabase.dto.response.toAttachment
 import nrr.konnekt.core.network.supabase.dto.response.toChat
 import nrr.konnekt.core.network.supabase.dto.response.toChatSetting
@@ -592,9 +592,12 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
-    override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> {
-        TODO("Not yet implemented")
-    }
+    override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> =
+        rpc.getJoinedChats(userId)
+            ?.let { chats ->
+                Success(chats.map(SupabaseChatRpc::toModel))
+            }
+            ?: Error(ChatError.Unknown)
 
     override suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>> =
         try {

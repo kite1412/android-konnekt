@@ -17,10 +17,10 @@ import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
-import nrr.konnekt.core.network.supabase.dto.response.rpc.CreateChat
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.SendMessageWithAttachments
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatParticipantRpc
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatRpc
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
@@ -117,8 +117,8 @@ internal abstract class SupabaseService(
             description: String? = null,
             iconPath: String? = null,
             permissionSettings: ChatPermissionSettings? = null
-        ): CreateChat? = performSuspendingAuthenticatedAction { _ ->
-            call<CreateChat>(
+        ): SupabaseChatRpc? = performSuspendingAuthenticatedAction { _ ->
+            call<SupabaseChatRpc>(
                 function = "create_chat",
                 parameters = {
                     put("_type", type)
@@ -205,6 +205,17 @@ internal abstract class SupabaseService(
                     function = "join_chat",
                     parameters = {
                         put("_chat_id", chatId)
+                    }
+                )
+            }
+
+
+        suspend fun getJoinedChats(userId: String): List<SupabaseChatRpc>? =
+            performSuspendingAuthenticatedAction {
+                call<List<SupabaseChatRpc>>(
+                    function = "get_joined_chats",
+                    parameters = {
+                        put("_user_id", userId)
                     }
                 )
             }
