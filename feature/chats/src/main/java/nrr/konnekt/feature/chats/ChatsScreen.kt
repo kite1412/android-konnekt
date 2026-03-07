@@ -77,6 +77,10 @@ import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.util.blockedByCurrentUser
+import nrr.konnekt.core.domain.util.deletedByCurrentUser
+import nrr.konnekt.core.domain.util.sentByCurrentUser
+import nrr.konnekt.core.domain.util.unreadByCurrentUser
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
@@ -109,6 +113,7 @@ internal fun ChatsScreen(
     navigateToConversation: (id: String) -> Unit,
     navigateToTempConversation: (id: String) -> Unit,
     navigateToProfile: () -> Unit,
+    navigateToArchivedChats: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
@@ -144,19 +149,6 @@ internal fun ChatsScreen(
                     ?.let { userParticipation ->
                         userParticipation.participation.status.leftAt != null
                     } ?: false
-            },
-            messageUnreadByCurrentUser = { latestChatMessage ->
-                latestChatMessage.message?.let { message ->
-                    if (message.sender.id != it.id || message.isHidden)
-                        myChatParticipants
-                            .firstOrNull { participation -> participation.chatId ==  latestChatMessage.chat.id }
-                            ?.let { (_, participant) ->
-                                participant.status.lastReadAt?.let { lastReadAt ->
-                                    lastReadAt < message.sentAt
-                                }
-                            } ?: true
-                    else false
-                } ?: false
             },
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
@@ -216,6 +208,7 @@ internal fun ChatsScreen(
                 )
             },
             onAvatarClick = navigateToProfile,
+            onArchivedChatsClick = navigateToArchivedChats,
             createActionEnabled = viewModel.createChatActionEnabled,
             modifier = modifier
         )
@@ -235,7 +228,6 @@ private fun ChatsScreen(
     contentPadding: PaddingValues,
     hideChat: (Chat) -> Boolean,
     isPersonalChatBlocked: (Chat) -> Boolean,
-    messageUnreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -253,6 +245,7 @@ private fun ChatsScreen(
     onUserClick: (User) -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
     onAvatarClick: () -> Unit,
+    onArchivedChatsClick: () -> Unit,
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -289,7 +282,6 @@ private fun ChatsScreen(
                     chatFilter = chatFilter,
                     hideChat = hideChat,
                     isPersonalChatBlocked = isPersonalChatBlocked,
-                    unreadByCurrentUser = messageUnreadByCurrentUser,
                     onChatClick = onChatClick,
                     onArchiveChat = { c ->
                         alert = Alert(
@@ -321,6 +313,7 @@ private fun ChatsScreen(
                     },
                     onSearchValueChange = onSearchValueChange,
                     onFilterChange = onFilterChange,
+                    onArchivedChatsClick = onArchivedChatsClick,
                     contentPadding = contentPadding
                 )
             }
@@ -468,6 +461,7 @@ private fun LoadingChats(modifier: Modifier = Modifier) {
 private fun SearchAndArchive(
     searchValue: String,
     onSearchValueChange: (String) -> Unit,
+    onArchivedChatsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -490,7 +484,7 @@ private fun SearchAndArchive(
             singleLine = true
         )
         ShadowedButton(
-            onClick = {},
+            onClick = onArchivedChatsClick,
             modifier = Modifier.fillMaxHeight(),
             style = ButtonDefaults.defaultShadowedStyle(
                 contentPadding = PaddingValues(12.dp),
@@ -533,7 +527,6 @@ private fun Chats(
     chatFilter: ChatFilter,
     hideChat: (Chat) -> Boolean,
     isPersonalChatBlocked: (Chat) -> Boolean,
-    unreadByCurrentUser: (LatestChatMessage) -> Boolean,
     onFilterChange: (ChatFilter) -> Unit,
     onSearchValueChange: (String) -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -541,6 +534,7 @@ private fun Chats(
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
     onBlockChatChange: (Chat, blocked: Boolean) -> Unit,
+    onArchivedChatsClick: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -569,6 +563,7 @@ private fun Chats(
             SearchAndArchive(
                 searchValue = searchValue,
                 onSearchValueChange = onSearchValueChange,
+                onArchivedChatsClick = onArchivedChatsClick,
                 modifier = Modifier
                     .padding(
                         start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
@@ -599,19 +594,16 @@ private fun Chats(
                     latestChatMessages = filteredChats,
                     onClick = { onChatClick(it.chat) },
                     sentByCurrentUser = {
-                        user.id == it.message?.sender?.id
+                        it.sentByCurrentUser(user)
                     },
-                    unreadByCurrentUser = unreadByCurrentUser,
+                    unreadByCurrentUser = {
+                        it.unreadByCurrentUser(user)
+                    },
                     deletedByCurrentUser = {
-                        it.message
-                            ?.messageStatuses
-                            ?.firstOrNull { s ->
-                                s.user.id == user.id
-                            }?.isDeleted == true
+                        it.deletedByCurrentUser(user)
                     },
-                    blockedByCurrentUser = { latestChatMessage ->
-                        latestChatMessage.chat.type == ChatType.PERSONAL &&
-                                isPersonalChatBlocked(latestChatMessage.chat)
+                    blockedByCurrentUser = {
+                        it.blockedByCurrentUser(user)
                     },
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
@@ -1016,7 +1008,6 @@ private fun ChatsScreenPreview(
                 contentPadding = PaddingValues(16.dp),
                 hideChat = { false },
                 isPersonalChatBlocked = { false },
-                messageUnreadByCurrentUser = { false },
                 onSearchValueChange = {},
                 onCreateChatClick = { t ->
                     createChatType = t
@@ -1036,6 +1027,7 @@ private fun ChatsScreenPreview(
                 onUserSearch = {},
                 onCreateChatRoom = {},
                 onAvatarClick = {},
+                onArchivedChatsClick = {},
                 createActionEnabled = true,
                 modifier = Modifier.padding(it),
             )

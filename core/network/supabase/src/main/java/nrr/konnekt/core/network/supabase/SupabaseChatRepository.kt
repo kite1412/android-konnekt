@@ -37,7 +37,6 @@ import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
-import nrr.konnekt.core.network.supabase.dto.response.JoinedChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipant
@@ -79,50 +78,30 @@ internal class SupabaseChatRepository @Inject constructor(
 ) : ChatRepository, SupabaseService(authentication) {
     @OptIn(SupabaseExperimental::class)
     private val participatedIn by lazy {
-        performOperation(CHAT_PARTICIPANTS) { u ->
-            selectAsFlow(
-                primaryKeys = listOf(
-                    SupabaseChatParticipant::userId,
-                    SupabaseChatParticipant::chatId
-                ),
-                filter = FilterOperation(
-                    column = "user_id",
-                    operator = FilterOperator.EQ,
-                    value = u.id
+        observeCurrentUserChatParticipations()
+            .map { userParticipations ->
+                userParticipations.filter { userParticipation ->
+                    userParticipation.participation.status.leftAt == null
+                }
+            }
+            .onEach { userParticipations ->
+                Log.d(
+                    LOG_TAG,
+                    "joined chats: ${userParticipations
+                        .map(UserChatParticipation::toString)}"
                 )
-            )
-                .map { l ->
-                    val statuses = getCurrentUserChatParticipantStatuses()
-
-                    l
-                        .filter { participant ->
-                            statuses
-                                .firstOrNull { status ->
-                                    participant.chatId == status.chatId
-                                } != null
-                        }
-                        .map {
-                            JoinedChat(
-                                chatId = it.chatId,
-                                userId = it.userId
-                            )
-                        }
-                }
-                .onEach {
-                    Log.d(LOG_TAG, "joined chats: $it")
-                }
-                .share()
-        }
+            }
+            .share()
     }
     @OptIn(ExperimentalCoroutinesApi::class)
     private val joinedChats by lazy {
-        participatedIn.flatMapLatest { jc ->
+        participatedIn.flatMapLatest { participations ->
             flow {
                 emit(
                     chats {
                         select {
                             filter {
-                                SupabaseChat::id isIn jc.map { c -> c.chatId }
+                                SupabaseChat::id isIn participations.map { c -> c.chatId }
                             }
                         }.decodeList<SupabaseChat>()
                     }
@@ -214,8 +193,9 @@ internal class SupabaseChatRepository @Inject constructor(
         combine(
             flow = joinedChats,
             flow2 = settings,
-            flow3 = personalChatParticipants
-        ) { chats, settings, otherUsers ->
+            flow3 = personalChatParticipants,
+            flow4 = participatedIn
+        ) { chats, settings, otherUsers, currentUserParticipations ->
             chats.map { c ->
                 c
                     .toChat(
@@ -231,6 +211,13 @@ internal class SupabaseChatRepository @Inject constructor(
                                     iconPath = it.imagePath
                                 )
                             }
+                    )
+                    .copy(
+                        participants = currentUserParticipations
+                            .filter { participation ->
+                                participation.chatId == c.id
+                            }
+                            .map(UserChatParticipation::participation)
                     )
             }
         }

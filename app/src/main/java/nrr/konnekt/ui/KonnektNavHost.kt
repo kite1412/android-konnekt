@@ -6,6 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import nrr.konnekt.feature.archivedchats.navigation.archivedChatsScreen
+import nrr.konnekt.feature.archivedchats.navigation.navigateToArchivedChats
 import nrr.konnekt.feature.authentication.navigation.AuthenticationRoute
 import nrr.konnekt.feature.authentication.navigation.authenticationScreen
 import nrr.konnekt.feature.chatdetail.navigation.chatDetailScreen
@@ -39,6 +41,7 @@ internal fun KonnektNavHost(
             navigateToConversation = navController::navigateToConversation,
             navigateToTempConversation = navController::navigateToTempPersonalConversation,
             navigateToProfile = navController::navigateToProfile,
+            navigateToArchivedChats = navController::navigateToArchivedChats,
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         conversationScreen(
@@ -57,6 +60,11 @@ internal fun KonnektNavHost(
         )
         profileScreen(
             navigateBack = navController::popBackStack,
+            contentPadding = contentPadding(scaffoldPadding)
+        )
+        archivedChatsScreen(
+            navigateBack = navController::popBackStack,
+            navigateToConversation = navController::navigateToConversation,
             contentPadding = contentPadding(scaffoldPadding)
         )
     }
