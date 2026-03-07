@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
+import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -27,7 +29,8 @@ import javax.inject.Inject
 class ChatDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     authentication: Authentication,
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase
 ) : ViewModel() {
     private val chatId = savedStateHandle.toRoute<ChatDetailRoute>().chatId
     private val peerId = savedStateHandle.toRoute<ChatDetailRoute>().peerId
@@ -94,6 +97,23 @@ class ChatDetailViewModel @Inject constructor(
                         is Result.Error -> _events.emit(UiEvent.NavigateBack)
                     }
                 }
+            }
+        }
+    }
+
+    internal fun updateChatParticipantStatus(
+        updateLeftAt: Boolean = false,
+        updateClearedAt: Boolean = false
+    ) {
+        viewModelScope.launch {
+            chat.value?.let { chat ->
+                updateChatParticipantStatusUseCase(
+                    update = UpdateChatParticipantStatus(
+                        chatId = chat.id,
+                        updateLeftAt = updateLeftAt,
+                        updateClearedAt = updateClearedAt
+                    )
+                )
             }
         }
     }

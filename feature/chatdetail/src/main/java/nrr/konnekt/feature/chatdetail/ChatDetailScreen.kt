@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,6 +72,8 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.util.toDateAndTimeString
+import nrr.konnekt.core.ui.component.ActionAlertDialog
+import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
@@ -106,6 +109,16 @@ internal fun ChatDetailScreen(
             onNavigateBack = navigateBack,
             onShare = {},
             onDescChange = {},
+            onClearChat = {
+                viewModel.updateChatParticipantStatus(
+                    updateClearedAt = true
+                )
+            },
+            onLeaveChat = {
+                viewModel.updateChatParticipantStatus(
+                    updateLeftAt = true
+                )
+            },
             modifier = modifier.padding(contentPadding),
             isPersonalChatAdded = viewModel.isPersonalChatAdded
         )
@@ -120,12 +133,16 @@ private fun ChatDetailScreen(
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     onDescChange: (String) -> Unit,
+    onClearChat: () -> Unit,
+    onLeaveChat: () -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
     pushNotificationEnabled: Boolean = false,
     onPushNotificationChange: (Boolean) -> Unit = {}
 ) {
+    var alert by retain { mutableStateOf<Alert?>(null) }
+
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(24.dp)
@@ -149,14 +166,31 @@ private fun ChatDetailScreen(
                     peerGroupsInCommon = peerGroupsInCommon,
                     messageNotificationEnabled = pushNotificationEnabled,
                     onMessageNotificationChange = onPushNotificationChange,
-                    onClearChat = {},
-                    onLeaveChat = {},
+                    onClearChat = {
+                        alert = Alert(
+                            onConfirm = onClearChat,
+                            title = "Clear Chat",
+                            message = "Clear all messages from this chat?"
+                        )
+                    },
+                    onLeaveChat = {
+                        alert = Alert(
+                            onConfirm = onLeaveChat,
+                            title = "Leave Chat",
+                            message = "Leave this chat?"
+                        )
+                    },
                     onAddMember = {},
                     onDeleteGroup = {},
                 )
             }
         }
     }
+
+    ActionAlertDialog(
+        alert = alert,
+        onDismissRequest = { alert = it }
+    )
 }
 
 @OptIn(ExperimentalTime::class)
@@ -744,6 +778,8 @@ private fun ChatDetailScreenPreview(
                 onNavigateBack = {},
                 onShare = {},
                 onDescChange = {},
+                onClearChat = {},
+                onLeaveChat = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

@@ -120,7 +120,8 @@ import nrr.konnekt.core.network.upload.util.FileUploadValidator
 import nrr.konnekt.core.network.upload.util.exception.FileUploadConstraintViolationException
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
-import nrr.konnekt.core.ui.component.AlertDialog
+import nrr.konnekt.core.ui.component.ActionAlertDialog
+import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownMenu
@@ -321,21 +322,7 @@ private fun ConversationScreen(
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
-    var alertTitle by retain { mutableStateOf<String?>(null) }
-    var conversationAction by retain { mutableStateOf({}) }
-    val resetAlert = {
-        alertTitle = null
-        conversationAction = {}
-    }
-    val actionAlertWrapper = { title: String, action: () -> Unit ->
-        {
-            alertTitle = title
-            conversationAction = {
-                action()
-                resetAlert()
-            }
-        }
-    }
+    var alert by retain { mutableStateOf<Alert?>(null) }
 
     Column(
         modifier = modifier
@@ -352,14 +339,23 @@ private fun ConversationScreen(
                 totalActiveParticipants = totalActiveParticipants,
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
-                onClearChat = actionAlertWrapper("Clear messages for this chat?", onClearChat),
-                onLeaveChat = actionAlertWrapper("Leave this chat?", onLeaveChat),
+                onClearChat = {
+                    alert = Alert(
+                        onConfirm = onClearChat,
+                        title = "Clear messages for this chat?"
+                    )
+                },
+                onLeaveChat = {
+                    alert = Alert(
+                        onConfirm = onLeaveChat,
+                        title = "Leave this chat?"
+                    )
+                },
                 onBlockChange = { blocked ->
-                    actionAlertWrapper(
-                        "${if (blocked) "Block" else "Unblock"} this chat?"
-                    ) {
-                        onBlockChange(blocked)
-                    }
+                    alert = Alert(
+                        onConfirm = { onBlockChange(blocked) },
+                        title = "${if (blocked) "Block" else "Unblock"} this chat?"
+                    )
                 },
                 peerLastActive = peerLastActive
             ) else SelectedMessageActions(
@@ -496,22 +492,9 @@ private fun ConversationScreen(
             onDeleteClick = onDeleteClick
         )
 
-    if (!alertTitle.isNullOrBlank()) AlertDialog(
-        onDismissRequest = resetAlert,
-        title = alertTitle,
-        confirmButton = {
-            TextButton(conversationAction) {
-                Text("Confirm")
-            }
-        },
-        cancelButton = {
-            TextButton(resetAlert) {
-                Text(
-                    text = "Cancel",
-                    color = Red
-                )
-            }
-        }
+    ActionAlertDialog(
+        alert = alert,
+        onDismissRequest = { alert = it }
     )
 }
 

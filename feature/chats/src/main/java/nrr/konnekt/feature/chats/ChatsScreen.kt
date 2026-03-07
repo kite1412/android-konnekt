@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,7 +71,6 @@ import nrr.konnekt.core.designsystem.component.SelectableShadowedButtons
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
-import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
@@ -85,6 +83,8 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.upload.util.ValidationResult
 import nrr.konnekt.core.network.upload.util.ViolationReason
 import nrr.konnekt.core.ui.UriException
+import nrr.konnekt.core.ui.component.ActionAlertDialog
+import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.CubicLoading
@@ -256,19 +256,7 @@ private fun ChatsScreen(
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    var alertTitle by remember { mutableStateOf<String?>(null) }
-    var alertMessage by retain { mutableStateOf<String?>(null) }
-    var chatAction by retain { mutableStateOf({}) }
-    val chatActionWrapper = { title: String, message: String, action: () -> Unit ->
-        alertTitle = title
-        alertMessage = message
-        chatAction = action
-    }
-    val resetAlert = {
-        alertMessage = null
-        alertTitle = null
-        chatAction = {}
-    }
+    var alert by retain { mutableStateOf<Alert?>(null) }
 
     Box(
         modifier = modifier
@@ -304,36 +292,32 @@ private fun ChatsScreen(
                     unreadByCurrentUser = messageUnreadByCurrentUser,
                     onChatClick = onChatClick,
                     onArchiveChat = { c ->
-                        chatActionWrapper(
-                            "Archive Chat",
-                            "Archive ${getChatName(c)}?"
-                        ) {
-                            onArchiveChat(c)
-                        }
+                        alert = Alert(
+                            onConfirm = { onArchiveChat(c) },
+                            title = "Archive Chat",
+                            message = "Archive ${getChatName(c)}?"
+                        )
                     },
                     onClearChat = { c ->
-                        chatActionWrapper(
-                            "Clear Messages",
-                            "Clear all messages in ${getChatName(c)}?"
-                        ) {
-                            onClearChat(c)
-                        }
+                        alert = Alert(
+                            onConfirm = { onClearChat(c) },
+                            title = "Clear Messages",
+                            message = "Clear all messages in ${getChatName(c)}?"
+                        )
                     },
                     onLeaveChat = { c ->
-                        chatActionWrapper(
-                            "Leave Chat",
-                            "Leave ${getChatName(c)}?"
-                        ) {
-                            onLeaveChat(c)
-                        }
+                        alert = Alert(
+                            onConfirm = { onLeaveChat(c) },
+                            title = "Leave Chat",
+                            message = "Leave ${getChatName(c)}?"
+                        )
                     },
                     onBlockChatChange = { c, b ->
-                        chatActionWrapper(
-                            "${if (!b) "Unblock" else "Block"} Chat",
-                            "${if (!b) "Unblock" else "Block"} ${getChatName(c)}?"
-                        ) {
-                            onBlockChatChange(c, b)
-                        }
+                        alert = Alert(
+                            onConfirm = { onBlockChatChange(c, b) },
+                            title = "${if (!b) "Unblock" else "Block"} Chat",
+                            message = "${if (!b) "Unblock" else "Block"} ${getChatName(c)}?"
+                        )
                     },
                     onSearchValueChange = onSearchValueChange,
                     onFilterChange = onFilterChange,
@@ -380,33 +364,9 @@ private fun ChatsScreen(
             usersByIdentifier = usersByIdentifier,
             createActionEnabled = createActionEnabled
         )
-        if (
-            !alertMessage.isNullOrBlank() &&
-            !alertTitle.isNullOrBlank()
-        ) AlertDialog(
-            onDismissRequest = resetAlert,
-            title = alertTitle,
-            message = alertMessage,
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        chatAction()
-                        resetAlert()
-                    }
-                ) {
-                    Text("Confirm")
-                }
-            },
-            cancelButton = {
-                TextButton(
-                    onClick = resetAlert
-                ) {
-                    Text(
-                        text = "Cancel",
-                        color = Red
-                    )
-                }
-            }
+        ActionAlertDialog(
+            alert = alert,
+            onDismissRequest = { alert = it }
         )
     }
 }
