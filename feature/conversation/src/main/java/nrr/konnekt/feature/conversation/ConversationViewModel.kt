@@ -28,6 +28,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
@@ -218,7 +219,7 @@ class ConversationViewModel @Inject constructor(
                                 val res = updateChatParticipantStatusUseCase(
                                     UpdateChatParticipantStatus(
                                         chatId = chatId,
-                                        updateLastReadAt = true
+                                        updateLastReadAt = UpdateStatus()
                                     )
                                 )
 

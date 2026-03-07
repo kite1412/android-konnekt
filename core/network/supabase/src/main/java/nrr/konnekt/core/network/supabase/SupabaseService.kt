@@ -181,10 +181,10 @@ internal abstract class SupabaseService(
 
         suspend fun updateChatParticipantStatus(
             chatId: String,
-            updateClearedAt: Boolean = false,
-            updateLeftAt: Boolean = false,
-            updateArchivedAt: Boolean = false,
-            updateLastReadAt: Boolean = false
+            updateClearedAt: Boolean? = null,
+            updateLeftAt: Boolean? = null,
+            updateArchivedAt: Boolean? = null,
+            updateLastReadAt: Boolean? = null
         ): ChatParticipantStatus? = performSuspendingAuthenticatedAction { user ->
             call(
                 function = "update_chat_participant_status",

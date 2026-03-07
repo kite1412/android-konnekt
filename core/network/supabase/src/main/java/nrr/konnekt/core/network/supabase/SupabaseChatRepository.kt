@@ -26,6 +26,7 @@ import nrr.konnekt.core.domain.dto.CreateChatSetting
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
+import nrr.konnekt.core.domain.model.updateOrReset
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
@@ -527,10 +528,10 @@ internal class SupabaseChatRepository @Inject constructor(
     ): ChatResult<ChatParticipantStatus> = with(update) {
         rpc.updateChatParticipantStatus(
             chatId = chatId,
-            updateLeftAt = updateLeftAt,
-            updateClearedAt = updateClearedAt,
-            updateArchivedAt = updateArchivedAt,
-            updateLastReadAt = updateLastReadAt
+            updateLeftAt = updateLeftAt.updateOrReset(),
+            updateClearedAt = updateClearedAt.updateOrReset(),
+            updateArchivedAt = updateArchivedAt.updateOrReset(),
+            updateLastReadAt = updateLastReadAt.updateOrReset()
         )
             ?.let(Result<ChatParticipantStatus, Nothing>::Success)
             ?: Error(ChatError.Unknown)

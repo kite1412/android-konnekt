@@ -483,10 +483,10 @@ $$;
 create or replace function update_chat_participant_status(
     _user_id uuid,
     _chat_id uuid,
-    _update_cleared_at boolean default false,
-    _update_left_at boolean default false,
-    _update_archived_at boolean default false,
-    _update_last_read_at boolean default false
+    _update_cleared_at boolean default null,
+    _update_left_at boolean default null,
+    _update_archived_at boolean default null,
+    _update_last_read_at boolean default null
 )
 returns chat_participant_statuses
 language plpgsql
@@ -496,10 +496,26 @@ declare
 begin
     update chat_participant_statuses
     set
-        cleared_at   = case when _update_cleared_at   then now() else cleared_at end,
-        left_at      = case when _update_left_at      then now() else left_at end,
-        archived_at  = case when _update_archived_at  then now() else archived_at end,
-        last_read_at = case when _update_last_read_at then now() else last_read_at end
+        cleared_at = case
+            when _update_cleared_at is true then now()
+            when _update_cleared_at is false then null
+            else cleared_at
+        end,
+        left_at = case
+            when _update_left_at is true then now()
+            when _update_left_at is false then null
+            else left_at
+        end,
+        archived_at = case
+            when _update_archived_at is true then now()
+            when _update_archived_at is false then null
+            else archived_at
+        end,
+        last_read_at = case
+            when _update_last_read_at is true then now()
+            when _update_last_read_at is false then null
+            else last_read_at
+        end
     where user_id = _user_id
       and chat_id = _chat_id
     returning * into _result;

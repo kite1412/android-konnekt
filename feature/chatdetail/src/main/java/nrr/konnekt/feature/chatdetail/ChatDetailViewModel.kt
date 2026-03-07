@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
@@ -110,8 +111,8 @@ class ChatDetailViewModel @Inject constructor(
                 updateChatParticipantStatusUseCase(
                     update = UpdateChatParticipantStatus(
                         chatId = chat.id,
-                        updateLeftAt = updateLeftAt,
-                        updateClearedAt = updateClearedAt
+                        updateLeftAt = if (updateLeftAt) UpdateStatus() else null,
+                        updateClearedAt = if (updateClearedAt) UpdateStatus() else null
                     )
                 )
             }
