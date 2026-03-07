@@ -80,11 +80,6 @@ internal class SupabaseChatRepository @Inject constructor(
     @OptIn(SupabaseExperimental::class)
     private val participatedIn by lazy {
         observeCurrentUserChatParticipations()
-            .map { userParticipations ->
-                userParticipations.filter { userParticipation ->
-                    userParticipation.participation.status.leftAt == null
-                }
-            }
             .onEach { userParticipations ->
                 Log.d(
                     LOG_TAG,

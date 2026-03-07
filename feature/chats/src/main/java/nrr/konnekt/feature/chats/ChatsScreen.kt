@@ -77,6 +77,7 @@ import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.blockedByCurrentUser
 import nrr.konnekt.core.domain.util.deletedByCurrentUser
 import nrr.konnekt.core.domain.util.sentByCurrentUser
@@ -168,14 +169,13 @@ internal fun ChatsScreen(
             onLeaveChat = { c ->
                 viewModel.updateUserStatus(
                     chat = c,
-                    updateLeftAt = true
+                    updateLeftAt = UpdateStatus()
                 )
             },
-            // TODO handle unblock
-            onBlockChatChange = { c, _ ->
+            onBlockChatChange = { c, blocked ->
                 viewModel.updateUserStatus(
                     chat = c,
-                    updateLeftAt = true
+                    updateLeftAt = UpdateStatus(!blocked)
                 )
             },
             chatFilter = viewModel.chatFilter,

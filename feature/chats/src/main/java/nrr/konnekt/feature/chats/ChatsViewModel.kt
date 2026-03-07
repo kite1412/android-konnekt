@@ -158,7 +158,7 @@ class ChatsViewModel @Inject constructor(
 
     internal fun updateUserStatus(
         chat: Chat,
-        updateLeftAt: Boolean = false,
+        updateLeftAt: UpdateStatus? = null,
         updateArchivedAt: Boolean = false,
         updateClearedAt: Boolean = false
     ) {
@@ -166,7 +166,7 @@ class ChatsViewModel @Inject constructor(
             updateChatParticipantStatusUseCase(
                 update = UpdateChatParticipantStatus(
                     chatId = chat.id,
-                    updateLeftAt = if (updateLeftAt) UpdateStatus() else null,
+                    updateLeftAt = updateLeftAt,
                     updateArchivedAt = if (updateArchivedAt) UpdateStatus() else null,
                     updateClearedAt = if (updateClearedAt) UpdateStatus() else null
                 )
