@@ -104,6 +104,7 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.media.AudioRecorder
 import nrr.konnekt.core.media.MediaPlayerManager
@@ -268,9 +269,21 @@ internal fun ConversationScreen(
                 onDeleteClick = viewModel::deleteSelectedMessages,
                 onCancelEditing = viewModel::cancelEditing,
                 onSendAudioRecording = viewModel::sendAudioRecording,
-                onClearChat = {},
-                onLeaveChat = {},
-                onBlockChange = {},
+                onClearChat = {
+                    viewModel.updateChatParticipationStatus(
+                        updateClearAt = true
+                    )
+                },
+                onLeaveChat = {
+                    viewModel.updateChatParticipationStatus(
+                        updateLeftAt = UpdateStatus()
+                    )
+                },
+                onBlockChange = { blocked ->
+                    viewModel.updateChatParticipationStatus(
+                        updateLeftAt = UpdateStatus(!blocked)
+                    )
+                },
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive

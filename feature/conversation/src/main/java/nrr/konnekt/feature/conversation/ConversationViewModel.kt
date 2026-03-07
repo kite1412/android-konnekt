@@ -442,4 +442,27 @@ class ConversationViewModel @Inject constructor(
             }
         }
     }
+
+    internal fun updateChatParticipationStatus(
+        updateClearAt: Boolean = false,
+        updateLeftAt: UpdateStatus? = null
+    ) {
+        viewModelScope.launch {
+            chat.first()?.let { chat ->
+                updateChatParticipantStatusUseCase(
+                    update = UpdateChatParticipantStatus(
+                        chatId = chat.id,
+                        updateClearedAt = if (updateClearAt) UpdateStatus() else null,
+                        updateLeftAt = updateLeftAt
+                    )
+                )
+                when {
+                    updateClearAt -> _events.emit(UiEvent.ShowSnackbar("Chat cleared"))
+                    updateLeftAt != null && chat.type == ChatType.PERSONAL -> _events.emit(
+                        UiEvent.ShowSnackbar(if (!updateLeftAt.reset) "Blocked" else "Unblocked")
+                    )
+                }
+            }
+        }
+    }
 }
