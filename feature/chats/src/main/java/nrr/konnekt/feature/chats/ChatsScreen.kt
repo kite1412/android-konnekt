@@ -78,10 +78,10 @@ import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateStatus
-import nrr.konnekt.core.domain.util.blockedByCurrentUser
-import nrr.konnekt.core.domain.util.deletedByCurrentUser
-import nrr.konnekt.core.domain.util.sentByCurrentUser
-import nrr.konnekt.core.domain.util.unreadByCurrentUser
+import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
+import nrr.konnekt.core.domain.util.isPersonalChatBlocked
+import nrr.konnekt.core.domain.util.isSentByCurrentUser
+import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
@@ -121,7 +121,6 @@ internal fun ChatsScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val chats by viewModel.chats.collectAsStateWithLifecycle()
-    val myChatParticipants by viewModel.myChatParticipants.collectAsStateWithLifecycle()
 
     currentUser?.let {
         ChatsScreen(
@@ -131,26 +130,6 @@ internal fun ChatsScreen(
             createChatType = viewModel.createChatType,
             usersByIdentifier = viewModel.usersByIdentifier,
             contentPadding = contentPadding,
-            hideChat = { chat ->
-                myChatParticipants
-                    .firstOrNull { userParticipation ->
-                        userParticipation.chatId == chat.id
-                    }
-                    ?.let { userParticipation ->
-                        with(userParticipation.participation.status) {
-                            archivedAt != null || (leftAt != null && chat.type != ChatType.PERSONAL)
-                        }
-                    } ?: false
-            },
-            isPersonalChatBlocked = { chat ->
-                myChatParticipants
-                    .firstOrNull { userParticipation ->
-                        userParticipation.chatId == chat.id
-                    }
-                    ?.let { userParticipation ->
-                        userParticipation.participation.status.leftAt != null
-                    } ?: false
-            },
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
             onChatClick = { c -> navigateToConversation(c.id) },
@@ -226,8 +205,6 @@ private fun ChatsScreen(
     createChatType: ChatType?,
     usersByIdentifier: List<User>?,
     contentPadding: PaddingValues,
-    hideChat: (Chat) -> Boolean,
-    isPersonalChatBlocked: (Chat) -> Boolean,
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -280,8 +257,9 @@ private fun ChatsScreen(
                     latestChatMessages = it,
                     searchValue = searchValue,
                     chatFilter = chatFilter,
-                    hideChat = hideChat,
-                    isPersonalChatBlocked = isPersonalChatBlocked,
+                    isPersonalChatBlocked = { chat ->
+                        chat.isPersonalChatBlocked(user)
+                    },
                     onChatClick = onChatClick,
                     onArchiveChat = { c ->
                         alert = Alert(
@@ -525,7 +503,6 @@ private fun Chats(
     latestChatMessages: List<LatestChatMessage>,
     searchValue: String,
     chatFilter: ChatFilter,
-    hideChat: (Chat) -> Boolean,
     isPersonalChatBlocked: (Chat) -> Boolean,
     onFilterChange: (ChatFilter) -> Unit,
     onSearchValueChange: (String) -> Unit,
@@ -552,7 +529,15 @@ private fun Chats(
         }
     }
     val filteredChats = latestChatMessages.filter { data ->
-        !hideChat(data.chat)
+        data.chat.participants
+            .firstOrNull { participant ->
+                participant.user.id == user.id
+            }
+            ?.let { participant ->
+                with(participant.status) {
+                    archivedAt == null && (data.chat.type == ChatType.PERSONAL || leftAt == null)
+                }
+            } ?: true
     }
 
     Column(
@@ -594,16 +579,16 @@ private fun Chats(
                     latestChatMessages = filteredChats,
                     onClick = { onChatClick(it.chat) },
                     sentByCurrentUser = {
-                        it.sentByCurrentUser(user)
+                        it.message?.isSentByCurrentUser(user) == true
                     },
                     unreadByCurrentUser = {
-                        it.unreadByCurrentUser(user)
+                        it.isUnreadByCurrentUser(user)
                     },
                     deletedByCurrentUser = {
-                        it.deletedByCurrentUser(user)
+                        it.message?.isDeletedByCurrentUser(user) == true
                     },
                     blockedByCurrentUser = {
-                        it.blockedByCurrentUser(user)
+                        it.chat.isPersonalChatBlocked(user)
                     },
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
@@ -1006,8 +991,6 @@ private fun ChatsScreenPreview(
                     }
                 }.toList(),
                 contentPadding = PaddingValues(16.dp),
-                hideChat = { false },
-                isPersonalChatBlocked = { false },
                 onSearchValueChange = {},
                 onCreateChatClick = { t ->
                     createChatType = t

@@ -34,10 +34,10 @@ import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
-import nrr.konnekt.core.domain.util.blockedByCurrentUser
-import nrr.konnekt.core.domain.util.deletedByCurrentUser
-import nrr.konnekt.core.domain.util.sentByCurrentUser
-import nrr.konnekt.core.domain.util.unreadByCurrentUser
+import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
+import nrr.konnekt.core.domain.util.isPersonalChatBlocked
+import nrr.konnekt.core.domain.util.isSentByCurrentUser
+import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.chats
@@ -106,16 +106,16 @@ private fun ArchivedChatsScreen(
                     latestChatMessages = archivedChats,
                     onClick = onChatClick,
                     sentByCurrentUser = {
-                        it.sentByCurrentUser(currentUser)
+                        it.message?.isSentByCurrentUser(currentUser) == true
                     },
                     unreadByCurrentUser = {
-                        it.unreadByCurrentUser(currentUser)
+                        it.isUnreadByCurrentUser(currentUser)
                     },
                     deletedByCurrentUser = {
-                        it.deletedByCurrentUser(currentUser)
+                        it.message?.isDeletedByCurrentUser(currentUser) == true
                     },
                     blockedByCurrentUser = {
-                        it.blockedByCurrentUser(currentUser)
+                        it.chat.isPersonalChatBlocked(currentUser)
                     },
                 )
             }

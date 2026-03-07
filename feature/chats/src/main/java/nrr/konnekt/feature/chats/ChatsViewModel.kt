@@ -19,7 +19,6 @@ import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
-import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
@@ -33,7 +32,6 @@ import javax.inject.Inject
 class ChatsViewModel @Inject constructor(
     authentication: Authentication,
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
-    observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
     private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase,
     private val createChatUseCase: CreateChatUseCase,
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase
@@ -71,12 +69,6 @@ class ChatsViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
-        )
-    internal val myChatParticipants = observeChatParticipantsUseCase.currentUser()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = emptyList()
         )
     internal val currentUser = authentication.loggedInUser
         .stateIn(
