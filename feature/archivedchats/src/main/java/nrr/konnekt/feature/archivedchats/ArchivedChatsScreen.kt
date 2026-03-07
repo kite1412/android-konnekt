@@ -19,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -39,10 +42,13 @@ import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.isSentByCurrentUser
 import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.ui.component.ActionAlertDialog
+import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.chats
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.ChatDropdownItems
 import nrr.konnekt.core.ui.util.bottomRadialGradient
 
 @Composable
@@ -65,6 +71,12 @@ internal fun ArchivedChatsScreen(
             onChatClick = { latestChatMessage ->
                 navigateToConversation(latestChatMessage.chat.id)
             },
+            onUnarchive = { chatId ->
+                viewModel.updateChatParticipantStatus(
+                    chatId = chatId,
+                    unarchive = true
+                )
+            },
             modifier = modifier
         )
     }
@@ -77,8 +89,11 @@ private fun ArchivedChatsScreen(
     contentPadding: PaddingValues,
     onNavigateBack: () -> Unit,
     onChatClick: (LatestChatMessage) -> Unit,
+    onUnarchive: (id: String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var alert by retain { mutableStateOf<Alert?>(null) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -117,7 +132,20 @@ private fun ArchivedChatsScreen(
                     blockedByCurrentUser = {
                         it.chat.isPersonalChatBlocked(currentUser)
                     },
-                )
+                ) { dismiss, latestChatMessage ->
+                    ChatDropdownItems.Unarchive(
+                        dismiss = dismiss,
+                        onUnarchive = {
+                            alert = Alert(
+                                onConfirm = { onUnarchive(latestChatMessage.chat.id) },
+                                title = "Unarchive Chat",
+                                message = latestChatMessage.chat.setting?.name?.let {
+                                    "Unarchive ${it}?"
+                                }
+                            )
+                        }
+                    )
+                }
             }
         }
         if (archivedChats?.isEmpty() == true) Text(
@@ -132,6 +160,10 @@ private fun ArchivedChatsScreen(
         if (archivedChats == null) CubicLoading(
             text = "Loading chats",
             modifier = Modifier.align(Alignment.Center)
+        )
+        ActionAlertDialog(
+            alert = alert,
+            onDismissRequest = { alert = it }
         )
     }
 }
@@ -182,7 +214,8 @@ private fun ArchivedChatsPreview(
                 archivedChats = emptyList(),
                 contentPadding = paddingValues,
                 onNavigateBack = {},
-                onChatClick = {}
+                onChatClick = {},
+                onUnarchive = {}
             )
         }
     }

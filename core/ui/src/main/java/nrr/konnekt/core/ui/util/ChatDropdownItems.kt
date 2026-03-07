@@ -30,6 +30,18 @@ object ChatDropdownItems {
     }
 
     @Composable
+    fun Unarchive(
+        dismiss: () -> Unit,
+        onUnarchive: () -> Unit
+    ) {
+        DropdownItem(
+            text = "Unarchive",
+            onClick = clickWrapper(dismiss, onUnarchive),
+            iconId = KonnektIcon.archiveRestore,
+        )
+    }
+
+    @Composable
     fun ClearChat(
         dismiss: () -> Unit,
         onClearChat: () -> Unit

@@ -43,4 +43,5 @@ object KonnektIcon {
     val mail = R.drawable.mail
     val check = R.drawable.check
     val repeat = R.drawable.repeat
+    val archiveRestore = R.drawable.archive_restore
 }

@@ -12,13 +12,17 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
+import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
+import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import javax.inject.Inject
 
 @HiltViewModel
 class ArchivedChatsViewModel @Inject constructor(
     authentication: Authentication,
-    private val observeChatMessagesUseCase: ObserveChatMessagesUseCase
+    private val observeChatMessagesUseCase: ObserveChatMessagesUseCase,
+    private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase
 ) : ViewModel() {
     internal val currentUser = authentication.loggedInUser
         .stateIn(
@@ -45,6 +49,20 @@ class ArchivedChatsViewModel @Inject constructor(
                         }
                 }
                 .launchIn(viewModelScope)
+        }
+    }
+
+    internal fun updateChatParticipantStatus(
+        chatId: String,
+        unarchive: Boolean = false
+    ) {
+        viewModelScope.launch {
+            updateChatParticipantStatusUseCase(
+                update = UpdateChatParticipantStatus(
+                    chatId = chatId,
+                    updateArchivedAt = if (unarchive) UpdateStatus(true) else null
+                )
+            )
         }
     }
 }
