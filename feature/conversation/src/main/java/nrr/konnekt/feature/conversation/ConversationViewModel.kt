@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -208,29 +209,44 @@ class ConversationViewModel @Inject constructor(
     }
 
     private fun observeFlows(chatId: String) {
-        messages = observeMessagesUseCase(chatId)
-            .onEach { l ->
-                currentUser.first()?.id?.let { id ->
-                    l.firstOrNull()
-                        ?.sender
-                        ?.id
-                        ?.let {
-                            if (id != it) latestCurrentUserChatParticipantStatus?.let { status ->
-                                val res = updateChatParticipantStatusUseCase(
-                                    UpdateChatParticipantStatus(
-                                        chatId = chatId,
-                                        updateLastReadAt = UpdateStatus()
-                                    )
-                                )
+        currentUserChatParticipation = observeChatParticipantsUseCase.currentUser(chatId)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = null
+            )
+        messages = combine(
+            flow = observeMessagesUseCase(chatId)
+                .onEach { l ->
+                    currentUser.first()?.id?.let { id ->
+                        l.firstOrNull()
+                            ?.let { message ->
+                                val participation = currentUserChatParticipation.first()
 
-                                if (res is Result.Success) {
-                                    latestCurrentUserChatParticipantStatus = res.data
+                                participation?.let { userChatParticipation ->
+                                    val status = userChatParticipation.participation.status
+                                    if (
+                                        id != message.sender.id &&
+                                        status.leftAt == null
+                                    ) latestCurrentUserChatParticipantStatus?.let {
+                                        updateLastReadAt(chatId)
+                                    }
                                 }
                             }
-                        }
-                }
-            }
-        currentUserChatParticipation = observeChatParticipantsUseCase.currentUser(chatId)
+                    }
+                },
+            flow2 = currentUserChatParticipation
+        ) { messages, userChatParticipation ->
+            userChatParticipation
+                ?.participation
+                ?.status
+                ?.let { status ->
+                    messages.filter { message ->
+                        message.sentAt < (status.leftAt ?: Instant.DISTANT_FUTURE) &&
+                                message.sentAt > (status.clearedAt ?: Instant.DISTANT_FUTURE)
+                    }
+                } ?: messages
+        }
         readMarkers = observeChatParticipantsUseCase(chatId)
             .onEach {
                 latestCurrentUserChatParticipantStatus = it
@@ -256,6 +272,19 @@ class ConversationViewModel @Inject constructor(
             .onEach {
                 Log.d(LOG_TAG, "read markers: $it")
             }
+    }
+
+    private suspend fun updateLastReadAt(chatId: String) {
+        val res = updateChatParticipantStatusUseCase(
+            UpdateChatParticipantStatus(
+                chatId = chatId,
+                updateLastReadAt = UpdateStatus()
+            )
+        )
+
+        if (res is Result.Success) {
+            latestCurrentUserChatParticipantStatus = res.data
+        }
     }
 
     private fun <T, E: Error> deleteMessages(
