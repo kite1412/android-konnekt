@@ -39,10 +39,7 @@ import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.hasLeftByCurrentUser
-import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
-import nrr.konnekt.core.domain.util.isSentByCurrentUser
-import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -150,19 +147,8 @@ private fun ArchivedChatsScreen(
             ) {
                 chats(
                     latestChatMessages = archivedChats,
-                    onClick = onChatClick,
-                    sentByCurrentUser = {
-                        it.message?.isSentByCurrentUser(currentUser) == true
-                    },
-                    unreadByCurrentUser = {
-                        it.isUnreadByCurrentUser(currentUser)
-                    },
-                    deletedByCurrentUser = {
-                        it.message?.isDeletedByCurrentUser(currentUser) == true
-                    },
-                    blockedByCurrentUser = {
-                        it.chat.isPersonalChatBlocked(currentUser)
-                    },
+                    currentUser = currentUser,
+                    onClick = onChatClick
                 ) { dismiss, latestChatMessage ->
                     val chat = latestChatMessage.chat
                     val blocked = chat.isPersonalChatBlocked(currentUser)

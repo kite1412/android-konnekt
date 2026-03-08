@@ -243,7 +243,7 @@ class ConversationViewModel @Inject constructor(
                 ?.let { status ->
                     messages.filter { message ->
                         message.sentAt < (status.leftAt ?: Instant.DISTANT_FUTURE) &&
-                                message.sentAt > (status.clearedAt ?: Instant.DISTANT_FUTURE)
+                                message.sentAt > (status.clearedAt ?: Instant.DISTANT_PAST)
                     }
                 } ?: messages
         }

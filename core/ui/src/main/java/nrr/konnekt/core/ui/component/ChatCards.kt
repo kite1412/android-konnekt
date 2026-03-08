@@ -57,8 +57,14 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.util.hasLeftByCurrentUser
+import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
+import nrr.konnekt.core.domain.util.isPersonalChatBlocked
+import nrr.konnekt.core.domain.util.isSentByCurrentUser
+import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.info
 import nrr.konnekt.core.model.util.toStringFormatted
 import nrr.konnekt.core.model.util.toStringIgnoreSecond
@@ -67,11 +73,8 @@ import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 
 fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
+    currentUser: User,
     onClick: (LatestChatMessage) -> Unit,
-    sentByCurrentUser: (LatestChatMessage) -> Boolean,
-    unreadByCurrentUser: (LatestChatMessage) -> Boolean,
-    deletedByCurrentUser: (LatestChatMessage) -> Boolean,
-    blockedByCurrentUser: (LatestChatMessage) -> Boolean,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
     items(
@@ -82,10 +85,11 @@ fun LazyListScope.chats(
             ChatCard(
                 latestChatMessage = this,
                 onClick = onClick,
-                sentByCurrentUser = sentByCurrentUser(this),
-                unreadByCurrentUser = unreadByCurrentUser(this),
-                deletedByCurrentUser = deletedByCurrentUser(this),
-                blockedByCurrentUser = blockedByCurrentUser(this),
+                sentByCurrentUser = message?.isSentByCurrentUser(currentUser) ?: false,
+                unreadByCurrentUser = isUnreadByCurrentUser(currentUser),
+                deletedByCurrentUser = message?.isDeletedByCurrentUser(currentUser) ?: false,
+                leftByCurrentUser = chat.hasLeftByCurrentUser(currentUser),
+                blockedByCurrentUser = chat.isPersonalChatBlocked(currentUser),
                 dropdownItems = dropdownItems?.let { c ->
                     { dismiss ->
                         c(this, dismiss, this@with)
@@ -103,6 +107,7 @@ private fun ChatCard(
     sentByCurrentUser: Boolean,
     unreadByCurrentUser: Boolean,
     deletedByCurrentUser: Boolean,
+    leftByCurrentUser: Boolean,
     blockedByCurrentUser: Boolean,
     modifier: Modifier = Modifier,
     iconDiameter: Dp = 40.dp,
@@ -134,7 +139,9 @@ private fun ChatCard(
                     vertical = 16.dp
                 ),
                 space = 6.dp,
-                backgroundColor = if (unreadByCurrentUser) animatedBg else MaterialTheme.colorScheme.primary,
+                backgroundColor = if (unreadByCurrentUser && !blockedByCurrentUser && !leftByCurrentUser)
+                    animatedBg
+                else MaterialTheme.colorScheme.primary,
             ),
             bounceBack = true
         ) {
@@ -210,7 +217,7 @@ private fun ChatCard(
                                 LocalTextStyle provides MaterialTheme.typography.bodySmall
                             ) {
                                 message?.let { m ->
-                                    if (!blockedByCurrentUser) Row(
+                                    if (!blockedByCurrentUser && !leftByCurrentUser) Row(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
@@ -287,15 +294,15 @@ private fun ChatCard(
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                         }
-                                    } else Text(
-                                        text = "You blocked this chat.",
-                                        fontStyle = FontStyle.Italic,
-                                        color = DarkGray
-                                    )
+                                    } else null
                                 } ?: Text(
-                                    text = "Start a message...",
+                                    text = if (blockedByCurrentUser) "You blocked this chat."
+                                        else if (leftByCurrentUser) "You left this chat."
+                                        else "Start a message...",
                                     style = LocalTextStyle.current.copy(
-                                        fontStyle = FontStyle.Italic
+                                        fontStyle = FontStyle.Italic,
+                                        color = if (blockedByCurrentUser || leftByCurrentUser) Red
+                                            else LocalContentColor.current
                                     )
                                 )
                             }
@@ -365,12 +372,9 @@ private fun ChatCardsPreview(
             ) {
                 chats(
                     latestChatMessages = data.latestChatMessages,
+                    currentUser = data.user,
                     onClick = {},
-                    sentByCurrentUser = { false },
-                    unreadByCurrentUser = { false },
-                    deletedByCurrentUser = { false },
-                    blockedByCurrentUser = { false },
-                    dropdownItems = { dismiss, chat ->
+                    dropdownItems = { dismiss, _ ->
                         DropdownItem(
                             text = "Clear Chat",
                             onClick = {

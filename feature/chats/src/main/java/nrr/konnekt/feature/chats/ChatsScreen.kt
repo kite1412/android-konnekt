@@ -78,10 +78,7 @@ import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateStatus
-import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
-import nrr.konnekt.core.domain.util.isSentByCurrentUser
-import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
@@ -534,7 +531,7 @@ private fun Chats(
             }
             ?.let { participant ->
                 with(participant.status) {
-                    archivedAt == null && (data.chat.type == ChatType.PERSONAL || leftAt == null)
+                    archivedAt == null
                 }
             } ?: true
     }
@@ -576,19 +573,8 @@ private fun Chats(
             ) {
                 chats(
                     latestChatMessages = filteredChats,
+                    currentUser = user,
                     onClick = { onChatClick(it.chat) },
-                    sentByCurrentUser = {
-                        it.message?.isSentByCurrentUser(user) == true
-                    },
-                    unreadByCurrentUser = {
-                        it.isUnreadByCurrentUser(user)
-                    },
-                    deletedByCurrentUser = {
-                        it.message?.isDeletedByCurrentUser(user) == true
-                    },
-                    blockedByCurrentUser = {
-                        it.chat.isPersonalChatBlocked(user)
-                    },
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
                             when (type) {
