@@ -6,9 +6,19 @@ import nrr.konnekt.core.model.User
 
 fun Chat.isPersonalChatBlocked(user: User) =
     type == ChatType.PERSONAL &&
-            participants
-                .firstOrNull { participant ->
-                    participant.user.id == user.id
-                }
-                ?.status
-                ?.leftAt != null
+            hasLeft(user)
+
+fun Chat.hasLeftByCurrentUser(user: User) =
+    type != ChatType.PERSONAL &&
+            hasLeft(user)
+
+fun Chat.name() =
+    setting?.name ?: ""
+
+private fun Chat.hasLeft(user: User) =
+    participants
+        .firstOrNull { participant ->
+            participant.user.id == user.id
+        }
+        ?.status
+        ?.leftAt != null

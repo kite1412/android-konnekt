@@ -82,6 +82,7 @@ import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.isSentByCurrentUser
 import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
+import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
@@ -100,9 +101,14 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.archiveChatAlert
+import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.clearChatAlert
 import nrr.konnekt.core.ui.util.getFileName
+import nrr.konnekt.core.ui.util.leaveChatAlert
 import nrr.konnekt.core.ui.util.topRadialGradient
+import nrr.konnekt.core.ui.util.unblockChatAlert
 import nrr.konnekt.core.ui.util.uriToByteArray
 import nrr.konnekt.feature.chats.util.ChatFilter
 import nrr.konnekt.feature.chats.util.CreateGroupChatSetting
@@ -194,9 +200,6 @@ internal fun ChatsScreen(
     }
 }
 
-private fun getChatName(chat: Chat) =
-    chat.setting?.name ?: ""
-
 @Composable
 private fun ChatsScreen(
     user: User,
@@ -262,32 +265,28 @@ private fun ChatsScreen(
                     },
                     onChatClick = onChatClick,
                     onArchiveChat = { c ->
-                        alert = Alert(
-                            onConfirm = { onArchiveChat(c) },
-                            title = "Archive Chat",
-                            message = "Archive ${getChatName(c)}?"
-                        )
+                        alert = archiveChatAlert(c.name()) {
+                            onArchiveChat(c)
+                        }
                     },
                     onClearChat = { c ->
-                        alert = Alert(
-                            onConfirm = { onClearChat(c) },
-                            title = "Clear Messages",
-                            message = "Clear all messages in ${getChatName(c)}?"
-                        )
+                        alert = clearChatAlert(c.name()) {
+                            onClearChat(c)
+                        }
                     },
                     onLeaveChat = { c ->
-                        alert = Alert(
-                            onConfirm = { onLeaveChat(c) },
-                            title = "Leave Chat",
-                            message = "Leave ${getChatName(c)}?"
-                        )
+                        alert = leaveChatAlert(c.name()) {
+                            onLeaveChat(c)
+                        }
                     },
                     onBlockChatChange = { c, b ->
-                        alert = Alert(
-                            onConfirm = { onBlockChatChange(c, b) },
-                            title = "${if (!b) "Unblock" else "Block"} Chat",
-                            message = "${if (!b) "Unblock" else "Block"} ${getChatName(c)}?"
-                        )
+                        val chatName = c.name()
+
+                        alert = if (!b) unblockChatAlert(chatName) {
+                            onBlockChatChange(c, b)
+                        } else blockChatAlert(chatName) {
+                            onBlockChatChange(c, b)
+                        }
                     },
                     onSearchValueChange = onSearchValueChange,
                     onFilterChange = onFilterChange,

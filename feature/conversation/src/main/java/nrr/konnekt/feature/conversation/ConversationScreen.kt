@@ -106,6 +106,7 @@ import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
+import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.media.AudioRecorder
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.media.PlaybackState
@@ -139,11 +140,15 @@ import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
+import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.clearChatAlert
 import nrr.konnekt.core.ui.util.getAudioDurationMs
+import nrr.konnekt.core.ui.util.leaveChatAlert
 import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
+import nrr.konnekt.core.ui.util.unblockChatAlert
 import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.ConversationActions
@@ -353,22 +358,19 @@ private fun ConversationScreen(
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
                 onClearChat = {
-                    alert = Alert(
-                        onConfirm = onClearChat,
-                        title = "Clear messages for this chat?"
-                    )
+                    alert = clearChatAlert(chat.name(), onClearChat)
                 },
                 onLeaveChat = {
-                    alert = Alert(
-                        onConfirm = onLeaveChat,
-                        title = "Leave this chat?"
-                    )
+                    alert = leaveChatAlert(chat.name(), onLeaveChat)
                 },
                 onBlockChange = { blocked ->
-                    alert = Alert(
-                        onConfirm = { onBlockChange(blocked) },
-                        title = "${if (blocked) "Block" else "Unblock"} this chat?"
-                    )
+                    val chatName = chat.name()
+
+                    alert = if (!blocked) unblockChatAlert(chatName) {
+                        onBlockChange(blocked)
+                    } else blockChatAlert(chatName) {
+                        onBlockChange(blocked)
+                    }
                 },
                 peerLastActive = peerLastActive
             ) else SelectedMessageActions(

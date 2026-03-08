@@ -54,13 +54,17 @@ class ArchivedChatsViewModel @Inject constructor(
 
     internal fun updateChatParticipantStatus(
         chatId: String,
-        unarchive: Boolean = false
+        updateLeftAt: UpdateStatus? = null,
+        unarchive: Boolean = false,
+        updateClearAt: Boolean = false
     ) {
         viewModelScope.launch {
             updateChatParticipantStatusUseCase(
                 update = UpdateChatParticipantStatus(
                     chatId = chatId,
-                    updateArchivedAt = if (unarchive) UpdateStatus(true) else null
+                    updateArchivedAt = if (unarchive) UpdateStatus(true) else null,
+                    updateLeftAt = updateLeftAt,
+                    updateClearedAt = if (updateClearAt) UpdateStatus() else null
                 )
             )
         }

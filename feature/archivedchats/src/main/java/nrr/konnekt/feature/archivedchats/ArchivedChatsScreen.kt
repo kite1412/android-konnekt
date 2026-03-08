@@ -37,10 +37,15 @@ import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
+import nrr.konnekt.core.domain.model.UpdateStatus
+import nrr.konnekt.core.domain.util.hasLeftByCurrentUser
 import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.isSentByCurrentUser
 import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
+import nrr.konnekt.core.domain.util.name
+import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
@@ -49,7 +54,12 @@ import nrr.konnekt.core.ui.component.chats
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.ChatDropdownItems
+import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.bottomRadialGradient
+import nrr.konnekt.core.ui.util.clearChatAlert
+import nrr.konnekt.core.ui.util.leaveChatAlert
+import nrr.konnekt.core.ui.util.unarchiveChatAlert
+import nrr.konnekt.core.ui.util.unblockChatAlert
 
 @Composable
 internal fun ArchivedChatsScreen(
@@ -71,10 +81,28 @@ internal fun ArchivedChatsScreen(
             onChatClick = { latestChatMessage ->
                 navigateToConversation(latestChatMessage.chat.id)
             },
-            onUnarchive = { chatId ->
+            onUnarchive = { chat ->
                 viewModel.updateChatParticipantStatus(
-                    chatId = chatId,
+                    chatId = chat.id,
                     unarchive = true
+                )
+            },
+            onClearChat = { chat ->
+                viewModel.updateChatParticipantStatus(
+                    chatId = chat.id,
+                    updateClearAt = true
+                )
+            },
+            onBlockChange = { chat, blocked ->
+                viewModel.updateChatParticipantStatus(
+                    chatId = chat.id,
+                    updateLeftAt = UpdateStatus(!blocked)
+                )
+            },
+            onLeaveChat = { chat ->
+                viewModel.updateChatParticipantStatus(
+                    chatId = chat.id,
+                    updateLeftAt = UpdateStatus()
                 )
             },
             modifier = modifier
@@ -89,7 +117,10 @@ private fun ArchivedChatsScreen(
     contentPadding: PaddingValues,
     onNavigateBack: () -> Unit,
     onChatClick: (LatestChatMessage) -> Unit,
-    onUnarchive: (id: String) -> Unit,
+    onUnarchive: (Chat) -> Unit,
+    onClearChat: (Chat) -> Unit,
+    onBlockChange: (chat: Chat, blocked: Boolean) -> Unit,
+    onLeaveChat: (Chat) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
@@ -133,16 +164,47 @@ private fun ArchivedChatsScreen(
                         it.chat.isPersonalChatBlocked(currentUser)
                     },
                 ) { dismiss, latestChatMessage ->
+                    val chat = latestChatMessage.chat
+                    val blocked = chat.isPersonalChatBlocked(currentUser)
+
+                    if (blocked) ChatDropdownItems.Unblock(
+                        dismiss = dismiss,
+                        onBlockChange = { blocked ->
+                            alert = unblockChatAlert(chat.name()) {
+                                onBlockChange(chat, blocked)
+                            }
+                        }
+                    )
                     ChatDropdownItems.Unarchive(
                         dismiss = dismiss,
                         onUnarchive = {
-                            alert = Alert(
-                                onConfirm = { onUnarchive(latestChatMessage.chat.id) },
-                                title = "Unarchive Chat",
-                                message = latestChatMessage.chat.setting?.name?.let {
-                                    "Unarchive ${it}?"
-                                }
-                            )
+                            alert = unarchiveChatAlert(chat.name()) {
+                                onUnarchive(chat)
+                            }
+                        }
+                    )
+                    ChatDropdownItems.ClearChat(
+                        dismiss = dismiss,
+                        onClearChat = {
+                            alert = clearChatAlert(chat.name()) {
+                                onClearChat(chat)
+                            }
+                        }
+                    )
+                    if (!chat.hasLeftByCurrentUser(currentUser) && chat.type != ChatType.PERSONAL) ChatDropdownItems.Leave(
+                        dismiss = dismiss,
+                        onLeaveChat = {
+                            alert = leaveChatAlert(chat.name()) {
+                                onLeaveChat(chat)
+                            }
+                        }
+                    )
+                    if (!blocked && chat.type == ChatType.PERSONAL) ChatDropdownItems.Block(
+                        dismiss = dismiss,
+                        onBlockChange = { blocked ->
+                            alert = blockChatAlert(chat.name()) {
+                                onBlockChange(chat, blocked)
+                            }
                         }
                     )
                 }
@@ -215,7 +277,10 @@ private fun ArchivedChatsPreview(
                 contentPadding = paddingValues,
                 onNavigateBack = {},
                 onChatClick = {},
-                onUnarchive = {}
+                onUnarchive = {},
+                onClearChat = {},
+                onBlockChange = { _, _ -> },
+                onLeaveChat = {}
             )
         }
     }
