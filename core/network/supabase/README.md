@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS attachment_metadata (
 CREATE TABLE IF NOT EXISTS chat_participant_statuses (
     user_id uuid NOT NULL REFERENCES users(id),
     chat_id uuid NOT NULL REFERENCES chats(id),
+    joined_at timestampz NOT NULL,
     cleared_at timestamptz,
     left_at timestamptz,
     archived_at timestamptz,

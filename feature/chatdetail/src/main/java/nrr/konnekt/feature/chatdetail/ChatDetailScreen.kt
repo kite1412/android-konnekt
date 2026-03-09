@@ -104,6 +104,7 @@ import kotlin.time.Instant
 internal fun ChatDetailScreen(
     navController: NavController,
     navigateBack: () -> Unit,
+    navigateToConversation: (isChatId: Boolean, id: String) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatDetailViewModel = hiltViewModel()
@@ -155,7 +156,13 @@ internal fun ChatDetailScreen(
                         } ?: navController.navigateToTempPersonalChatDetail(participant.id)
                     }
                 },
-                onParticipantMessageClick = {},
+                onParticipantMessageClick = { participant ->
+                    scope.launch {
+                        val chatId = viewModel.getPersonalChatId(participant)
+
+                        navigateToConversation(chatId != null, chatId ?: participant.id)
+                    }
+                },
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )

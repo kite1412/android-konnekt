@@ -15,6 +15,7 @@ import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
 import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
 import nrr.konnekt.feature.chats.navigation.ChatsRoute
 import nrr.konnekt.feature.chats.navigation.chatsScreen
+import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.navigation.conversationScreen
 import nrr.konnekt.feature.conversation.navigation.navigateToConversation
 import nrr.konnekt.feature.conversation.navigation.navigateToTempPersonalConversation
@@ -57,6 +58,16 @@ internal fun KonnektNavHost(
         chatDetailScreen(
             navController = navController,
             navigateBack = navController::popBackStack,
+            navigateToConversation = { isChatId, id ->
+                if (isChatId) {
+                    navController.popBackStack(
+                        route = ConversationRoute::class,
+                        inclusive = true
+                    )
+                    navController.navigateToConversation(id)
+                }
+                else navController.navigateToTempPersonalConversation(id)
+            },
             contentPadding = contentPadding(scaffoldPadding)
         )
         profileScreen(
