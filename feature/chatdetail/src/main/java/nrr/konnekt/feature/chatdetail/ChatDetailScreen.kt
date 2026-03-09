@@ -3,6 +3,8 @@ package nrr.konnekt.feature.chatdetail
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColor
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
@@ -42,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -50,6 +54,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
@@ -62,7 +67,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.component.Toggle
 import nrr.konnekt.core.designsystem.theme.DarkGray
+import nrr.konnekt.core.designsystem.theme.DarkNavy
 import nrr.konnekt.core.designsystem.theme.Gray
+import nrr.konnekt.core.designsystem.theme.GreenPrimaryDarken
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
@@ -71,9 +78,10 @@ import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
-import nrr.konnekt.core.model.util.toDateAndTimeString
+import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
+import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
@@ -82,7 +90,6 @@ import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.feature.chatdetail.util.UiEvent
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 
 @Composable
 internal fun ChatDetailScreen(
@@ -182,6 +189,8 @@ private fun ChatDetailScreen(
                     },
                     onAddMember = {},
                     onDeleteGroup = {},
+                    onChatParticipantClick = {},
+                    isParticipantActive = { true }
                 )
             }
         }
@@ -249,6 +258,8 @@ private fun ChatInfo(
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
     onDeleteGroup: () -> Unit,
+    onChatParticipantClick: (ChatParticipant) -> Unit,
+    isParticipantActive: (ChatParticipant) -> Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -337,13 +348,17 @@ private fun ChatInfo(
                 )
                 ChatType.GROUP -> GroupChatInfo(
                     isAdmin = isAdmin,
-                    participants = chat.participants,
+                    participants = chat.participants.sortedBy { participant ->
+                        participant.role != ParticipantRole.ADMIN
+                    },
                     messageNotificationEnabled = messageNotificationEnabled,
                     onMessageNotificationChange = onMessageNotificationChange,
                     onClearChat = onClearChat,
                     onLeaveChat = onLeaveChat,
                     onAddMember = onAddMember,
                     onDeleteGroup = onDeleteGroup,
+                    onChatParticipantClick = onChatParticipantClick,
+                    isParticipantActive = isParticipantActive
                 )
                 else -> Unit
             }
@@ -437,6 +452,8 @@ private fun GroupChatInfo(
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
+    onChatParticipantClick: (ChatParticipant) -> Unit,
+    isParticipantActive: (ChatParticipant) -> Boolean,
     onDeleteGroup: () -> Unit
 ) {
     ChatInfoSection(
@@ -449,6 +466,13 @@ private fun GroupChatInfo(
             desc = "Messages",
             checked = messageNotificationEnabled,
             onCheckedChange = onMessageNotificationChange
+        )
+    }
+    ChatInfoSection("Members") {
+        ChatParticipants(
+            participants = participants,
+            isParticipantActive = isParticipantActive,
+            onClick = onChatParticipantClick
         )
     }
     GroupChatActions(
@@ -491,48 +515,6 @@ private fun GroupChatActions(
         name = "Delete Group",
         onClick = onDeleteGroup
     )
-}
-
-@Composable
-private fun GroupEvent(
-    title: String,
-    startsAt: Instant,
-    desc: String?,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Icon(
-            painter = painterResource(KonnektIcon.calendar),
-            contentDescription = "event",
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Column {
-            Text(
-                text = startsAt.toDateAndTimeString("dd MMMM yyyy"),
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = DarkGray,
-                    fontStyle = FontStyle.Italic
-                )
-            )
-            Text(
-                text = title,
-                style = LocalTextStyle.current.copy(
-                    fontWeight = FontWeight.Bold
-                )
-            )
-            desc?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Gray
-                    )
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -759,6 +741,146 @@ private fun Action(
     }
 }
 
+@Composable
+private fun ChatParticipants(
+    participants: List<ChatParticipant>,
+    onClick: (ChatParticipant) -> Unit,
+    isParticipantActive: (ChatParticipant) -> Boolean,
+    modifier: Modifier = Modifier
+) {
+    var showAll by retain { mutableStateOf(false) }
+
+    AnimatedContent(
+        targetState = showAll,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = DarkNavy,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp)
+    ) {
+        val take = 5
+        val needMore = participants.size > take
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            participants
+                .take(if (it && needMore) Int.MAX_VALUE else take)
+                .forEach { participant ->
+                    ChatParticipantCard(
+                        participant = participant,
+                        isActive = isParticipantActive(participant),
+                        onClick = onClick
+                    )
+                }
+
+            if (needMore) {
+                val rotationDegrees by animateFloatAsState(
+                    targetValue = if (!it) -90f else -270f
+                )
+
+                Icon(
+                    painter = painterResource(KonnektIcon.chevronLeft),
+                    contentDescription = if (it) "show less" else "show more",
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = null,
+                            indication = null
+                        ) {
+                            showAll = !showAll
+                        }
+                        .rotate(rotationDegrees),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatParticipantCard(
+    participant: ChatParticipant,
+    isActive: Boolean,
+    onClick: (ChatParticipant) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val activityColor by animateColorAsState(
+        targetValue = if (isActive) MaterialTheme.colorScheme.primary
+            else DarkNavy
+    )
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = activityColor,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp)
+            .clickable { onClick(participant) },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1.4f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val user = participant.user
+
+            Box {
+                AvatarIcon(
+                    name = user.username,
+                    iconPath = user.imagePath
+                )
+                if (isActive) Box(
+                    Modifier
+                        .size(12.dp)
+                        .background(
+                            color = GreenPrimaryDarken,
+                            shape = CircleShape
+                        )
+                        .align(Alignment.BottomEnd)
+                )
+            }
+            Column {
+                Text(
+                    text = user.username,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                user.bio?.let { bio ->
+                    Text(
+                        text = bio,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = DarkGray,
+                            fontStyle = FontStyle.Italic
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        if (participant.role == ParticipantRole.ADMIN) Text(
+            text = "Admin",
+            modifier = Modifier.weight(0.2f),
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
+}
+
 @OptIn(ExperimentalTime::class)
 @Preview
 @Composable
@@ -772,7 +894,21 @@ private fun ChatDetailScreenPreview(
                 chat = conversation.chat.copy(
                     setting = conversation.chat.setting?.copy(
                         description = null
-                    )
+                    ),
+                    participants = mutableListOf<ChatParticipant>().apply {
+                        (0 until 3).forEach { _ ->
+                            addAll(
+                                conversation.chat.participants.map { participant ->
+                                    participant.copy(
+                                        user = participant.user.copy(
+                                            bio = "A very long long long long long long long long long bio"
+                                        ),
+                                        role = ParticipantRole.ADMIN
+                                    )
+                                }
+                            )
+                        }
+                    }
                 ),
                 totalActiveParticipants = 1,
                 onNavigateBack = {},
