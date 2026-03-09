@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -64,6 +65,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.component.Toggle
 import nrr.konnekt.core.designsystem.theme.DarkGray
@@ -79,21 +82,27 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.ParticipantRole
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.ChatHeader
+import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
+import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
+import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
+import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
 import nrr.konnekt.feature.chatdetail.util.UiEvent
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 @Composable
 internal fun ChatDetailScreen(
+    navController: NavController,
     navigateBack: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -101,6 +110,8 @@ internal fun ChatDetailScreen(
 ) {
     val chat by viewModel.chat.collectAsStateWithLifecycle()
     val activeParticipants by viewModel.activeParticipants.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.events.collect {
@@ -110,39 +121,52 @@ internal fun ChatDetailScreen(
         }
     }
     chat?.let { chat ->
-        ChatDetailScreen(
-            chat = chat,
-            activeParticipants = activeParticipants,
-            peerLastActiveAt = viewModel.peerLastActiveAt,
-            peerGroupsInCommon = viewModel.peerGroupsInCommon,
-            onNavigateBack = navigateBack,
-            onShare = {},
-            onDescChange = {},
-            onClearChat = {
-                viewModel.updateChatParticipantStatus(
-                    updateClearedAt = true
-                )
-            },
-            onLeaveChat = {
-                viewModel.updateChatParticipantStatus(
-                    updateLeftAt = true
-                )
-            },
-            isParticipantActive = { participant ->
-                activeParticipants.any { activeParticipant ->
-                    activeParticipant.user.id == participant.user.id
-                }
-            },
-            onChatParticipantClick = {},
-            modifier = modifier.padding(contentPadding),
-            isPersonalChatAdded = viewModel.isPersonalChatAdded
-        )
+        currentUser?.let { currentUser ->
+            ChatDetailScreen(
+                chat = chat,
+                currentUser = currentUser,
+                activeParticipants = activeParticipants,
+                peerLastActiveAt = viewModel.peerLastActiveAt,
+                peerGroupsInCommon = viewModel.peerGroupsInCommon,
+                onNavigateBack = navigateBack,
+                onShare = {},
+                onDescChange = {},
+                onClearChat = {
+                    viewModel.updateChatParticipantStatus(
+                        updateClearedAt = true
+                    )
+                },
+                onLeaveChat = {
+                    viewModel.updateChatParticipantStatus(
+                        updateLeftAt = true
+                    )
+                },
+                isParticipantActive = { participant ->
+                    activeParticipants.any { activeParticipant ->
+                        activeParticipant.user.id == participant.user.id
+                    }
+                },
+                onParticipantInfoClick = { participant ->
+                    scope.launch {
+                        val chatId = viewModel.getPersonalChatId(participant)
+
+                        chatId?.let { chatId ->
+                            navController.navigateToChatDetail(chatId)
+                        } ?: navController.navigateToTempPersonalChatDetail(participant.id)
+                    }
+                },
+                onParticipantMessageClick = {},
+                modifier = modifier.padding(contentPadding),
+                isPersonalChatAdded = viewModel.isPersonalChatAdded
+            )
+        }
     }
 }
 
 @Composable
 private fun ChatDetailScreen(
     chat: Chat,
+    currentUser: User,
     activeParticipants: List<ChatParticipant>,
     peerGroupsInCommon: List<Chat>,
     peerLastActiveAt: Instant?,
@@ -152,7 +176,8 @@ private fun ChatDetailScreen(
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
-    onChatParticipantClick: (ChatParticipant) -> Unit,
+    onParticipantInfoClick: (User) -> Unit,
+    onParticipantMessageClick: (User) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -160,6 +185,10 @@ private fun ChatDetailScreen(
     onPushNotificationChange: (Boolean) -> Unit = {}
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
+    var selectedParticipant by retain { mutableStateOf<User?>(null) }
+    val resetSelectedParticipant = {
+        selectedParticipant = null
+    }
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -178,6 +207,7 @@ private fun ChatDetailScreen(
             item {
                 ChatInfo(
                     chat = chat,
+                    currentUser = currentUser,
                     isAdmin = true,
                     canEditDesc = canEditDesc,
                     onDescChange = onDescChange,
@@ -201,7 +231,9 @@ private fun ChatDetailScreen(
                     },
                     onAddMember = {},
                     onDeleteGroup = {},
-                    onChatParticipantClick = onChatParticipantClick,
+                    onChatParticipantClick = { participant ->
+                        selectedParticipant = participant.user
+                    },
                     isParticipantActive = isParticipantActive
                 )
             }
@@ -212,6 +244,20 @@ private fun ChatDetailScreen(
         alert = alert,
         onDismissRequest = { alert = it }
     )
+    selectedParticipant?.let {
+        ProfilePopup(
+            data = it.toChatPopupData(),
+            onDismissRequest = resetSelectedParticipant,
+            onInfoClick = {
+                onParticipantInfoClick(it)
+                resetSelectedParticipant()
+            },
+            onMessageClick = {
+                onParticipantMessageClick(it)
+                resetSelectedParticipant()
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalTime::class)
@@ -261,6 +307,7 @@ private fun chatInfoTitleStyle(): TextStyle =
 @Composable
 private fun ChatInfo(
     chat: Chat,
+    currentUser: User,
     isAdmin: Boolean,
     onClearChat: () -> Unit,
     canEditDesc: Boolean,
@@ -362,6 +409,7 @@ private fun ChatInfo(
                 )
                 ChatType.GROUP -> GroupChatInfo(
                     isAdmin = isAdmin,
+                    currentUser = currentUser,
                     participants = chat.participants.sortedBy { participant ->
                         participant.role != ParticipantRole.ADMIN
                     },
@@ -460,6 +508,7 @@ private fun PersonalChatActions(
 @Composable
 private fun GroupChatInfo(
     isAdmin: Boolean,
+    currentUser: User,
     participants: List<ChatParticipant>,
     messageNotificationEnabled: Boolean,
     onMessageNotificationChange: (Boolean) -> Unit,
@@ -484,6 +533,7 @@ private fun GroupChatInfo(
     }
     ChatInfoSection("Members") {
         ChatParticipants(
+            currentUser = currentUser,
             participants = participants,
             isParticipantActive = isParticipantActive,
             onClick = onChatParticipantClick
@@ -757,6 +807,7 @@ private fun Action(
 
 @Composable
 private fun ChatParticipants(
+    currentUser: User,
     participants: List<ChatParticipant>,
     onClick: (ChatParticipant) -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
@@ -787,7 +838,8 @@ private fun ChatParticipants(
                     ChatParticipantCard(
                         participant = participant,
                         isActive = isParticipantActive(participant),
-                        onClick = onClick
+                        onClick = onClick,
+                        clickEnabled = currentUser.id != participant.user.id
                     )
                 }
 
@@ -820,6 +872,7 @@ private fun ChatParticipants(
 private fun ChatParticipantCard(
     participant: ChatParticipant,
     isActive: Boolean,
+    clickEnabled: Boolean,
     onClick: (ChatParticipant) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -838,6 +891,7 @@ private fun ChatParticipantCard(
             )
             .padding(8.dp)
             .clickable(
+                enabled = clickEnabled,
                 interactionSource = null,
                 indication = null
             ) { onClick(participant) },
@@ -927,6 +981,7 @@ private fun ChatDetailScreenPreview(
                         }
                     }
                 ),
+                currentUser = conversation.chat.participants.first().user,
                 activeParticipants = emptyList(),
                 peerLastActiveAt = null,
                 onNavigateBack = {},
@@ -935,7 +990,8 @@ private fun ChatDetailScreenPreview(
                 onClearChat = {},
                 onLeaveChat = {},
                 isParticipantActive = { true },
-                onChatParticipantClick = {},
+                onParticipantInfoClick = {},
+                onParticipantMessageClick = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

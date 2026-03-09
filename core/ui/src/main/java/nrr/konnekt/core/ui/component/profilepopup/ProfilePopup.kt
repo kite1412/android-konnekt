@@ -1,4 +1,4 @@
-package nrr.konnekt.core.ui.component
+package nrr.konnekt.core.ui.component.profilepopup
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,19 +34,19 @@ import androidx.compose.ui.window.DialogProperties
 import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.DarkNavy
+import nrr.konnekt.core.designsystem.theme.GreenPrimaryDarken
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
-import nrr.konnekt.core.domain.util.name
-import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 
 @Composable
-fun ChatPopup(
-    chat: Chat,
+fun ProfilePopup(
+    data: ProfilePopupData,
     onDismissRequest: () -> Unit,
     onMessageClick: () -> Unit,
     onInfoClick: () -> Unit,
@@ -67,9 +67,12 @@ fun ChatPopup(
         ShadowedBox(
             modifier = modifier
                 .widthIn(max = 400.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             style = ShadowedBoxDefaults.defaultStyle(
                 contentColor = MaterialTheme.colorScheme.onBackground,
+                backgroundColor = DarkNavy,
+                shadowColor = GreenPrimaryDarken,
                 borderWidth = 4.dp,
                 space = 8.dp
             )
@@ -81,16 +84,16 @@ fun ChatPopup(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val chatName = chat.name()
-
                 Column(
                     modifier = Modifier.padding(horizontal = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    val chatName = data.name
+
                     AvatarIcon(
                         name = chatName,
-                        iconPath = chat.setting?.iconPath,
+                        iconPath = data.iconPath,
                         diameter = 120.dp
                     )
                     Column(
@@ -105,7 +108,7 @@ fun ChatPopup(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        chat.setting?.description?.let { description ->
+                        data.description?.let { description ->
                             Text(
                                 text = description,
                                 color = DarkGray,
@@ -175,7 +178,7 @@ private fun Action(
                     shape = shape
                 )
                 .background(
-                    color = DarkNavy.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.background,
                     shape = shape
                 )
                 .size(90.dp)
@@ -210,15 +213,16 @@ private fun Action(
 
 @Preview
 @Composable
-private fun ChatPopupPreview(
+private fun ProfilePopupPreview(
     @PreviewParameter(PreviewParameterDataProvider::class)
     data: PreviewParameterData
 ) {
     KonnektTheme {
-        ChatPopup(
-            chat = data.latestChatMessages
+        ProfilePopup(
+            data = data.latestChatMessages
                 .first { it.chat.type == ChatType.GROUP }
-                .chat,
+                .chat
+                .toChatPopupData(),
             onDismissRequest = {},
             onMessageClick = {},
             onInfoClick = {}

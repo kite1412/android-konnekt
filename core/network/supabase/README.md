@@ -366,7 +366,16 @@ begin
                             'description', cs.description,
                             'icon_path', cs.icon_path
                         )
-                    else null
+                    else case
+                        when c.type = 'personal' then
+                            jsonb_build_object(
+                                'chat_id', u.id,
+                                'name', u.username,
+                                'description', u.bio,
+                                'icon_path', u.image_path
+                            )
+                        else null
+                    end
                 end,
             'participants',
                 (
@@ -393,9 +402,9 @@ begin
         and ps.chat_id = c.id
     left join chat_settings cs
         on cs.chat_id = c.id
-    where p.user_id = _user_id
-        and c.type in ('group', 'chat_room')
-        and ps.left_at is null;
+    left join users u
+        on u.id = _user_id
+    where p.user_id = _user_id;
 
     return coalesce(result, '[]'::jsonb);
 end;

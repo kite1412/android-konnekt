@@ -30,6 +30,7 @@ import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chatdetail.navigation.ChatDetailRoute
 import nrr.konnekt.feature.chatdetail.util.UiEvent
 import javax.inject.Inject
@@ -46,14 +47,14 @@ class ChatDetailViewModel @Inject constructor(
 ) : ViewModel() {
     private val chatId = savedStateHandle.toRoute<ChatDetailRoute>().chatId
     private val peerId = savedStateHandle.toRoute<ChatDetailRoute>().peerId
-    private val currentUser = authentication
+
+    internal val currentUser = authentication
         .loggedInUser
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
-
     internal val isPersonalChatAdded = peerId == null
     internal var peerGroupsInCommon = mutableStateListOf<Chat>()
     internal var peerLastActiveAt by mutableStateOf<Instant?>(null)
@@ -102,7 +103,7 @@ class ChatDetailViewModel @Inject constructor(
                                             peerGroupsInCommon.addAll(
                                                 res.data
                                                     .filter { chat ->
-                                                        chat.participants
+                                                        chat.type != ChatType.PERSONAL && chat.participants
                                                             .firstOrNull { participant ->
                                                                 currentUser?.id == participant.user.id
                                                             }
@@ -145,5 +146,22 @@ class ChatDetailViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    internal suspend fun getPersonalChatId(user: User): String? {
+        val res = chatRepository.getJoinedChats(user.id)
+
+        return if (res is Result.Success) {
+            val currentUserId = currentUser.first()?.id
+
+            res.data
+                .firstOrNull { chat ->
+                    chat.type == ChatType.PERSONAL &&
+                            chat.participants.any { participant ->
+                                participant.user.id == currentUserId
+                            }
+                }
+                ?.id
+        } else null
     }
 }

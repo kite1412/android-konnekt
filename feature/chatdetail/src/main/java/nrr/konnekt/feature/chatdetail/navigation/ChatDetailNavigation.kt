@@ -20,11 +20,13 @@ fun NavController.navigateToTempPersonalChatDetail(peerId: String) =
     navigate(ChatDetailRoute(peerId = peerId))
 
 fun NavGraphBuilder.chatDetailScreen(
+    navController: NavController,
     navigateBack: () -> Unit,
     contentPadding: PaddingValues
 ) {
     composable<ChatDetailRoute> {
         ChatDetailScreen(
+            navController = navController,
             navigateBack = navigateBack,
             contentPadding = contentPadding
         )
