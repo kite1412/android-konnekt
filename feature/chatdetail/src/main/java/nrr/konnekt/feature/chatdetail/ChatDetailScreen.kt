@@ -90,6 +90,7 @@ import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.feature.chatdetail.util.UiEvent
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @Composable
 internal fun ChatDetailScreen(
@@ -99,7 +100,7 @@ internal fun ChatDetailScreen(
     viewModel: ChatDetailViewModel = hiltViewModel()
 ) {
     val chat by viewModel.chat.collectAsStateWithLifecycle()
-    val totalActiveParticipants by viewModel.totalChatParticipants.collectAsStateWithLifecycle()
+    val activeParticipants by viewModel.activeParticipants.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.events.collect {
@@ -111,7 +112,8 @@ internal fun ChatDetailScreen(
     chat?.let { chat ->
         ChatDetailScreen(
             chat = chat,
-            totalActiveParticipants = totalActiveParticipants ?: 0,
+            activeParticipants = activeParticipants,
+            peerLastActiveAt = viewModel.peerLastActiveAt,
             peerGroupsInCommon = viewModel.peerGroupsInCommon,
             onNavigateBack = navigateBack,
             onShare = {},
@@ -126,6 +128,11 @@ internal fun ChatDetailScreen(
                     updateLeftAt = true
                 )
             },
+            isParticipantActive = { participant ->
+                activeParticipants.any { activeParticipant ->
+                    activeParticipant.user.id == participant.user.id
+                }
+            },
             modifier = modifier.padding(contentPadding),
             isPersonalChatAdded = viewModel.isPersonalChatAdded
         )
@@ -135,13 +142,15 @@ internal fun ChatDetailScreen(
 @Composable
 private fun ChatDetailScreen(
     chat: Chat,
-    totalActiveParticipants: Int,
+    activeParticipants: List<ChatParticipant>,
     peerGroupsInCommon: List<Chat>,
+    peerLastActiveAt: Instant?,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     onDescChange: (String) -> Unit,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
+    isParticipantActive: (ChatParticipant) -> Boolean,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -156,7 +165,8 @@ private fun ChatDetailScreen(
     ) {
         Header(
             chat = chat,
-            totalActiveParticipants = totalActiveParticipants,
+            peerLastActive = peerLastActiveAt,
+            totalActiveParticipants = activeParticipants.size - 1,
             onNavigateBack = onNavigateBack,
             onShare = onShare
         )
@@ -190,7 +200,7 @@ private fun ChatDetailScreen(
                     onAddMember = {},
                     onDeleteGroup = {},
                     onChatParticipantClick = {},
-                    isParticipantActive = { true }
+                    isParticipantActive = isParticipantActive
                 )
             }
         }
@@ -207,6 +217,7 @@ private fun ChatDetailScreen(
 private fun Header(
     chat: Chat,
     totalActiveParticipants: Int,
+    peerLastActive: Instant?,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
@@ -224,7 +235,8 @@ private fun Header(
             onNavigateBack = onNavigateBack,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(1f),
+            peerLastActive = peerLastActive
         )
         if (chat.type == ChatType.PERSONAL) IconButton(
             onClick = onShare
@@ -811,7 +823,7 @@ private fun ChatParticipantCard(
 ) {
     val activityColor by animateColorAsState(
         targetValue = if (isActive) MaterialTheme.colorScheme.primary
-            else DarkNavy
+            else DarkGray
     )
 
     Row(
@@ -823,7 +835,10 @@ private fun ChatParticipantCard(
                 shape = RoundedCornerShape(8.dp)
             )
             .padding(8.dp)
-            .clickable { onClick(participant) },
+            .clickable(
+                interactionSource = null,
+                indication = null
+            ) { onClick(participant) },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -839,11 +854,11 @@ private fun ChatParticipantCard(
                     name = user.username,
                     iconPath = user.imagePath
                 )
-                if (isActive) Box(
+                Box(
                     Modifier
                         .size(12.dp)
                         .background(
-                            color = GreenPrimaryDarken,
+                            color = if (isActive) GreenPrimaryDarken else DarkGray,
                             shape = CircleShape
                         )
                         .align(Alignment.BottomEnd)
@@ -910,12 +925,14 @@ private fun ChatDetailScreenPreview(
                         }
                     }
                 ),
-                totalActiveParticipants = 1,
+                activeParticipants = emptyList(),
+                peerLastActiveAt = null,
                 onNavigateBack = {},
                 onShare = {},
                 onDescChange = {},
                 onClearChat = {},
                 onLeaveChat = {},
+                isParticipantActive = { true },
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,
