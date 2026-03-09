@@ -133,6 +133,7 @@ internal fun ChatDetailScreen(
                     activeParticipant.user.id == participant.user.id
                 }
             },
+            onChatParticipantClick = {},
             modifier = modifier.padding(contentPadding),
             isPersonalChatAdded = viewModel.isPersonalChatAdded
         )
@@ -151,6 +152,7 @@ private fun ChatDetailScreen(
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
+    onChatParticipantClick: (ChatParticipant) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -199,7 +201,7 @@ private fun ChatDetailScreen(
                     },
                     onAddMember = {},
                     onDeleteGroup = {},
-                    onChatParticipantClick = {},
+                    onChatParticipantClick = onChatParticipantClick,
                     isParticipantActive = isParticipantActive
                 )
             }
@@ -933,6 +935,7 @@ private fun ChatDetailScreenPreview(
                 onClearChat = {},
                 onLeaveChat = {},
                 isParticipantActive = { true },
+                onChatParticipantClick = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

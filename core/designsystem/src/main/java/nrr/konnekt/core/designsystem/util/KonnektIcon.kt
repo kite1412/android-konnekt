@@ -44,4 +44,6 @@ object KonnektIcon {
     val check = R.drawable.check
     val repeat = R.drawable.repeat
     val archiveRestore = R.drawable.archive_restore
+    val messageCircle = R.drawable.message_circle
+    val info = R.drawable.info
 }
