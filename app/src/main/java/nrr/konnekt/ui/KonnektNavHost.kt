@@ -46,6 +46,7 @@ internal fun KonnektNavHost(
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         conversationScreen(
+            navController = navController,
             navigateBack = navController::popBackStack,
             navigateToChatDetail = { id, type ->
                 when (type) {

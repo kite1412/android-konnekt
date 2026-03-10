@@ -52,6 +52,7 @@ import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.ui.util.UiEvent
@@ -493,5 +494,22 @@ class ConversationViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    internal suspend fun getPersonalChatId(user: User): String? {
+        val res = chatRepository.getJoinedChats(user.id)
+
+        return if (res is Result.Success) {
+            val currentUserId = currentUser.first()?.id
+
+            res.data
+                .firstOrNull { chat ->
+                    chat.type == ChatType.PERSONAL &&
+                            chat.participants.any { participant ->
+                                participant.user.id == currentUserId
+                            }
+                }
+                ?.id
+        } else null
     }
 }

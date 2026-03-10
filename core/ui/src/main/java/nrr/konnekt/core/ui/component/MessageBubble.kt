@@ -237,6 +237,7 @@ fun MessageBubble(
     tailColor: Color = shadowedBoxStyle.borderColor,
     avatarDiameter: Dp = 40.dp,
     maxContentWidth: Dp = 350.dp,
+    onAvatarClick: (() -> Unit)? = null,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     Column(
@@ -245,6 +246,10 @@ fun MessageBubble(
         horizontalAlignment = if (sentByCurrentUser) Alignment.End else Alignment.Start
     ) {
         if (withAvatar) Row(
+            modifier = Modifier.clickable(
+                interactionSource = null,
+                indication = null
+            ) { onAvatarClick?.invoke() },
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

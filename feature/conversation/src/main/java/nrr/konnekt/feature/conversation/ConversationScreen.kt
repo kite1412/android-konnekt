@@ -60,6 +60,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -93,7 +94,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.PlayerView
+import androidx.navigation.NavController
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.theme.DarkGray
@@ -131,6 +134,8 @@ import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
 import nrr.konnekt.core.ui.component.RequestPermission
+import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
+import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
@@ -149,6 +154,9 @@ import nrr.konnekt.core.ui.util.msToString
 import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.topRadialGradient
 import nrr.konnekt.core.ui.util.unblockChatAlert
+import nrr.konnekt.feature.conversation.navigation.ConversationRoute
+import nrr.konnekt.feature.conversation.navigation.navigateToConversation
+import nrr.konnekt.feature.conversation.navigation.navigateToTempPersonalConversation
 import nrr.konnekt.feature.conversation.util.ActionType
 import nrr.konnekt.feature.conversation.util.ComposerAttachment
 import nrr.konnekt.feature.conversation.util.ConversationActions
@@ -167,6 +175,7 @@ import kotlin.time.Instant
 
 @Composable
 internal fun ConversationScreen(
+    navController: NavController,
     navigateBack: () -> Unit,
     navigateToChatDetail: (id: String, type: IdType) -> Unit,
     contentPadding: PaddingValues,
@@ -184,6 +193,7 @@ internal fun ConversationScreen(
     val snackbarHostState = LocalSnackbarHostState.current
     val messageInput = viewModel.messageInput
     val messageAction by viewModel.messageAction.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -289,6 +299,28 @@ internal fun ConversationScreen(
                         updateLeftAt = UpdateStatus(!blocked)
                     )
                 },
+                onParticipantInfoClick = { user ->
+                    scope.launch {
+                        val id = viewModel.getPersonalChatId(user)
+                        navigateToChatDetail(
+                            id ?: user.id,
+                                if (id == null) IdType.USER else IdType.CHAT
+                            )
+                    }
+                },
+                onParticipantMessageClick = { user ->
+                    scope.launch {
+                        val id = viewModel.getPersonalChatId(user)
+                        if (id != null) {
+                            navController.popBackStack(
+                                route = ConversationRoute::class,
+                                inclusive = true
+                            )
+                            navController.navigateToConversation(id)
+                        }
+                        else navController.navigateToTempPersonalConversation(user.id)
+                    }
+                },
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -336,11 +368,17 @@ private fun ConversationScreen(
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onBlockChange: (blocked: Boolean) -> Unit,
+    onParticipantInfoClick: (User) -> Unit,
+    onParticipantMessageClick: (User) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
+    var selectedUser by retain { mutableStateOf<User?>(null) }
+    val resetUser = {
+        selectedUser = null
+    }
 
     Column(
         modifier = modifier
@@ -439,7 +477,11 @@ private fun ConversationScreen(
                 isMessageSelected = {
                     selectedMessageIds.contains(it.id)
                 },
+
                 onMessageAction = onMessageAction,
+                onAvatarClick = { user ->
+                    selectedUser = user
+                },
                 state = state,
                 contentPadding = PaddingValues(bottom = 8.dp)
             )
@@ -511,6 +553,20 @@ private fun ConversationScreen(
         alert = alert,
         onDismissRequest = { alert = it }
     )
+    selectedUser?.let { user ->
+        ProfilePopup(
+            data = user.toChatPopupData(),
+            onDismissRequest = { selectedUser = null },
+            onMessageClick = {
+                onParticipantMessageClick(user)
+                resetUser()
+            },
+            onInfoClick = {
+                onParticipantInfoClick(user)
+                resetUser()
+            }
+        )
+    }
 }
 
 @Composable
@@ -745,6 +801,7 @@ private fun Conversation(
     deletedByCurrentUser: (Message) -> Boolean,
     isMessageSelected: (Message) -> Boolean,
     onMessageAction: (MessageAction) -> Unit,
+    onAvatarClick: (User) -> Unit,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues.Zero
@@ -841,6 +898,7 @@ private fun Conversation(
                                 onAction = onMessageAction,
                                 applyTopPadding = applyTopPadding,
                                 sender = if (sentByCurrentUser) null else item.message.sender,
+                                onAvatarClick = { onAvatarClick(item.message.sender) },
                                 seenContent = if (myLatestReadMessage == item) {
                                     readMarkers?.let { l ->
                                         {
@@ -876,6 +934,7 @@ private fun AdjustedMessageBubble(
     modifier: Modifier = Modifier,
     sender: User? = null,
     applyTopPadding: Boolean = true,
+    onAvatarClick: (() -> Unit)? = null,
     seenContent: (@Composable MessageSeenIndicator.() -> Unit)? = null
 ) {
     val clickable = !deletedByCurrentUser && !message.isHidden
@@ -954,6 +1013,7 @@ private fun AdjustedMessageBubble(
                     withAvatar = !wasSentByPreviousUser,
                     deletedByCurrentUser = deletedByCurrentUser,
                     maxContentWidth = this@BoxWithConstraints.maxWidth * 0.9f,
+                    onAvatarClick = onAvatarClick,
                     seenContent = seenContent
                 )
             }
@@ -1959,6 +2019,8 @@ private fun ConversationScreenPreview(
                     onClearChat = {},
                     onLeaveChat = {},
                     onBlockChange = {},
+                    onParticipantInfoClick = {},
+                    onParticipantMessageClick = {},
                     contentPadding = it,
                     modifier = Modifier.padding(it),
                     peerLastActive = now()
