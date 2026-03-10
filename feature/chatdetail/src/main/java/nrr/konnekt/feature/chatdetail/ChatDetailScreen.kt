@@ -80,6 +80,7 @@ import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
+import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
@@ -94,8 +95,10 @@ import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
 import nrr.konnekt.core.ui.util.asImageBitmap
+import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.rememberResolvedFile
+import nrr.konnekt.core.ui.util.unblockChatAlert
 import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
 import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
 import nrr.konnekt.feature.chatdetail.util.UiEvent
@@ -250,7 +253,17 @@ private fun ChatDetailScreen(
                         selectedParticipant = participant.user
                     },
                     isParticipantActive = isParticipantActive,
-                    onBlockChange = onBlockChange
+                    onBlockChange = { blocked ->
+                        val chatName = chat.name()
+
+                        alert = if (blocked) blockChatAlert(
+                            chatName = chatName,
+                            onConfirm = { onBlockChange(blocked) }
+                        ) else unblockChatAlert(
+                            chatName = chatName,
+                            onConfirm = { onBlockChange(blocked) }
+                        )
+                    }
                 )
             }
         }
