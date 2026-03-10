@@ -111,7 +111,7 @@ internal fun ChatDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: ChatDetailViewModel = hiltViewModel()
 ) {
-    val chat by viewModel.chat.collectAsStateWithLifecycle()
+    val chat by viewModel.chat.collectAsStateWithLifecycle(null)
     val activeParticipants by viewModel.activeParticipants.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -516,12 +516,13 @@ private fun PersonalChatActions(
     modifier: Modifier = Modifier,
     onClearChat: (() -> Unit)? = null
 ) = ActionsLayout(modifier) {
+    if (isBlocked) ActionUnblockChat {
+        onBlockChange(false)
+    }
     if (isAdded) onClearChat?.let {
         ActionClearChat(onClick = it)
     }
-    if (isBlocked) ActionUnblockChat {
-        onBlockChange(false)
-    } else ActionBlockChat {
+    if (!isBlocked) ActionBlockChat {
         onBlockChange(true)
     }
 }
@@ -562,6 +563,9 @@ private fun GroupChatInfo(
     }
     GroupChatActions(
         isAdmin = isAdmin,
+        canLeave = participants.firstOrNull { participant ->
+            participant.user.id == currentUser.id
+        }?.status?.leftAt == null,
         onClearChat = onClearChat,
         onLeaveChat = onLeaveChat,
         onAddMember = onAddMember,
@@ -572,13 +576,14 @@ private fun GroupChatInfo(
 @Composable
 private fun GroupChatActions(
     isAdmin: Boolean,
+    canLeave: Boolean,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
     onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier,
 ) = ActionsLayout(modifier = modifier) {
-    if (isAdmin) {
+    if (isAdmin && !canLeave) {
         val contentColor = MaterialTheme.colorScheme.primary
 
         Action(
@@ -589,13 +594,13 @@ private fun GroupChatActions(
         )
     }
     ActionClearChat(onClick = onClearChat)
-    Action(
+    if (canLeave) Action(
         iconId = KonnektIcon.logOut,
         name = "Leave",
         onClick = onLeaveChat,
         modifier = modifier
     )
-    if (isAdmin) Action(
+    if (isAdmin && !canLeave) Action(
         iconId = KonnektIcon.delete,
         name = "Delete Group",
         onClick = onDeleteGroup

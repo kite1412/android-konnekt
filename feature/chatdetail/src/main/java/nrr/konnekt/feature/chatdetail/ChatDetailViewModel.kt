@@ -59,11 +59,11 @@ class ChatDetailViewModel @Inject constructor(
     internal var peerGroupsInCommon = mutableStateListOf<Chat>()
     internal var peerLastActiveAt by mutableStateOf<Instant?>(null)
 
-    private val _events = MutableSharedFlow<UiEvent>()
-    internal val events = _events.asSharedFlow()
-
     private val _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
+
+    private val _events = MutableSharedFlow<UiEvent>()
+    internal val events = _events.asSharedFlow()
 
     private val _activeParticipants = MutableStateFlow<List<ChatParticipant>>(emptyList())
     internal val activeParticipants = _activeParticipants.asStateFlow()
@@ -121,6 +121,30 @@ class ChatDetailViewModel @Inject constructor(
                                         .filter { participant ->
                                             participant.status.leftAt == null
                                         }
+                                }
+                                .launchIn(viewModelScope)
+
+                            observeChatParticipantsUseCase
+                                .currentUser(chat.id)
+                                .onEach { currentUserChatParticipation ->
+                                    _chat.value?.let { prev ->
+                                        _chat.value = prev.copy(
+                                            participants = mutableListOf<ChatParticipant>().apply {
+                                                addAll(chat.participants)
+
+                                                indexOfFirst { participant ->
+                                                    currentUserChatParticipation?.participation?.user?.id == participant.user.id
+                                                }
+                                                    .let { index ->
+                                                        if (index != -1) {
+                                                            currentUserChatParticipation?.participation?.let { participation ->
+                                                                set(index, participation)
+                                                            }
+                                                        }
+                                                    }
+                                            }
+                                        )
+                                    }
                                 }
                                 .launchIn(viewModelScope)
                         }
