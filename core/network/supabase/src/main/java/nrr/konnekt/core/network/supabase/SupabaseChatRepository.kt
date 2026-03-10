@@ -534,45 +534,12 @@ internal class SupabaseChatRepository @Inject constructor(
 
     override suspend fun getChatById(chatId: String): ChatResult<Chat> =
         try {
-            chats {
-                select {
-                    filter {
-                        SupabaseChat::id eq chatId
-                    }
-                }.decodeSingleOrNull<SupabaseChat>()
-            }
-                ?.toChat()
-                ?.run {
-                    copy(
-                        setting = if (type != ChatType.PERSONAL) chatSettings {
-                            select {
-                                filter {
-                                    SupabaseChatSetting::chatId eq id
-                                }
-                            }.decodeSingleOrNull<SupabaseChatSetting>()
-                        }?.toChatSetting(
-                            permissionSettings = chatPermissionSettings {
-                                select {
-                                    filter {
-                                        SupabaseChatPermissionSettings::chatId eq id
-                                    }
-                                }.decodeSingleOrNull<SupabaseChatPermissionSettings>()
-                            }?.toModel()
-                        ) else getPersonalChatSetting(chatId)
-                            ?: return Error(ChatError.ChatNotFound),
-                        participants = (getChatParticipants(chatId)
-                            .takeIf {
-                                it is Result.Success
-                            } as? Result.Success<List<ChatParticipant>>)
-                            ?.data ?: emptyList()
-                    )
-                }
-                ?.let {
-                    Success(it)
-                } ?: Error(ChatError.ChatNotFound)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Error(ChatError.Unknown)
+            rpc.getChatById(chatId)
+                ?.toModel()
+                ?.let(Result<Chat, Nothing>::Success)
+                ?: Error(ChatError.Unknown)
+        } catch (_: Exception) {
+            Error(ChatError.ChatNotFound)
         }
 
     override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> =

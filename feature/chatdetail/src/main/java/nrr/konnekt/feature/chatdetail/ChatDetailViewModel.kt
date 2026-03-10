@@ -132,7 +132,7 @@ class ChatDetailViewModel @Inject constructor(
     }
 
     internal fun updateChatParticipantStatus(
-        updateLeftAt: Boolean = false,
+        updateLeftAt: UpdateStatus? = null,
         updateClearedAt: Boolean = false
     ) {
         viewModelScope.launch {
@@ -140,7 +140,7 @@ class ChatDetailViewModel @Inject constructor(
                 updateChatParticipantStatusUseCase(
                     update = UpdateChatParticipantStatus(
                         chatId = chat.id,
-                        updateLeftAt = if (updateLeftAt) UpdateStatus() else null,
+                        updateLeftAt = updateLeftAt,
                         updateClearedAt = if (updateClearedAt) UpdateStatus() else null
                     )
                 )

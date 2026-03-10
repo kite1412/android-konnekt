@@ -341,6 +341,79 @@ end;
 $$;
 ```
 
+### get_chat_by_id
+```sql
+create or replace function get_chat_by_id(
+    _chat_id uuid
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+    _current_user_id uuid := auth.uid();
+    result jsonb;
+begin
+    select jsonb_build_object(
+        'id', c.id,
+        'type', c.type,
+        'created_at', c.created_at,
+
+        'setting',
+        case
+            when cs.chat_id is not null then
+                jsonb_build_object(
+                    'chat_id', cs.chat_id,
+                    'name', cs.name,
+                    'description', cs.description,
+                    'icon_path', cs.icon_path
+                )
+
+            when c.type = 'personal' then (
+                select jsonb_build_object(
+                    'chat_id', c.id,
+                    'name', u2.username,
+                    'description', u2.bio,
+                    'icon_path', u2.image_path
+                )
+                from chat_participants cp2
+                join users u2
+                    on u2.id = cp2.user_id
+                where cp2.chat_id = c.id
+                  and u2.id != _current_user_id
+                limit 1
+            )
+
+            else null
+        end,
+
+        'participants', (
+            select jsonb_agg(
+                jsonb_build_object(
+                    'user', to_jsonb(u),
+                    'role', cp.role,
+                    'status', to_jsonb(ps)
+                )
+            )
+            from chat_participants cp
+            join users u
+                on u.id = cp.user_id
+            left join chat_participant_statuses ps
+                on ps.chat_id = cp.chat_id
+               and ps.user_id = cp.user_id
+            where cp.chat_id = c.id
+        )
+    )
+    into result
+    from chats c
+    left join chat_settings cs
+        on cs.chat_id = c.id
+    where c.id = _chat_id;
+
+    return result;
+end;
+$$;
+```
+
 ### get_joined_chats
 ```sql
 create or replace function get_joined_chats(

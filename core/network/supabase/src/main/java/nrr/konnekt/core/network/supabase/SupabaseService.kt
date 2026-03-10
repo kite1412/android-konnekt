@@ -219,5 +219,15 @@ internal abstract class SupabaseService(
                     }
                 )
             }
+
+        suspend fun getChatById(chatId: String): SupabaseChatRpc? =
+            performSuspendingAuthenticatedAction {
+                call<SupabaseChatRpc>(
+                    function = "get_chat_by_id",
+                    parameters = {
+                        put("_chat_id", chatId)
+                    }
+                )
+            }
     }
 }

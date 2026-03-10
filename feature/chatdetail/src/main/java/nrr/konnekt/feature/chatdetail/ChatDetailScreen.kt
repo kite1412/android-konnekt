@@ -78,6 +78,8 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.domain.model.UpdateStatus
+import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
@@ -139,7 +141,7 @@ internal fun ChatDetailScreen(
                 },
                 onLeaveChat = {
                     viewModel.updateChatParticipantStatus(
-                        updateLeftAt = true
+                        updateLeftAt = UpdateStatus()
                     )
                 },
                 isParticipantActive = { participant ->
@@ -163,6 +165,11 @@ internal fun ChatDetailScreen(
                         navigateToConversation(chatId != null, chatId ?: participant.id)
                     }
                 },
+                onBlockChange = { blocked ->
+                    viewModel.updateChatParticipantStatus(
+                        updateLeftAt = UpdateStatus(!blocked)
+                    )
+                },
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -185,6 +192,7 @@ private fun ChatDetailScreen(
     isParticipantActive: (ChatParticipant) -> Boolean,
     onParticipantInfoClick: (User) -> Unit,
     onParticipantMessageClick: (User) -> Unit,
+    onBlockChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -241,7 +249,8 @@ private fun ChatDetailScreen(
                     onChatParticipantClick = { participant ->
                         selectedParticipant = participant.user
                     },
-                    isParticipantActive = isParticipantActive
+                    isParticipantActive = isParticipantActive,
+                    onBlockChange = onBlockChange
                 )
             }
         }
@@ -328,6 +337,7 @@ private fun ChatInfo(
     onDeleteGroup: () -> Unit,
     onChatParticipantClick: (ChatParticipant) -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
+    onBlockChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -409,10 +419,12 @@ private fun ChatInfo(
             when (chat.type) {
                 ChatType.PERSONAL -> PersonalChatInfo(
                     isAdded = isPersonalChatAdded,
+                    isBlocked = chat.isPersonalChatBlocked(currentUser),
                     groupsInCommon = peerGroupsInCommon,
                     pushNotificationEnabled = messageNotificationEnabled,
                     onPushNotificationChange = onMessageNotificationChange,
-                    onClearChat = onClearChat
+                    onClearChat = onClearChat,
+                    onBlockChange = onBlockChange
                 )
                 ChatType.GROUP -> GroupChatInfo(
                     isAdmin = isAdmin,
@@ -438,10 +450,12 @@ private fun ChatInfo(
 @Composable
 private fun PersonalChatInfo(
     isAdded: Boolean,
+    isBlocked: Boolean,
     groupsInCommon: List<Chat>,
     pushNotificationEnabled: Boolean,
     onPushNotificationChange: (Boolean) -> Unit,
-    onClearChat: () -> Unit
+    onClearChat: () -> Unit,
+    onBlockChange: (Boolean) -> Unit
 ) {
     if (isAdded) ToggleSetting(
         desc = "Message Notifications",
@@ -488,8 +502,8 @@ private fun PersonalChatInfo(
     }
     PersonalChatActions(
         isAdded = isAdded,
-        isBlocked = false,
-        onBlockChange = {  },
+        isBlocked = isBlocked,
+        onBlockChange = onBlockChange,
         onClearChat = onClearChat
     )
 }
@@ -746,7 +760,7 @@ private fun ActionUnblockChat(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) = Action(
-    iconId = KonnektIcon.circleOff,
+    iconId = KonnektIcon.eye,
     name = "Unblock",
     onClick = onClick,
     modifier = modifier,
@@ -999,6 +1013,7 @@ private fun ChatDetailScreenPreview(
                 isParticipantActive = { true },
                 onParticipantInfoClick = {},
                 onParticipantMessageClick = {},
+                onBlockChange = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,
