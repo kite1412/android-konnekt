@@ -264,5 +264,24 @@ internal abstract class SupabaseService(
                     }
                 )
             }
+
+        suspend fun cancelChatInvitations(invitationIds: List<String>): Boolean? =
+            invitationIds
+                .takeIf { it.isNotEmpty() }
+                ?.let {
+                    performSuspendingAuthenticatedAction {
+                        call<Boolean>(
+                            function = "cancel_chat_invitations",
+                            parameters = {
+                                put(
+                                    key = "_invitation_ids",
+                                    element = buildJsonArray {
+                                        invitationIds.forEach(::add)
+                                    }
+                                )
+                            }
+                        )
+                    }
+                }
     }
 }

@@ -662,6 +662,75 @@ end;
 $$;
 ```
 
+### cancel_chat_invitations
+```sql
+create or replace function cancel_chat_invitations(
+    _invitation_ids uuid[]
+)
+returns boolean
+language plpgsql
+security definer
+as $$
+declare
+    _user_id uuid := auth.uid();
+    _chat_id uuid;
+    _role participant_role;
+    _can_manage_members boolean;
+begin
+
+    select chat_id
+    into _chat_id
+    from chat_invitations
+    where id = any(_invitation_ids)
+    limit 1;
+
+    if _chat_id is null then
+        raise exception 'Invitations not found';
+    end if;
+
+    if exists (
+        select 1
+        from chat_invitations
+        where id = any(_invitation_ids)
+        and chat_id <> _chat_id
+    ) then
+        raise exception 'Invitations must belong to the same chat';
+    end if;
+
+    select role
+    into _role
+    from chat_participants
+    where chat_id = _chat_id
+      and user_id = _user_id;
+
+    if _role is null then
+        raise exception 'User is not a participant of this chat';
+    end if;
+
+    if _role = 'admin' then
+        delete from chat_invitations
+        where id = any(_invitation_ids);
+
+        return true;
+    end if;
+
+    select manage_members
+    into _can_manage_members
+    from chat_permission_settings
+    where chat_id = _chat_id;
+
+    if not coalesce(_can_manage_members, false) then
+        raise exception 'User does not have permission to cancel invitations';
+    end if;
+
+    delete from chat_invitations
+    where id = any(_invitation_ids);
+
+    return true;
+end;
+$$;
+```
+
 ### get_chat_invitations
 ```sql
 create or replace function get_chat_invitations(

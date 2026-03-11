@@ -139,15 +139,11 @@ interface ChatRepository {
     /**
      * Cancel chat invitations
      *
-     * @param inviterId The ID of the user who is inviting the users.
-     * @param chatId The ID of the chat to cancel invitations for.
-     * @param receiverIds The IDs of the users to cancel invitations for.
+     * @param invitationIds The IDs of the invitations to cancel.
      * @return Whether the invitations were canceled.
      */
     suspend fun cancelChatInvitations(
-        inviterId: String,
-        chatId: String,
-        receiverIds: List<String>
+        invitationIds: List<String>
     ): ChatResult<Boolean>
 
     /**

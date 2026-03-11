@@ -699,12 +699,11 @@ internal class SupabaseChatRepository @Inject constructor(
         ?: Error(ChatError.ParticipantRoleViolation)
 
     override suspend fun cancelChatInvitations(
-        inviterId: String,
-        chatId: String,
-        receiverIds: List<String>
-    ): ChatResult<Boolean> {
-        TODO("Not yet implemented")
-    }
+        invitationIds: List<String>
+    ): ChatResult<Boolean> =
+        rpc.cancelChatInvitations(invitationIds)
+            ?.let(Result<Boolean, Nothing>::Success)
+            ?: Error(ChatError.Unknown)
 
     private suspend fun getCurrentUserChatParticipation(chatId: String) =
         performSuspendingAuthenticatedAction { user ->
