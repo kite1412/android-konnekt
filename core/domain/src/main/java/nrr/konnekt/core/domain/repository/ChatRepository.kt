@@ -126,15 +126,13 @@ interface ChatRepository {
     /**
      * Invite users to a chat.
      *
-     * @param inviterId The ID of the user who is inviting the users.
      * @param chatId The ID of the chat to invite users to.
-     * @param userIds The IDs of the users to invite.
+     * @param receiverIds The IDs of the users to invite.
      * @return The list of chat invitations.
      */
     suspend fun inviteToChat(
-        inviterId: String,
         chatId: String,
-        userIds: List<String>
+        receiverIds: List<String>
     ): ChatResult<List<ChatInvitation>>
 
     /**
@@ -142,13 +140,13 @@ interface ChatRepository {
      *
      * @param inviterId The ID of the user who is inviting the users.
      * @param chatId The ID of the chat to cancel invitations for.
-     * @param userIds The IDs of the users to cancel invitations for.
+     * @param receiverIds The IDs of the users to cancel invitations for.
      * @return Whether the invitations were canceled.
      */
     suspend fun cancelChatInvitations(
         inviterId: String,
         chatId: String,
-        userIds: List<String>
+        receiverIds: List<String>
     ): ChatResult<Boolean>
 
     /**
@@ -164,6 +162,7 @@ interface ChatRepository {
         object ParticipantLimitViolation: ChatError
         object ChatSettingNotFound : ChatError
         object FileUploadError : ChatError
+        object ParticipantRoleViolation : ChatError
         object Unknown : ChatError
     }
 }

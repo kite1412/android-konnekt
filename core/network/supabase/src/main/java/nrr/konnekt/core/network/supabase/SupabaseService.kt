@@ -20,6 +20,7 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.rpc.SendMessageWithAttachments
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatInvitationRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatParticipantRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatRpc
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
@@ -234,6 +235,28 @@ internal abstract class SupabaseService(
                         put("_chat_id", chatId)
                     }
                 )
+            }
+
+        suspend fun inviteToChat(
+            chatId: String,
+            receiverIds: List<String>
+        ): List<SupabaseChatInvitationRpc>? = receiverIds
+            .takeIf { it.isNotEmpty() }
+            ?.let { receiverIds ->
+                performSuspendingAuthenticatedAction {
+                    call<List<SupabaseChatInvitationRpc>>(
+                        function = "invite_to_chat",
+                        parameters = {
+                            put("_chat_id", chatId)
+                            put(
+                                key = "_receiver_ids",
+                                element = buildJsonArray {
+                                    receiverIds.forEach(::add)
+                                }
+                            )
+                        }
+                    )
+                }
             }
     }
 }

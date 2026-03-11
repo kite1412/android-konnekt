@@ -49,6 +49,7 @@ import nrr.konnekt.core.network.supabase.dto.response.SupabaseMessage
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUserMessageStatus
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatInvitationRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.toModel
 import nrr.konnekt.core.network.supabase.dto.response.rpc.toChatParticipant
@@ -682,62 +683,25 @@ internal class SupabaseChatRepository @Inject constructor(
     }
 
     override suspend fun inviteToChat(
-        inviterId: String,
         chatId: String,
-        userIds: List<String>
-    ): ChatResult<List<ChatInvitation>> {
-        TODO("Not yet implemented")
-    }
+        receiverIds: List<String>
+    ): ChatResult<List<ChatInvitation>> =
+        rpc.inviteToChat(
+            chatId = chatId,
+            receiverIds = receiverIds
+        )
+        ?.let { invitations ->
+            Success(invitations.map(SupabaseChatInvitationRpc::toModel))
+        }
+        ?: Error(ChatError.ParticipantRoleViolation)
 
     override suspend fun cancelChatInvitations(
         inviterId: String,
         chatId: String,
-        userIds: List<String>
+        receiverIds: List<String>
     ): ChatResult<Boolean> {
         TODO("Not yet implemented")
     }
-
-    private suspend fun getPersonalChatSetting(chatId: String) =
-        performSuspendingAuthenticatedAction { u ->
-            chatParticipants {
-                select {
-                    filter {
-                        SupabaseChatParticipant::chatId eq chatId
-                        SupabaseChatParticipant::userId neq u.id
-                    }
-                }
-                    .decodeSingleOrNull<SupabaseChatParticipant>()
-                    ?.let {
-                        users {
-                            select {
-                                filter {
-                                    SupabaseUser::id eq it.userId
-                                }
-                            }
-                                .decodeSingleOrNull<SupabaseUser>()
-                                ?.toModel()
-                                ?.let { user ->
-                                    ChatSetting(
-                                        name = user.username,
-                                        iconPath = user.imagePath
-                                    )
-                                }
-                        }
-                    }
-            }
-        }
-
-    private suspend fun getCurrentUserChatParticipantStatuses() =
-        performSuspendingAuthenticatedAction { user ->
-            chatParticipantStatuses {
-                select {
-                    filter {
-                        SupabaseChatParticipantStatus::userId eq user.id
-                    }
-                }
-            }
-                .decodeList<SupabaseChatParticipantStatus>()
-        }
 
     private suspend fun getCurrentUserChatParticipation(chatId: String) =
         performSuspendingAuthenticatedAction { user ->
