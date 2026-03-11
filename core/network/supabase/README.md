@@ -119,6 +119,15 @@ CREATE TABLE IF NOT EXISTS chat_participant_statuses (
     last_read_at timestamptz,
     PRIMARY KEY (user_id, chat_id)
 );
+
+CREATE TABLE IF NOT EXISTS chat_invitations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    chat_id uuid NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+    inviter_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invited_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (chat_id, receiver_id)
+);
 ```
 
 ## Enable realtime for tables:

@@ -240,7 +240,10 @@ private fun ChatDetailScreen(
                 ChatInfo(
                     chat = chat,
                     currentUser = currentUser,
-                    isAdmin = true,
+                    isAdmin = chat.participants.any { participant ->
+                        participant.user.id == currentUser.id &&
+                                participant.role == ParticipantRole.ADMIN
+                    },
                     canEditDesc = canEditDesc,
                     onDescChange = onDescChange,
                     isPersonalChatAdded = isPersonalChatAdded,

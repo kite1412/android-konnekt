@@ -34,6 +34,7 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
@@ -561,6 +562,10 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
+    override suspend fun getChatInvitations(): ChatResult<List<ChatInvitation>> {
+        TODO("Not yet implemented")
+    }
+
     override suspend fun joinChat(chatId: String): ChatResult<ChatParticipant> =
         performSuspendingAuthenticatedAction {
             val res = rpc.joinChat(chatId)
@@ -674,6 +679,22 @@ internal class SupabaseChatRepository @Inject constructor(
                 }
             )
         } ?: Error(ChatError.Unknown)
+    }
+
+    override suspend fun inviteToChat(
+        inviterId: String,
+        chatId: String,
+        userIds: List<String>
+    ): ChatResult<List<ChatInvitation>> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun cancelChatInvitations(
+        inviterId: String,
+        chatId: String,
+        userIds: List<String>
+    ): ChatResult<Boolean> {
+        TODO("Not yet implemented")
     }
 
     private suspend fun getPersonalChatSetting(chatId: String) =

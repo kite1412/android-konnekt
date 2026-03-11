@@ -9,6 +9,7 @@ import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatType
@@ -86,6 +87,13 @@ interface ChatRepository {
     suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>>
 
     /**
+     * Get the current user's chat invitations from other users.
+     *
+     * @return A list of chat invitations.
+     */
+    suspend fun getChatInvitations(): ChatResult<List<ChatInvitation>>
+
+    /**
      * Join a chat.
      *
      * @param chatId The ID of the chat to subscribe to.
@@ -115,6 +123,33 @@ interface ChatRepository {
         participantIds: List<String>? = null
     ): ChatResult<Chat>
 
+    /**
+     * Invite users to a chat.
+     *
+     * @param inviterId The ID of the user who is inviting the users.
+     * @param chatId The ID of the chat to invite users to.
+     * @param userIds The IDs of the users to invite.
+     * @return The list of chat invitations.
+     */
+    suspend fun inviteToChat(
+        inviterId: String,
+        chatId: String,
+        userIds: List<String>
+    ): ChatResult<List<ChatInvitation>>
+
+    /**
+     * Cancel chat invitations
+     *
+     * @param inviterId The ID of the user who is inviting the users.
+     * @param chatId The ID of the chat to cancel invitations for.
+     * @param userIds The IDs of the users to cancel invitations for.
+     * @return Whether the invitations were canceled.
+     */
+    suspend fun cancelChatInvitations(
+        inviterId: String,
+        chatId: String,
+        userIds: List<String>
+    ): ChatResult<Boolean>
 
     /**
      * Update current user chat participant status.
