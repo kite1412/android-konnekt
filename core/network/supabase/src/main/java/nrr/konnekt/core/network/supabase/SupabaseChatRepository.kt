@@ -570,9 +570,9 @@ internal class SupabaseChatRepository @Inject constructor(
             }
             ?: Error(ChatError.Unknown)
 
-    override suspend fun joinChat(chatId: String): ChatResult<ChatParticipant> =
+    override suspend fun joinChat(invitationId: String): ChatResult<ChatParticipant> =
         performSuspendingAuthenticatedAction {
-            val res = rpc.joinChat(chatId)
+            val res = rpc.joinChat(invitationId)
 
             res
                 ?.toModel()

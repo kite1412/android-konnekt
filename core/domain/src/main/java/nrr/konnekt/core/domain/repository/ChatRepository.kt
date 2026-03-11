@@ -97,10 +97,10 @@ interface ChatRepository {
     /**
      * Join a chat.
      *
-     * @param chatId The ID of the chat to subscribe to.
+     * @param invitationId The ID of the chat invitation to join.
      * @return Participant of the joined chat.
      */
-    suspend fun joinChat(chatId: String): ChatResult<ChatParticipant>
+    suspend fun joinChat(invitationId: String): ChatResult<ChatParticipant>
 
     /**
      * Leave a chat.

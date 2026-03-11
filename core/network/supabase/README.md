@@ -291,17 +291,30 @@ $$;
 ### join_chat
 ```sql
 create or replace function join_chat(
-    _chat_id uuid
+    _invitation_id uuid
 )
 returns jsonb
 language plpgsql
+security definer
 as $$
 declare
     _user_id uuid := auth.uid();
+    _chat_id uuid;
     _role participant_role;
     _user_record users;
     _status_record chat_participant_statuses;
 begin
+
+    select chat_id
+    into _chat_id
+    from chat_invitations
+    where id = _invitation_id
+      and receiver_id = _user_id;
+
+    if _chat_id is null then
+        raise exception 'Invitation not found or not allowed';
+    end if;
+
     insert into chat_participants (
         chat_id,
         user_id,
@@ -323,6 +336,9 @@ begin
         _user_id
     )
     on conflict (chat_id, user_id) do nothing;
+
+    delete from chat_invitations
+    where id = _invitation_id;
 
     select role
     into _role

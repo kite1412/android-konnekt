@@ -198,12 +198,12 @@ internal abstract class SupabaseService(
             )
         }
 
-        suspend fun joinChat(chatId: String): SupabaseChatParticipantRpc? =
+        suspend fun joinChat(invitationId: String): SupabaseChatParticipantRpc? =
             performSuspendingAuthenticatedAction {
                 call<SupabaseChatParticipantRpc>(
                     function = "join_chat",
                     parameters = {
-                        put("_chat_id", chatId)
+                        put("_invitation_id", invitationId)
                     }
                 )
             }
