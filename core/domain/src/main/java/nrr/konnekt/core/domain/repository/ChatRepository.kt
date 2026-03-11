@@ -75,7 +75,7 @@ interface ChatRepository {
      * @param userId The ID of the user to get joined chats for.
      * @return A list of chats the user is subscribed to.
      */
-    suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>>
+    suspend fun getJoinedChats(userId: String, type: ChatType? = null): ChatResult<List<Chat>>
 
     /**
      * Get a list of chat participants given a chat ID.

@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,12 +33,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,6 +72,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.component.ShadowedTextField
 import nrr.konnekt.core.designsystem.component.Toggle
 import nrr.konnekt.core.designsystem.theme.DarkGray
@@ -88,6 +94,7 @@ import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
+import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
@@ -133,6 +140,7 @@ internal fun ChatDetailScreen(
                 currentUser = currentUser,
                 activeParticipants = activeParticipants,
                 peerLastActiveAt = viewModel.peerLastActiveAt,
+                currentUserContacts = viewModel.currentUserContacts,
                 peerGroupsInCommon = viewModel.peerGroupsInCommon,
                 onNavigateBack = navigateBack,
                 onShare = {},
@@ -173,6 +181,8 @@ internal fun ChatDetailScreen(
                         updateLeftAt = UpdateStatus(!blocked)
                     )
                 },
+                onAddMemberClick = viewModel::updateCurrentUserContacts,
+                onAddMembers = {},
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -187,6 +197,7 @@ private fun ChatDetailScreen(
     activeParticipants: List<ChatParticipant>,
     peerGroupsInCommon: List<Chat>,
     peerLastActiveAt: Instant?,
+    currentUserContacts: List<User>?,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     onDescChange: (String) -> Unit,
@@ -196,6 +207,8 @@ private fun ChatDetailScreen(
     onParticipantInfoClick: (User) -> Unit,
     onParticipantMessageClick: (User) -> Unit,
     onBlockChange: (Boolean) -> Unit,
+    onAddMemberClick: () -> Unit,
+    onAddMembers: (selectedContacts: List<User>) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -204,6 +217,7 @@ private fun ChatDetailScreen(
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
     var selectedParticipant by retain { mutableStateOf<User?>(null) }
+    var showAddMemberDialog by retain { mutableStateOf(false) }
     val resetSelectedParticipant = {
         selectedParticipant = null
     }
@@ -247,7 +261,10 @@ private fun ChatDetailScreen(
                             message = "Leave this chat?"
                         )
                     },
-                    onAddMember = {},
+                    onAddMember = {
+                        showAddMemberDialog = true
+                        onAddMemberClick()
+                    },
                     onDeleteGroup = {},
                     onChatParticipantClick = { participant ->
                         selectedParticipant = participant.user
@@ -287,6 +304,12 @@ private fun ChatDetailScreen(
             }
         )
     }
+    if (showAddMemberDialog) AddMemberDialog(
+        chatParticipants = chat.participants,
+        userContacts = currentUserContacts,
+        onDismissRequest = { showAddMemberDialog = false },
+        onConfirm = onAddMembers
+    )
 }
 
 @OptIn(ExperimentalTime::class)
@@ -596,7 +619,7 @@ private fun GroupChatActions(
     onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier,
 ) = ActionsLayout(modifier = modifier) {
-    if (isAdmin && !canLeave) {
+    if (isAdmin) {
         val contentColor = MaterialTheme.colorScheme.primary
 
         Action(
@@ -991,6 +1014,173 @@ private fun ChatParticipantCard(
     }
 }
 
+@Composable
+private fun AddMemberDialog(
+    chatParticipants: List<ChatParticipant>,
+    userContacts: List<User>?,
+    onDismissRequest: () -> Unit,
+    onConfirm: (selectedContacts: List<User>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var usernameSearch by retain { mutableStateOf("") }
+    val selectedContacts = retain {
+        mutableStateListOf<User>()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        title = "Add Member",
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(selectedContacts)
+                    onDismissRequest()
+                },
+                enabled = selectedContacts.isNotEmpty()
+            ) {
+                Text("Add")
+            }
+        },
+        cancelButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = Red
+                )
+            }
+        }
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            val style = MaterialTheme.typography.bodyLarge.copy(
+                color = DarkGray,
+                fontStyle = FontStyle.Italic
+            )
+
+            when {
+                userContacts == null -> Text(
+                    text = "Loading contacts...",
+                    style = style
+                )
+                userContacts.isNotEmpty() -> Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = usernameSearch,
+                        onValueChange = { usernameSearch = it },
+                        placeholder = "Search by username",
+                        singleLine = true
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .sizeIn(
+                                maxHeight = 400.dp
+                            )
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(
+                            items = userContacts.filter { contact ->
+                                contact.username.contains(usernameSearch, ignoreCase = true)
+                            },
+                            key = { u -> u.id }
+                        ) { user ->
+                            Contact(
+                                user = user,
+                                selected = selectedContacts.any { u ->
+                                    u.id == user.id
+                                },
+                                onClick = { user, selected ->
+                                    if (selected) selectedContacts.add(user)
+                                    else selectedContacts.remove(user)
+                                },
+                                added = chatParticipants.any { participant ->
+                                    participant.user.id == user.id
+                                }
+                            )
+                        }
+                    }
+                }
+                else -> Text(
+                    text = "No contacts found",
+                    style = style
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Contact(
+    user: User,
+    selected: Boolean,
+    added: Boolean,
+    onClick: (User, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary
+            else DarkGray
+    )
+    val onClick = {
+        onClick(user, !selected)
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable(
+                interactionSource = null,
+                indication = null,
+                enabled = !added,
+                onClick = onClick
+            )
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AvatarIcon(
+                name = user.username,
+                iconPath = user.imagePath
+            )
+            Text(
+                text = user.username,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Box(
+            modifier = Modifier.weight(0.2f)
+        ) {
+            if (!added) RadioButton(
+                selected = selected,
+                onClick = onClick
+            ) else Text(
+                text = "Added",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalTime::class)
 @Preview
 @Composable
@@ -1023,6 +1213,7 @@ private fun ChatDetailScreenPreview(
                 currentUser = conversation.chat.participants.first().user,
                 activeParticipants = emptyList(),
                 peerLastActiveAt = null,
+                currentUserContacts = emptyList(),
                 onNavigateBack = {},
                 onShare = {},
                 onDescChange = {},
@@ -1032,6 +1223,8 @@ private fun ChatDetailScreenPreview(
                 onParticipantInfoClick = {},
                 onParticipantMessageClick = {},
                 onBlockChange = {},
+                onAddMemberClick = {},
+                onAddMembers = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

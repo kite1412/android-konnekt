@@ -542,8 +542,8 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.ChatNotFound)
         }
 
-    override suspend fun getJoinedChats(userId: String): ChatResult<List<Chat>> =
-        rpc.getJoinedChats(userId)
+    override suspend fun getJoinedChats(userId: String, type: ChatType?): ChatResult<List<Chat>> =
+        rpc.getJoinedChats(userId, type)
             ?.let { chats ->
                 Success(chats.map(SupabaseChatRpc::toModel))
             }

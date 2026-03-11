@@ -417,7 +417,8 @@ $$;
 ### get_joined_chats
 ```sql
 create or replace function get_joined_chats(
-    _user_id uuid
+    _user_id uuid,
+    _type text default null
 )
 returns jsonb
 language plpgsql
@@ -478,7 +479,11 @@ begin
         on cs.chat_id = c.id
     left join users u
         on u.id = _user_id
-    where p.user_id = _user_id;
+    where p.user_id = _user_id
+        and (
+            _type is null
+            or c.type = _type::chat_type
+        );
 
     return coalesce(result, '[]'::jsonb);
 end;

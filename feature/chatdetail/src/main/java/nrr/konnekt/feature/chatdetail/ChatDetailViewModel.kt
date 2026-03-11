@@ -58,6 +58,7 @@ class ChatDetailViewModel @Inject constructor(
     internal val isPersonalChatAdded = peerId == null
     internal var peerGroupsInCommon = mutableStateListOf<Chat>()
     internal var peerLastActiveAt by mutableStateOf<Instant?>(null)
+    internal var currentUserContacts: List<User>? by mutableStateOf(null)
 
     private val _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
@@ -187,5 +188,28 @@ class ChatDetailViewModel @Inject constructor(
                 }
                 ?.id
         } else null
+    }
+
+    internal fun updateCurrentUserContacts() {
+        if (currentUserContacts == null) {
+            viewModelScope.launch {
+                currentUser.first()?.let { user ->
+                    val res = chatRepository.getJoinedChats(
+                        userId = user.id,
+                        type = ChatType.PERSONAL
+                    )
+
+                    if (res is Result.Success) {
+                        currentUserContacts = res.data.mapNotNull { chat ->
+                            chat.participants
+                                .firstOrNull { participant ->
+                                    participant.user.id != user.id
+                                }
+                                ?.user
+                        }
+                    }
+                }
+            }
+        }
     }
 }

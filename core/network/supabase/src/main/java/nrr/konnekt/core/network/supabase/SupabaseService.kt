@@ -15,6 +15,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatPermissionSettings
+import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
 import nrr.konnekt.core.network.supabase.dto.response.rpc.GetChatParticipant
@@ -32,6 +33,7 @@ import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.Tables.USER_ACTIVITY_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.USER_MESSAGE_STATUSES
+import nrr.konnekt.core.network.supabase.util.toSupabaseEnum
 
 internal abstract class SupabaseService(
     private val authentication: Authentication
@@ -210,12 +212,16 @@ internal abstract class SupabaseService(
             }
 
 
-        suspend fun getJoinedChats(userId: String): List<SupabaseChatRpc>? =
+        suspend fun getJoinedChats(
+            userId: String,
+            type: ChatType?
+        ): List<SupabaseChatRpc>? =
             performSuspendingAuthenticatedAction {
                 call<List<SupabaseChatRpc>>(
                     function = "get_joined_chats",
                     parameters = {
                         put("_user_id", userId)
+                        put("_type", type?.toSupabaseEnum())
                     }
                 )
             }
