@@ -646,6 +646,85 @@ end;
 $$;
 ```
 
+### get_chat_invitations
+```sql
+create or replace function get_chat_invitations(
+    _user_id uuid
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+    _result jsonb;
+begin
+
+    select jsonb_agg(
+        jsonb_build_object(
+            'id', ci.id,
+            'invited_at', ci.invited_at,
+
+            'inviter', to_jsonb(inviter),
+            'receiver', to_jsonb(receiver),
+
+            'chat',
+            jsonb_build_object(
+                'id', c.id,
+                'type', c.type,
+                'created_at', c.created_at,
+
+                'participants',
+                (
+                    select jsonb_agg(
+                        jsonb_build_object(
+                            'user', to_jsonb(u),
+                            'role', cp.role,
+                            'status', to_jsonb(cps)
+                        )
+                    )
+                    from chat_participants cp
+                    join users u
+                        on u.id = cp.user_id
+                    join chat_participant_statuses cps
+                        on cps.user_id = cp.user_id
+                       and cps.chat_id = cp.chat_id
+                    where cp.chat_id = c.id
+                ),
+
+                'setting',
+                jsonb_build_object(
+                    'chat_id', cs.chat_id,
+                    'name', cs.name,
+                    'description', cs.description,
+                    'icon_path', cs.icon_path,
+                    'permission_settings',
+                    case
+                        when cps.chat_id is not null
+                        then to_jsonb(cps)
+                        else null
+                    end
+                )
+            )
+        )
+    )
+    into _result
+    from chat_invitations ci
+    join chats c
+        on c.id = ci.chat_id
+    join users inviter
+        on inviter.id = ci.inviter_id
+    join users receiver
+        on receiver.id = ci.receiver_id
+    left join chat_settings cs
+        on cs.chat_id = c.id
+    left join chat_permission_settings cps
+        on cps.chat_id = c.id
+    where ci.receiver_id = _user_id;
+
+    return coalesce(_result, '[]'::jsonb);
+end;
+$$;
+```
+
 ### send_message_with_attachments
 ```sql
 create or replace function send_message_with_attachments(

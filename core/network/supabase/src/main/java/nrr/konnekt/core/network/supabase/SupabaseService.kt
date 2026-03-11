@@ -27,7 +27,6 @@ import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
-import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_SETTINGS
 import nrr.konnekt.core.network.supabase.util.Tables.MESSAGES
@@ -91,9 +90,6 @@ internal abstract class SupabaseService(
 
     protected suspend fun <R> attachments(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(ATTACHMENTS, operation)
-
-    protected suspend fun <R> chatParticipantStatuses(operation: suspend PostgrestQueryBuilder.() -> R) =
-        performSuspendingOperation(CHAT_PARTICIPANT_STATUSES, operation)
 
     protected inner class Rpc {
         private suspend inline fun <reified R : Any> call(
@@ -257,6 +253,16 @@ internal abstract class SupabaseService(
                         }
                     )
                 }
+            }
+
+        suspend fun getChatInvitations(userId: String): List<SupabaseChatInvitationRpc>? =
+            performSuspendingAuthenticatedAction {
+                call<List<SupabaseChatInvitationRpc>>(
+                    function = "get_chat_invitations",
+                    parameters = {
+                        put("_user_id", userId)
+                    }
+                )
             }
     }
 }
