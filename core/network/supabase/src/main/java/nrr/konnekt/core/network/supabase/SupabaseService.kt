@@ -313,5 +313,16 @@ internal abstract class SupabaseService(
                 }
             )
         }
+
+        suspend fun deleteChat(
+            chatId: String
+        ): SupabaseChatRpc? = performSuspendingAuthenticatedAction {
+            call<SupabaseChatRpc>(
+                function = "delete_chat",
+                parameters = {
+                    put("_chat_id", chatId)
+                }
+            )
+        }
     }
 }

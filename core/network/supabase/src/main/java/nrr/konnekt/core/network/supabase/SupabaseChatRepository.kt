@@ -722,6 +722,12 @@ internal class SupabaseChatRepository @Inject constructor(
         } ?: Error(ChatError.Unknown)
     }
 
+    override suspend fun deleteChat(chatId: String): ChatResult<Chat> =
+        rpc.deleteChat(chatId)
+            ?.toModel()
+            ?.let(Result<Chat, Nothing>::Success)
+            ?: Error(ChatError.ParticipantRoleViolation)
+
     override suspend fun inviteToChat(
         chatId: String,
         receiverIds: List<String>

@@ -134,6 +134,16 @@ interface ChatRepository {
     ): ChatResult<Chat>
 
     /**
+     * Delete a chat.
+     *
+     * @param chatId The ID of the chat to delete.
+     * @return The deleted chat.
+     */
+    suspend fun deleteChat(
+        chatId: String
+    ): ChatResult<Chat>
+
+    /**
      * Invite users to a chat.
      *
      * @param chatId The ID of the chat to invite users to.

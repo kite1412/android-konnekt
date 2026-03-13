@@ -441,6 +441,109 @@ end;
 $$;
 ```
 
+### delete_chat
+```sql
+create or replace function delete_chat(
+    _chat_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+    _user_id uuid := auth.uid();
+    _is_admin boolean;
+    result jsonb;
+begin
+
+    select exists (
+        select 1
+        from chat_participants cp
+        where cp.chat_id = _chat_id
+        and cp.user_id = _user_id
+        and cp.role = 'admin'
+        and cp.left_at is null
+    )
+    into _is_admin;
+
+    if not _is_admin then
+        raise exception 'only admins can delete the chat';
+    end if;
+
+    update chats
+    set deleted_at = now()
+    where id = _chat_id;
+
+    select jsonb_build_object(
+        'id', c.id,
+        'type', c.type,
+        'created_at', c.created_at,
+        'deleted_at', c.deleted_at,
+
+        'setting',
+            jsonb_build_object(
+                'chat_id', cs.chat_id,
+                'name', cs.name,
+                'description', cs.description,
+                'icon_path', cs.icon_path,
+
+                'permission_settings',
+                    case
+                        when cps.chat_id is not null then
+                            jsonb_build_object(
+                                'chat_id', cps.chat_id,
+                                'edit_chat_info', cps.edit_chat_info,
+                                'send_messages', cps.send_messages,
+                                'manage_members', cps.manage_members
+                            )
+                        else null
+                    end
+            ),
+
+        'participants',
+            (
+                select jsonb_agg(
+                    jsonb_build_object(
+                        'role', cp.role,
+
+                        'user',
+                            jsonb_build_object(
+                                'id', u.id,
+                                'username', u.username,
+                                'email', u.email,
+                                'bio', u.bio,
+                                'created_at', u.created_at,
+                                'image_path', u.image_path
+                            ),
+
+                        'status',
+                            jsonb_build_object(
+                                'user_id', cp.user_id,
+                                'chat_id', cp.chat_id,
+                                'joined_at', cp.joined_at,
+                                'cleared_at', cp.cleared_at,
+                                'left_at', cp.left_at,
+                                'archived_at', cp.archived_at,
+                                'last_read_at', cp.last_read_at
+                            )
+                    )
+                )
+                from chat_participants cp
+                join users u on u.id = cp.user_id
+                where cp.chat_id = c.id
+            )
+    )
+    into result
+    from chats c
+    left join chat_settings cs on cs.chat_id = c.id
+    left join chat_permission_settings cps on cps.chat_id = c.id
+    where c.id = _chat_id;
+
+    return result;
+end;
+$$;
+```
+
 ### get_joined_chats
 ```sql
 create or replace function get_joined_chats(
