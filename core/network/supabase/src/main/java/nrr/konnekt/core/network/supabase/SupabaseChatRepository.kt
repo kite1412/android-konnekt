@@ -41,6 +41,7 @@ import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
+import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChat
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipant
@@ -586,13 +587,14 @@ internal class SupabaseChatRepository @Inject constructor(
                 else return@let res
             }
 
-            rpc.updateChatSetting(
+            val res = rpc.updateChatSetting(
                 chatId = chatId,
                 chatSetting = chatSetting.toChatSetting(
                     iconPath = newIconPath ?: chat.setting?.iconPath
                 )
-            )
-                ?.toModel()
+            )?.toModel()
+
+            res
                 ?.let(Result<ChatSetting, Nothing>::Success)
                 ?: Error(ChatError.Unknown)
         } catch (_: Exception) {
@@ -769,12 +771,14 @@ internal class SupabaseChatRepository @Inject constructor(
                     allowedExtensions.contains(newIcon.fileExtension)
                 ) Error(ChatError.FileUploadError)
 
+                val chatType = chat.type.toSupabaseEnum()
                 val path = createPath(
-                    fileName = "${chat.id}.${newIcon.fileExtension}",
-                    rootFolder = chat.type.toSupabaseEnum()
+                    fileName = "${chat.id}/${now()}.${newIcon.fileExtension}",
+                    rootFolder = chatType
                 )
                 try {
                     perform {
+                        delete("$chatType/${chat.id}/")
                         upload(
                             path = path.pathInBucket,
                             data = newIcon.content

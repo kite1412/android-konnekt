@@ -928,12 +928,14 @@ begin
     end if;
 
     select jsonb_build_object(
+        'chat_id', cs.chat_id,
         'name', cs.name,
         'description', cs.description,
         'icon_path', cs.icon_path,
         'permission_settings',
             case
                 when cps.chat_id is not null then jsonb_build_object(
+                    'chat_id', cps.chat_id,
                     'edit_chat_info', cps.edit_chat_info,
                     'send_messages', cps.send_messages,
                     'manage_members', cps.manage_members

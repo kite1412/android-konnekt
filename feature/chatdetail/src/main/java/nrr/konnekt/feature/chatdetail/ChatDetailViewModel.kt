@@ -21,9 +21,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
+import nrr.konnekt.core.domain.usecase.EditChatSettingUseCase
 import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
@@ -46,7 +48,8 @@ class ChatDetailViewModel @Inject constructor(
     private val userPresenceManager: UserPresenceManager,
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase,
     private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
-    private val inviteToChatUseCase: InviteToChatUseCase
+    private val inviteToChatUseCase: InviteToChatUseCase,
+    private val editChatSettingUseCase: EditChatSettingUseCase
 ) : ViewModel() {
     private val chatId = savedStateHandle.toRoute<ChatDetailRoute>().chatId
     private val peerId = savedStateHandle.toRoute<ChatDetailRoute>().peerId
@@ -251,6 +254,23 @@ class ChatDetailViewModel @Inject constructor(
                     chatInvitations.addAll(res.data)
                     _events.emit(
                         UiEvent.ShowSnackbar("Invitations sent")
+                    )
+                }
+            }
+        }
+    }
+
+    internal fun updateChatSetting(chatSettingEdit: ChatSettingEdit) {
+        viewModelScope.launch {
+            chat.first()?.let { chat ->
+                val res = editChatSettingUseCase(
+                    chatId = chat.id,
+                    chatSetting = chatSettingEdit
+                )
+
+                if (res is Result.Success) {
+                    _chat.value = chat.copy(
+                        setting = res.data
                     )
                 }
             }

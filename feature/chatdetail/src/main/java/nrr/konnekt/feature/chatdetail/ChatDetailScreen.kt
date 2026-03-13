@@ -205,7 +205,7 @@ internal fun ChatDetailScreen(
                 onCancelInvitation = { invitation ->
                     viewModel.cancelInvitations(listOf(invitation.id))
                 },
-                onSaveChanges = {},
+                onSaveChanges = viewModel::updateChatSetting,
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
