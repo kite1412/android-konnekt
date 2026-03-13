@@ -1,6 +1,8 @@
 package nrr.konnekt.feature.chatdetail
 
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
@@ -55,6 +57,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -84,6 +88,8 @@ import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.name
@@ -91,9 +97,11 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatPermissionSettings
+import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.network.upload.util.ValidationResult
 import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.AlertDialog
@@ -101,6 +109,7 @@ import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
 import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
@@ -108,7 +117,7 @@ import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.getLetterColor
-import nrr.konnekt.core.ui.util.rememberResolvedFile
+import nrr.konnekt.core.ui.util.toFileUpload
 import nrr.konnekt.core.ui.util.unblockChatAlert
 import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
 import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
@@ -196,6 +205,7 @@ internal fun ChatDetailScreen(
                 onCancelInvitation = { invitation ->
                     viewModel.cancelInvitations(listOf(invitation.id))
                 },
+                onSaveChanges = {},
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -224,6 +234,7 @@ private fun ChatDetailScreen(
     onAddMemberClick: () -> Unit,
     onAddMembers: (selectedContacts: List<User>) -> Unit,
     onCancelInvitation: (ChatInvitation) -> Unit,
+    onSaveChanges: (ChatSettingEdit) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -234,6 +245,7 @@ private fun ChatDetailScreen(
     var selectedParticipant by retain { mutableStateOf<User?>(null) }
     var isClickingPendingInvitation by retain { mutableStateOf(false) }
     var showAddMemberDialog by retain { mutableStateOf(false) }
+    var showChatEditDialog by retain { mutableStateOf(false) }
     val isAdmin = chat.participants.any { participant ->
         participant.user.id == currentUser.id &&
                 participant.role == ParticipantRole.ADMIN
@@ -254,7 +266,7 @@ private fun ChatDetailScreen(
             totalActiveParticipants = activeParticipants.size - 1,
             onNavigateBack = onNavigateBack,
             onShare = onShare,
-            onEdit = {}
+            onEdit = { showChatEditDialog = true }
         )
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -354,6 +366,13 @@ private fun ChatDetailScreen(
         onDismissRequest = { showAddMemberDialog = false },
         onConfirm = onAddMembers
     )
+    if (showChatEditDialog) chat.setting?.let { chatSetting ->
+        ChatEditDialog(
+            chatSetting = chatSetting,
+            onDismissRequest = { showChatEditDialog = false },
+            onSaveChanges = onSaveChanges
+        )
+    }
     ActionAlertDialog(
         alert = alert,
         onDismissRequest = { alert = it }
@@ -746,29 +765,11 @@ private fun SmallChatIcon(
         )
     }
 
-    iconPath?.let {
-        val chatIcon by rememberResolvedFile(it)
-
-        chatIcon?.let { bytes ->
-            Image(
-                bitmap = bytes.asImageBitmap(),
-                contentDescription = "group icon",
-                modifier = modifier
-                    .size(iconSize)
-                    .clip(shape)
-                    .border()
-            )
-        } ?: ChatNameIcon(
-            chatName = chatName,
-            size = iconSize,
-            clipShape = shape,
-            modifier = modifier.border()
-        )
-    } ?: ChatNameIcon(
-        chatName = chatName,
-        size = iconSize,
-        clipShape = shape,
-        modifier = modifier.border()
+    AvatarIcon(
+        name = chatName,
+        iconPath = iconPath,
+        modifier = modifier.border(),
+        diameter = iconSize
     )
 }
 
@@ -1291,6 +1292,140 @@ private fun Contact(
     }
 }
 
+@Composable
+private fun ChatEditDialog(
+    chatSetting: ChatSetting,
+    onDismissRequest: () -> Unit,
+    onSaveChanges: (ChatSettingEdit) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var chatSettingEdit by retain(chatSetting) {
+        mutableStateOf(
+            ChatSettingEdit(
+                name = chatSetting.name,
+                description = chatSetting.description,
+                permissionSettings = chatSetting.permissionSettings
+            )
+        )
+    }
+    val fileUploadValidator = LocalFileUploadValidator.current
+    val snackbarHostState = LocalSnackbarHostState.current
+    val context = LocalContext.current
+    val iconLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { uri ->
+            when (val res = fileUploadValidator(uri)) {
+                is ValidationResult.Invalid -> snackbarHostState.showSnackbar(
+                    message = fileUploadValidator.getViolationReasonMessage(res.exception.reason)
+                )
+                is ValidationResult.Valid -> chatSettingEdit = chatSettingEdit.copy(
+                    icon = uri.toFileUpload(context)
+                )
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = "Edit Chat Detail",
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSaveChanges(chatSettingEdit)
+                    onDismissRequest()
+                },
+                enabled = chatSettingEdit.name.isNotBlank()
+            ) {
+                Text("Save")
+            }
+        },
+        cancelButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = Red
+                )
+            }
+        }
+    ) {
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable {
+                        iconLauncher.launch("image/*")
+                    }
+            ) {
+                val diameter = 80.dp
+
+                chatSettingEdit.icon?.let {
+                    Image(
+                        bitmap = it.content.asImageBitmap(),
+                        contentDescription = "chat icon",
+                        modifier = Modifier
+                            .size(diameter)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } ?: AvatarIcon(
+                    name = chatSetting.name,
+                    iconPath = chatSetting.iconPath,
+                    diameter = diameter
+                )
+                Box(
+                    Modifier
+                        .size(diameter)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                ) {
+                    Icon(
+                        painter = painterResource(KonnektIcon.pencil),
+                        contentDescription = "change icon",
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(diameter / 3),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = chatSettingEdit.name,
+                onValueChange = {
+                    chatSettingEdit = chatSettingEdit.copy(
+                        name = it
+                    )
+                },
+                singleLine = true,
+                errorIndicators = listOf(
+                    TextFieldErrorIndicator(
+                        error = chatSettingEdit.name.isBlank(),
+                        message = "Name cannot be blank."
+                    )
+                ),
+                placeholder = "Enter Chat Name",
+                label = "Chat Name"
+            )
+            OutlinedTextField(
+                value = chatSettingEdit.description ?: "",
+                onValueChange = {
+                    chatSettingEdit = chatSettingEdit.copy(
+                        description = it
+                    )
+                },
+                placeholder = "Enter Chat Description",
+                label = "Chat Description"
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalTime::class)
 @Preview
 @Composable
@@ -1337,6 +1472,7 @@ private fun ChatDetailScreenPreview(
                 onAddMemberClick = {},
                 onAddMembers = {},
                 onCancelInvitation = {},
+                onSaveChanges = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

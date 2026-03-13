@@ -3,8 +3,18 @@ package nrr.konnekt.core.ui.util
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
+
+fun Uri.toFileUpload(context: Context) =
+    context.getFileName(this).let {
+        FileUpload(
+            fileName = it,
+            fileExtension = it.substringAfterLast("."),
+            content = context.uriToByteArray(this)
+        )
+    }
 
 fun Context.getFileName(uri: Uri): String {
     var name: String? = null

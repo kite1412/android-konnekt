@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,11 +32,12 @@ fun OutlinedTextField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    label: String? = null,
     placeholder: String = "Enter text here",
     errorIndicators: List<TextFieldErrorIndicator>? = null,
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
-    style: OutlinedTextFieldStyle = TextFieldDefaults.defaultOutlinedStyle(),
+    style: OutlinedTextFieldStyle = TextFieldDefaults.defaultOutlinedStyle()
 ) {
     val errorColor = MaterialTheme.colorScheme.error
     val borderColor by animateColorAsState(
@@ -42,23 +45,27 @@ fun OutlinedTextField(
             errorColor
         else style.outlineColor
     )
-    var latestErrorMessage by remember { mutableStateOf("") }
+    var latestErrorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         AnimatedVisibility(
-            visible = errorIndicators != null && errorIndicators.any { it.error }
+            visible = (errorIndicators != null && errorIndicators.any { it.error }) || label != null
         ) {
-            val message = errorIndicators?.firstOrNull { it.error }?.message
-            message?.let {
-                latestErrorMessage = it
+            val errorIndicator = errorIndicators?.firstOrNull { it.error }
+            LaunchedEffect(errorIndicator) {
+                errorIndicator?.let {
+                    latestErrorMessage = it.message
+                } ?: let {
+                    latestErrorMessage = null
+                }
             }
             Text(
-                text = message ?: latestErrorMessage,
+                text = latestErrorMessage ?: label ?: "",
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = errorColor
+                    color = if (errorIndicator != null) errorColor else LocalContentColor.current
                 )
             )
         }

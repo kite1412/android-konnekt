@@ -11,3 +11,7 @@ kotlin {
         languageSettings.optIn("kotlin.time.ExperimentalTime")
     }
 }
+
+dependencies {
+    implementation(projects.konnekt.core.network.upload.util)
+}

@@ -78,8 +78,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.UiEvent
-import nrr.konnekt.core.ui.util.getFileName
-import nrr.konnekt.core.ui.util.uriToByteArray
+import nrr.konnekt.core.ui.util.toFileUpload
 
 @Composable
 internal fun ProfileScreen(
@@ -248,13 +247,8 @@ private fun ProfileImage(
         uri?.let { uri ->
             when (val result = fileUploadValidator(uri)) {
                 is ValidationResult.Valid -> {
-                    val fileName = context.getFileName(uri)
                     onProfileImageChange(
-                        FileUpload(
-                            fileName = fileName,
-                            fileExtension = fileName.substringAfterLast("."),
-                            content = context.uriToByteArray(uri)
-                        )
+                        uri.toFileUpload(context)
                     )
                 }
                 is ValidationResult.Invalid -> snackbarHostState.showSnackbar(
