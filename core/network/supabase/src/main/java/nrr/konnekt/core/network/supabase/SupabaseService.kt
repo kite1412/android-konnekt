@@ -255,7 +255,17 @@ internal abstract class SupabaseService(
                 }
             }
 
-        suspend fun getChatInvitations(userId: String): List<SupabaseChatInvitationRpc>? =
+        suspend fun getChatInvitations(chatId: String): List<SupabaseChatInvitationRpc>? =
+            performSuspendingAuthenticatedAction {
+                call<List<SupabaseChatInvitationRpc>>(
+                    function = "get_chat_invitations",
+                    parameters = {
+                        put("_chat_id", chatId)
+                    }
+                )
+            }
+
+        suspend fun getUserChatInvitations(userId: String): List<SupabaseChatInvitationRpc>? =
             performSuspendingAuthenticatedAction {
                 call<List<SupabaseChatInvitationRpc>>(
                     function = "get_chat_invitations",

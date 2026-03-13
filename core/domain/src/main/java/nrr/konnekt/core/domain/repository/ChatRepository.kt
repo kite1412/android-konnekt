@@ -87,12 +87,20 @@ interface ChatRepository {
     suspend fun getChatParticipants(chatId: String): ChatResult<List<ChatParticipant>>
 
     /**
+     * Get a list of chat invitations for a chat.
+     *
+     * @param chatId The ID of the chat to get invitations for.
+     * @return A list of chat invitations.
+     */
+    suspend fun getChatInvitations(chatId: String): ChatResult<List<ChatInvitation>>
+
+    /**
      * Get user's chat invitations from other users.
      *
      * @param userId The ID of the user to get chat invitations for.
      * @return A list of chat invitations.
      */
-    suspend fun getChatInvitations(userId: String): ChatResult<List<ChatInvitation>>
+    suspend fun getUserChatInvitations(userId: String): ChatResult<List<ChatInvitation>>
 
     /**
      * Join a chat.

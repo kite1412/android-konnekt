@@ -563,8 +563,16 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
-    override suspend fun getChatInvitations(userId: String): ChatResult<List<ChatInvitation>> =
-        rpc.getChatInvitations(userId)
+    override suspend fun getChatInvitations(chatId: String): ChatResult<List<ChatInvitation>> =
+        rpc.getChatInvitations(chatId)
+            ?.let { invitations ->
+                Success(invitations.map(SupabaseChatInvitationRpc::toModel))
+            }
+            ?: Error(ChatError.Unknown)
+
+
+    override suspend fun getUserChatInvitations(userId: String): ChatResult<List<ChatInvitation>> =
+        rpc.getUserChatInvitations(userId)
             ?.let { invitations ->
                 Success(invitations.map(SupabaseChatInvitationRpc::toModel))
             }
