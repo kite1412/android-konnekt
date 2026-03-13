@@ -1,13 +1,10 @@
 package nrr.konnekt.feature.chatdetail
 
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,8 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -45,16 +40,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.retain.retain
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -63,7 +55,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -77,7 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.designsystem.component.OutlinedTextField
-import nrr.konnekt.core.designsystem.component.ShadowedTextField
+import nrr.konnekt.core.designsystem.component.ShadowedBox
 import nrr.konnekt.core.designsystem.component.Toggle
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.DarkNavy
@@ -86,8 +77,7 @@ import nrr.konnekt.core.designsystem.theme.GreenPrimaryDarken
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
-import nrr.konnekt.core.designsystem.util.ShadowedTextFieldStyle
-import nrr.konnekt.core.designsystem.util.TextFieldDefaults
+import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.model.UpdateStatus
@@ -161,7 +151,6 @@ internal fun ChatDetailScreen(
                 chatInvitations = viewModel.chatInvitations,
                 onNavigateBack = navigateBack,
                 onShare = {},
-                onDescChange = {},
                 onClearChat = {
                     viewModel.updateChatParticipantStatus(
                         updateClearedAt = true
@@ -224,7 +213,6 @@ private fun ChatDetailScreen(
     chatInvitations: List<ChatInvitation>,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
-    onDescChange: (String) -> Unit,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
@@ -236,7 +224,6 @@ private fun ChatDetailScreen(
     onCancelInvitation: (ChatInvitation) -> Unit,
     onSaveChanges: (ChatSettingEdit) -> Unit,
     modifier: Modifier = Modifier,
-    canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
     pushNotificationEnabled: Boolean = false,
     onPushNotificationChange: (Boolean) -> Unit = {}
@@ -277,8 +264,6 @@ private fun ChatDetailScreen(
                     currentUser = currentUser,
                     isAdmin = isAdmin,
                     chatInvitations = chatInvitations,
-                    canEditDesc = canEditDesc,
-                    onDescChange = onDescChange,
                     isPersonalChatAdded = isPersonalChatAdded,
                     peerGroupsInCommon = peerGroupsInCommon,
                     messageNotificationEnabled = pushNotificationEnabled,
@@ -436,8 +421,6 @@ private fun ChatInfo(
     isAdmin: Boolean,
     chatInvitations: List<ChatInvitation>,
     onClearChat: () -> Unit,
-    canEditDesc: Boolean,
-    onDescChange: (String) -> Unit,
     isPersonalChatAdded: Boolean,
     peerGroupsInCommon: List<Chat>,
     messageNotificationEnabled: Boolean,
@@ -455,74 +438,37 @@ private fun ChatInfo(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        var descEdit by rememberSaveable(chat.setting?.description) {
-            mutableStateOf(chat.setting?.description ?: "")
-        }
-        var editDesc by rememberSaveable { mutableStateOf(false) }
-        val editable = chat.type == ChatType.GROUP && canEditDesc
-        val editEnabled = editable && editDesc
-        val focusRequester = remember { FocusRequester() }
+        val contentColor = LocalContentColor.current
 
-        AdjustedShadowedTextField(
-            value = descEdit,
-            onValueChange = {
-                descEdit = it
-            },
-            label = if (chat.type == ChatType.PERSONAL) "Bio" else "Group Description",
-            enabled = editEnabled,
-            placeholder = if (chat.type == ChatType.PERSONAL) "No Bio" else "No Description",
-            actions = if (editable) {
-                {
-                    LaunchedEffect(editDesc) {
-                        Log.d("feat:detail", editDesc.toString())
-                        if (!editDesc) {
-                            descEdit = chat.setting?.description ?: ""
-                            focusRequester.freeFocus()
-                        } else focusRequester.requestFocus()
-                    }
-                    AnimatedContent(
-                        targetState = editDesc
-                    ) { state ->
-                        val transition = updateTransition(state, "ui state transition")
-
-                        val tint by transition.animateColor(
-                            label = "tint color"
-                        ) { s ->
-                            if (!s) MaterialTheme.colorScheme.primary else Red
-                        }
-
-                        Icon(
-                            painter = painterResource(if (!state) KonnektIcon.pencil else KonnektIcon.x),
-                            contentDescription = "edit",
-                            modifier = Modifier.clickable(
-                                indication = null,
-                                interactionSource = null
-                            ) {
-                                editDesc = !editDesc
-                            },
-                            tint = tint
-                        )
-                    }
-                }
-            } else null,
-            style = TextFieldDefaults.defaultShadowedStyle(
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    color = LocalContentColor.current,
-                    fontStyle = if (descEdit.isEmpty()) FontStyle.Italic else FontStyle.Normal
+        ShadowedBox(
+            modifier = Modifier.fillMaxWidth(),
+            style = ShadowedBoxDefaults.defaultStyle(
+                contentPadding = PaddingValues(
+                    horizontal = 24.dp,
+                    vertical = 16.dp
                 )
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    if (editEnabled && descEdit != chat.setting?.description)
-                        onDescChange(descEdit)
-                    editDesc = false
-                }
-            ),
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Done
-            ),
-            focusRequester = focusRequester
-        )
+            )
+        ) {
+            Column {
+                val desc = chat.setting?.description
+
+                Text(
+                    text = if (chat.type == ChatType.PERSONAL) "Bio" else "Group Description",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = Gray
+                    )
+                )
+                Text(
+                    text = if (desc.isNullOrBlank()) if (chat.type == ChatType.PERSONAL) "No Bio"
+                        else "No Description"
+                            else desc,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (desc.isNullOrBlank()) Gray else contentColor,
+                        fontStyle = if (desc.isNullOrBlank()) FontStyle.Italic else FontStyle.Normal
+                    )
+                )
+            }
+        }
 
         Column(
             verticalArrangement = Arrangement.spacedBy(32.dp)
@@ -725,7 +671,7 @@ private fun GroupChatActions(
         onClick = onLeaveChat,
         modifier = modifier
     )
-    if (isAdmin && !canLeave) Action(
+    if (isAdmin) Action(
         iconId = KonnektIcon.delete,
         name = "Delete Group",
         onClick = onDeleteGroup
@@ -796,40 +742,6 @@ private fun ChatNameIcon(
             )
         )
     }
-}
-
-// TODO: inline it in ChatInfo
-@Composable
-private fun AdjustedShadowedTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = false,
-    placeholder: String = "",
-    style: ShadowedTextFieldStyle = TextFieldDefaults.defaultShadowedStyle(),
-    actions: (@Composable () -> Unit)? = null,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    focusRequester: FocusRequester? = null
-) {
-    ShadowedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        enabled = enabled,
-        placeholder = placeholder,
-        label = label,
-        style = style.copy(
-            labelTextStyle = MaterialTheme.typography.bodySmall.copy(
-                color = Gray
-            )
-        ),
-        actions = actions,
-        keyboardActions = keyboardActions,
-        keyboardOptions = keyboardOptions,
-        focusRequester = focusRequester
-    )
 }
 
 @Composable
@@ -1462,7 +1374,6 @@ private fun ChatDetailScreenPreview(
                 chatInvitations = emptyList(),
                 onNavigateBack = {},
                 onShare = {},
-                onDescChange = {},
                 onClearChat = {},
                 onLeaveChat = {},
                 isParticipantActive = { true },

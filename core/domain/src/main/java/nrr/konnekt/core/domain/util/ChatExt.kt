@@ -12,6 +12,8 @@ fun Chat.hasLeftByCurrentUser(user: User) =
     type != ChatType.PERSONAL &&
             hasLeft(user)
 
+fun Chat.isDeleted() = deletedAt != null
+
 fun Chat.name() =
     setting?.name ?: ""
 

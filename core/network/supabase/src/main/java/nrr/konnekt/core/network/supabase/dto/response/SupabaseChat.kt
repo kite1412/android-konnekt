@@ -1,6 +1,5 @@
 package nrr.konnekt.core.network.supabase.dto.response
 
-import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.Chat
@@ -13,8 +12,9 @@ internal data class SupabaseChat(
     val id: String,
     val type: String,
     @SerialName("created_at")
-    @Contextual
-    val createdAt: Instant
+    val createdAt: Instant,
+    @SerialName("deleted_at")
+    val deletedAt: Instant?
 )
 
 internal fun SupabaseChat.toChat(setting: ChatSetting? = null) =
@@ -22,5 +22,6 @@ internal fun SupabaseChat.toChat(setting: ChatSetting? = null) =
         id = id,
         type = ChatType.valueOf(type.uppercase()),
         createdAt = createdAt,
+        deletedAt = deletedAt,
         setting = setting
     )

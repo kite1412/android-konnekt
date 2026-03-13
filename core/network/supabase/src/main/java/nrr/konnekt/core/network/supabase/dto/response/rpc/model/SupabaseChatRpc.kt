@@ -13,6 +13,8 @@ internal data class SupabaseChatRpc(
     val setting: SupabaseChatSettingRpc,
     @SerialName("created_at")
     val createdAt: Instant,
+    @SerialName("deleted_at")
+    val deletedAt: Instant?,
     val participants: List<SupabaseChatParticipantRpc>
 )
 
@@ -21,5 +23,6 @@ internal fun SupabaseChatRpc.toModel() = Chat(
     type = ChatType.valueOf(type.uppercase()),
     setting = setting.toModel(),
     createdAt = createdAt,
+    deletedAt = deletedAt,
     participants = participants.map(SupabaseChatParticipantRpc::toModel)
 )

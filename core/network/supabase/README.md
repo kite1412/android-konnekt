@@ -48,8 +48,9 @@ CREATE TABLE IF NOT EXISTS user_activity_statuses (
 
 CREATE TABLE IF NOT EXISTS chats (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    type chat_type NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now()
+    type chat_type NOT NULL ,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    deleted_at timestamptz
 );
 
 CREATE TABLE IF NOT EXISTS chat_settings (
@@ -382,6 +383,7 @@ begin
         'id', c.id,
         'type', c.type,
         'created_at', c.created_at,
+        'deleted_at', c.deleted_at,
 
         'setting',
         case
@@ -457,6 +459,7 @@ begin
             'id', c.id,
             'type', c.type,
             'created_at', c.created_at,
+            'deleted_at', c.deleted_at,
             'setting',
                 case
                     when cs.chat_id is not null then
@@ -607,6 +610,7 @@ begin
             'id', _chat_row.id,
             'type', _chat_row.type,
             'created_at', _chat_row.created_at,
+            'deleted_at', _chat_row.deleted_at,
             'participants', _participants,
             'setting',
             jsonb_build_object(
@@ -756,6 +760,7 @@ begin
                 'id', c.id,
                 'type', c.type,
                 'created_at', c.created_at,
+                'deleted_at', c.deleted_at,
 
                 'participants',
                 (
@@ -835,6 +840,7 @@ begin
                 'id', c.id,
                 'type', c.type,
                 'created_at', c.created_at,
+                'deleted_at', c.deleted_at,
 
                 'participants',
                 (
