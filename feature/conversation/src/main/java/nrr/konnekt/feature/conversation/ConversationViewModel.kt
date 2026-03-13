@@ -112,6 +112,7 @@ class ConversationViewModel @Inject constructor(
     internal var idType = IdType.CHAT
         private set
 
+    // NOTE: not observed
     private var _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
 
@@ -244,6 +245,7 @@ class ConversationViewModel @Inject constructor(
                 ?.let { status ->
                     messages.filter { message ->
                         message.sentAt < (status.leftAt ?: Instant.DISTANT_FUTURE) &&
+                                message.sentAt < (this@ConversationViewModel.chat.value?.deletedAt ?: Instant.DISTANT_FUTURE)
                                 message.sentAt > (status.clearedAt ?: Instant.DISTANT_PAST)
                     }
                 } ?: messages

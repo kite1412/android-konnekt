@@ -109,6 +109,7 @@ import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
+import nrr.konnekt.core.domain.util.isDeleted
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.media.AudioRecorder
 import nrr.konnekt.core.media.MediaPlayerManager
@@ -502,7 +503,8 @@ private fun ConversationScreen(
         }
         AnimatedContent(
             !isLoadingMessages &&
-                    currentUserChatParticipation?.participation?.status?.leftAt == null
+                    currentUserChatParticipation?.participation?.status?.leftAt == null &&
+                    !chat.isDeleted()
         ) { sendEnabled ->
             if (sendEnabled) MessageComposer(
                 message = messageInput,
@@ -526,6 +528,7 @@ private fun ConversationScreen(
             ) {
                 Text(
                     text = if (chat.type == ChatType.PERSONAL) "You blocked this chat."
+                    else if (chat.isDeleted()) "Chat has been deleted."
                     else "You left this chat.",
                     color = Gray
                 )
@@ -602,8 +605,7 @@ private fun Header(
             peerLastActive = peerLastActive,
             onNavigateBack = onNavigateBack,
             onClick = { onChatClick(chat) },
-            modifier = Modifier
-                .weight(1f),
+            modifier = Modifier.weight(1f),
             iconSize = iconButtonSize,
             iconTint = iconButtonTint
         )
@@ -628,6 +630,7 @@ private fun Header(
                     ConversationActions(
                         blocked = chat.type == ChatType.PERSONAL &&
                                 currentUserChatParticipation?.participation?.status?.leftAt != null,
+                        hasLeftChat = currentUserChatParticipation?.participation?.status?.leftAt != null,
                         chatType = chat.type,
                         dismiss = { dropdownExpanded = false },
                         onClearChat = onClearChat,

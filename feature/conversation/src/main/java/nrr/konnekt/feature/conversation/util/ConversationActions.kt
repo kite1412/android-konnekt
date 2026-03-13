@@ -8,6 +8,7 @@ import nrr.konnekt.core.ui.util.ChatDropdownItems
 @Composable
 internal fun ColumnScope.ConversationActions(
     blocked: Boolean,
+    hasLeftChat: Boolean,
     chatType: ChatType,
     dismiss: () -> Unit,
     onClearChat: () -> Unit,
@@ -23,6 +24,7 @@ internal fun ColumnScope.ConversationActions(
         )
         ChatType.GROUP -> GroupChatActions(
             dismiss = dismiss,
+            hasLeftChat = hasLeftChat,
             onClearChat = onClearChat,
             onLeaveChat = onLeaveChat
         )
@@ -56,6 +58,7 @@ private fun ColumnScope.PersonalChatActions(
 
 @Composable
 private fun ColumnScope.GroupChatActions(
+    hasLeftChat: Boolean,
     dismiss: () -> Unit,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit
@@ -64,7 +67,7 @@ private fun ColumnScope.GroupChatActions(
         dismiss = dismiss,
         onClearChat = onClearChat
     )
-    ChatDropdownItems.Leave(
+    if (!hasLeftChat) ChatDropdownItems.Leave(
         dismiss = dismiss,
         onLeaveChat = onLeaveChat
     )

@@ -239,6 +239,7 @@ private fun ChatDetailScreen(
     var showChatEditDialog by retain { mutableStateOf(false) }
     val isAdmin = chat.participants.any { participant ->
         participant.user.id == currentUser.id &&
+                participant.status.leftAt == null &&
                 participant.role == ParticipantRole.ADMIN
     }
     val resetSelectedParticipant = {
@@ -643,7 +644,9 @@ private fun GroupChatInfo(
     ChatInfoSection("Members") {
         ChatParticipants(
             currentUser = currentUser,
-            participants = participants,
+            participants = participants.filter { participant ->
+                participant.status.leftAt == null
+            },
             isParticipantActive = isParticipantActive,
             onClick = onChatParticipantClick
         )
@@ -894,45 +897,54 @@ private fun ChatParticipants(
             )
             .padding(8.dp)
     ) {
-        val take = 5
-        val needMore = participants.size > take
-
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            participants
-                .take(if (it && needMore) Int.MAX_VALUE else take)
-                .forEach { participant ->
-                    ChatParticipantCard(
-                        participant = participant,
-                        isActive = isParticipantActive(participant),
-                        onClick = onClick,
-                        clickEnabled = currentUser.id != participant.user.id
+            if (participants.isNotEmpty()) {
+                val take = 5
+                val needMore = participants.size > take
+
+                participants
+                    .take(if (it && needMore) Int.MAX_VALUE else take)
+                    .forEach { participant ->
+                        ChatParticipantCard(
+                            participant = participant,
+                            isActive = isParticipantActive(participant),
+                            onClick = onClick,
+                            clickEnabled = currentUser.id != participant.user.id
+                        )
+                    }
+
+                if (needMore) {
+                    val rotationDegrees by animateFloatAsState(
+                        targetValue = if (!it) -90f else -270f
+                    )
+
+                    Icon(
+                        painter = painterResource(KonnektIcon.chevronLeft),
+                        contentDescription = if (it) "show less" else "show more",
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = null,
+                                indication = null
+                            ) {
+                                showAll = !showAll
+                            }
+                            .rotate(rotationDegrees),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-
-            if (needMore) {
-                val rotationDegrees by animateFloatAsState(
-                    targetValue = if (!it) -90f else -270f
+            } else Text(
+                text = "No Members",
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = DarkGray,
+                    fontStyle = FontStyle.Italic
                 )
-
-                Icon(
-                    painter = painterResource(KonnektIcon.chevronLeft),
-                    contentDescription = if (it) "show less" else "show more",
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .fillMaxWidth()
-                        .clickable(
-                            interactionSource = null,
-                            indication = null
-                        ) {
-                            showAll = !showAll
-                        }
-                        .rotate(rotationDegrees),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+            )
         }
     }
 }

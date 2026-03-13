@@ -58,6 +58,7 @@ import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.util.hasLeftByCurrentUser
+import nrr.konnekt.core.domain.util.isDeleted
 import nrr.konnekt.core.domain.util.isDeletedByCurrentUser
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.isSentByCurrentUser
@@ -85,11 +86,12 @@ fun LazyListScope.chats(
             ChatCard(
                 latestChatMessage = this,
                 onClick = onClick,
-                sentByCurrentUser = message?.isSentByCurrentUser(currentUser) ?: false,
-                unreadByCurrentUser = isUnreadByCurrentUser(currentUser),
-                deletedByCurrentUser = message?.isDeletedByCurrentUser(currentUser) ?: false,
-                leftByCurrentUser = chat.hasLeftByCurrentUser(currentUser),
-                blockedByCurrentUser = chat.isPersonalChatBlocked(currentUser),
+                messageSentByCurrentUser = message?.isSentByCurrentUser(currentUser) ?: false,
+                messageUnreadByCurrentUser = isUnreadByCurrentUser(currentUser),
+                messageDeletedByCurrentUser = message?.isDeletedByCurrentUser(currentUser) ?: false,
+                chatLeftByCurrentUser = chat.hasLeftByCurrentUser(currentUser),
+                personalChatBlockedByCurrentUser = chat.isPersonalChatBlocked(currentUser),
+                groupChatDeleted = chat.isDeleted(),
                 dropdownItems = dropdownItems?.let { c ->
                     { dismiss ->
                         c(this, dismiss, this@with)
@@ -104,11 +106,12 @@ fun LazyListScope.chats(
 private fun ChatCard(
     latestChatMessage: LatestChatMessage,
     onClick: (LatestChatMessage) -> Unit,
-    sentByCurrentUser: Boolean,
-    unreadByCurrentUser: Boolean,
-    deletedByCurrentUser: Boolean,
-    leftByCurrentUser: Boolean,
-    blockedByCurrentUser: Boolean,
+    messageSentByCurrentUser: Boolean,
+    messageUnreadByCurrentUser: Boolean,
+    messageDeletedByCurrentUser: Boolean,
+    chatLeftByCurrentUser: Boolean,
+    personalChatBlockedByCurrentUser: Boolean,
+    groupChatDeleted: Boolean,
     modifier: Modifier = Modifier,
     iconDiameter: Dp = 40.dp,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null
@@ -139,7 +142,7 @@ private fun ChatCard(
                     vertical = 16.dp
                 ),
                 space = 6.dp,
-                backgroundColor = if (unreadByCurrentUser && !blockedByCurrentUser && !leftByCurrentUser)
+                backgroundColor = if (messageUnreadByCurrentUser && !personalChatBlockedByCurrentUser && !chatLeftByCurrentUser)
                     animatedBg
                 else MaterialTheme.colorScheme.primary,
             ),
@@ -165,7 +168,7 @@ private fun ChatCard(
                                     iconPath = chat.setting?.iconPath,
                                     diameter = iconDiameter
                                 )
-                                if (blockedByCurrentUser) Icon(
+                                if (personalChatBlockedByCurrentUser) Icon(
                                     painter = painterResource(KonnektIcon.circleOff),
                                     contentDescription = "blocked",
                                     modifier = Modifier
@@ -217,12 +220,16 @@ private fun ChatCard(
                                 LocalTextStyle provides MaterialTheme.typography.bodySmall
                             ) {
                                 message?.let { m ->
-                                    if (!blockedByCurrentUser && !leftByCurrentUser) Row(
+                                    if (
+                                        !personalChatBlockedByCurrentUser &&
+                                        !chatLeftByCurrentUser &&
+                                        !groupChatDeleted
+                                    ) Row(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
                                             text = buildAnnotatedString {
-                                                if (sentByCurrentUser) withStyle(
+                                                if (messageSentByCurrentUser) withStyle(
                                                     style = SpanStyle(
                                                         fontStyle = FontStyle.Italic
                                                     )
@@ -267,7 +274,7 @@ private fun ChatCard(
 
                                                     if (m.content.isNotBlank()) {
                                                         if (!m.isHidden) {
-                                                            if (!deletedByCurrentUser) withStyle(
+                                                            if (!messageDeletedByCurrentUser) withStyle(
                                                                 style = SpanStyle(
                                                                     color = Color.White
                                                                 )
@@ -296,13 +303,18 @@ private fun ChatCard(
                                         }
                                     } else null
                                 } ?: Text(
-                                    text = if (blockedByCurrentUser) "You blocked this chat."
-                                        else if (leftByCurrentUser) "You left this chat."
+                                    text = if (groupChatDeleted) "Group chat deleted."
+                                        else if (personalChatBlockedByCurrentUser) "You blocked this chat."
+                                        else if (chatLeftByCurrentUser) "You left this chat."
                                         else "Start a message...",
                                     style = LocalTextStyle.current.copy(
                                         fontStyle = FontStyle.Italic,
-                                        color = if (blockedByCurrentUser || leftByCurrentUser) Red
-                                            else LocalContentColor.current
+                                        color = if (
+                                            personalChatBlockedByCurrentUser ||
+                                            chatLeftByCurrentUser ||
+                                            groupChatDeleted
+                                        ) Red
+                                        else LocalContentColor.current
                                     )
                                 )
                             }
