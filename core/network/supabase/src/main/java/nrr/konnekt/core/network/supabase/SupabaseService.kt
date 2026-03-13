@@ -15,6 +15,7 @@ import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatPermissionSettings
+import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.request.SupabaseCreateAttachment
@@ -23,6 +24,7 @@ import nrr.konnekt.core.network.supabase.dto.response.rpc.SendMessageWithAttachm
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatInvitationRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatParticipantRpc
 import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatRpc
+import nrr.konnekt.core.network.supabase.dto.response.rpc.model.SupabaseChatSettingRpc
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.ATTACHMENTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
@@ -293,5 +295,23 @@ internal abstract class SupabaseService(
                         )
                     }
                 }
+
+        suspend fun updateChatSetting(
+            chatId: String,
+            chatSetting: ChatSetting
+        ): SupabaseChatSettingRpc? = performSuspendingAuthenticatedAction {
+            call<SupabaseChatSettingRpc>(
+                function = "update_chat_setting",
+                parameters = {
+                    put("_chat_id", chatId)
+                    put("_name", chatSetting.name)
+                    put("_description", chatSetting.description)
+                    put("_icon_path", chatSetting.iconPath)
+                    put("_edit_chat_info", chatSetting.permissionSettings?.editChatInfo)
+                    put("_manage_members", chatSetting.permissionSettings?.manageMembers)
+                    put("_send_messages", chatSetting.permissionSettings?.sendMessages)
+                }
+            )
+        }
     }
 }

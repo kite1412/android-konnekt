@@ -889,6 +889,69 @@ end;
 $$;
 ```
 
+### update_chat_setting
+```sql
+create or replace function update_chat_setting(
+    _chat_id uuid,
+    _name text,
+    _description text default null,
+    _icon_path text default null,
+    _edit_chat_info boolean default null,
+    _send_messages boolean default null,
+    _manage_members boolean default null
+)
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+    result jsonb;
+begin
+
+    update chat_settings
+    set
+        name = _name,
+        description = _description,
+        icon_path = _icon_path
+    where chat_id = _chat_id;
+
+    if _edit_chat_info is not null
+        or _send_messages is not null
+        or _manage_members is not null
+    then
+        update chat_permission_settings
+        set
+            edit_chat_info = coalesce(_edit_chat_info, edit_chat_info),
+            send_messages = coalesce(_send_messages, send_messages),
+            manage_members = coalesce(_manage_members, manage_members)
+        where chat_id = _chat_id;
+    end if;
+
+    select jsonb_build_object(
+        'name', cs.name,
+        'description', cs.description,
+        'icon_path', cs.icon_path,
+        'permission_settings',
+            case
+                when cps.chat_id is not null then jsonb_build_object(
+                    'edit_chat_info', cps.edit_chat_info,
+                    'send_messages', cps.send_messages,
+                    'manage_members', cps.manage_members
+                )
+                else null
+            end
+    )
+    into result
+    from chat_settings cs
+    left join chat_permission_settings cps
+        on cps.chat_id = cs.chat_id
+    where cs.chat_id = _chat_id;
+
+    return result;
+end;
+$$;
+```
+
 ### send_message_with_attachments
 ```sql
 create or replace function send_message_with_attachments(

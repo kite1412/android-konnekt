@@ -534,6 +534,22 @@ internal class SupabaseChatRepository @Inject constructor(
             ?: Error(ChatError.Unknown)
     }
 
+    override suspend fun updateChatSetting(
+        chatId: String,
+        chatSetting: ChatSetting
+    ): ChatResult<ChatSetting> =
+        try {
+            rpc.updateChatSetting(
+                chatId = chatId,
+                chatSetting = chatSetting
+            )
+                ?.toModel()
+                ?.let(Result<ChatSetting, Nothing>::Success)
+                ?: Error(ChatError.Unknown)
+        } catch (_: Exception) {
+            Error(ChatError.Unknown)
+        }
+
     override suspend fun getChatById(chatId: String): ChatResult<Chat> =
         try {
             rpc.getChatById(chatId)

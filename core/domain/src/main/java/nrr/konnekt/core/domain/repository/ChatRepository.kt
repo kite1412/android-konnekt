@@ -12,6 +12,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
+import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 
 typealias ChatResult<T> = Result<T, ChatRepository.ChatError>
@@ -161,6 +162,15 @@ interface ChatRepository {
      * @return The updated user read marker.
      */
     suspend fun updateCurrentUserChatParticipantStatus(update: UpdateChatParticipantStatus): ChatResult<ChatParticipantStatus>
+
+    /**
+     * Update a chat setting.
+     *
+     * @param chatId The ID of the chat to update.
+     * @param chatSetting The new chat setting.
+     * @return The updated chat setting.
+     */
+    suspend fun updateChatSetting(chatId: String, chatSetting: ChatSetting): ChatResult<ChatSetting>
 
     sealed interface ChatError : Error {
         object ChatNotFound : ChatError
