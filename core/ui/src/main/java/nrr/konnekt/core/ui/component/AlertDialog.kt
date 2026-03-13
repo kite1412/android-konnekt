@@ -12,23 +12,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import nrr.konnekt.core.designsystem.theme.DarkNavy
 import nrr.konnekt.core.designsystem.util.KonnektIcon
+import nrr.konnekt.core.ui.util.AlertDialogDefaults
+import nrr.konnekt.core.ui.util.AlertDialogStyle
 
 @Composable
 fun AlertDialog(
@@ -36,6 +36,7 @@ fun AlertDialog(
     modifier: Modifier = Modifier,
     title: String? = null,
     message: String? = null,
+    style: AlertDialogStyle = AlertDialogDefaults.defaultStyle(),
     cancelButton: (@Composable () -> Unit)? = null,
     confirmButton: (@Composable () -> Unit)? = null,
     content: @Composable (() -> Unit)? = null
@@ -51,7 +52,7 @@ fun AlertDialog(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            val clipShape = RoundedCornerShape(12.dp)
+            val clipShape = style.shape
 
             Column(
                 modifier = modifier
@@ -62,10 +63,10 @@ fun AlertDialog(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .clip(clipShape)
-                    .background(DarkNavy)
+                    .background(style.backgroundColor)
                     .border(
                         width = 2.dp,
-                        color = MaterialTheme.colorScheme.background,
+                        color = style.borderColor,
                         shape = clipShape
                     )
                     .clickable(false) {}
@@ -81,16 +82,13 @@ fun AlertDialog(
                         Text(
                             text = title,
                             modifier = Modifier.weight(0.9f),
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.Medium
-                            ),
+                            style = style.titleStyle,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                     IconButton(
                         onClick = onDismissRequest,
-                        modifier = Modifier
-                            .size(32.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             painter = painterResource(KonnektIcon.x),
@@ -101,7 +99,7 @@ fun AlertDialog(
                 message?.let { message ->
                     Text(
                         text = message,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = style.messageStyle
                     )
                 }
 
@@ -112,8 +110,16 @@ fun AlertDialog(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    cancelButton?.invoke()
-                    confirmButton?.invoke()
+                    cancelButton?.let {
+                        CompositionLocalProvider(LocalContentColor provides style.cancelButtonContentColor) {
+                            it()
+                        }
+                    }
+                    confirmButton?.let {
+                        CompositionLocalProvider(LocalContentColor provides style.confirmButtonContentColor) {
+                            it()
+                        }
+                    }
                 }
             }
         }

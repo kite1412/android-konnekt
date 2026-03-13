@@ -25,6 +25,7 @@ import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
+import nrr.konnekt.core.domain.usecase.DeleteChatUseCase
 import nrr.konnekt.core.domain.usecase.EditChatSettingUseCase
 import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
@@ -49,7 +50,8 @@ class ChatDetailViewModel @Inject constructor(
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase,
     private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
     private val inviteToChatUseCase: InviteToChatUseCase,
-    private val editChatSettingUseCase: EditChatSettingUseCase
+    private val editChatSettingUseCase: EditChatSettingUseCase,
+    private val deleteChatUseCase: DeleteChatUseCase
 ) : ViewModel() {
     private val chatId = savedStateHandle.toRoute<ChatDetailRoute>().chatId
     private val peerId = savedStateHandle.toRoute<ChatDetailRoute>().peerId
@@ -272,6 +274,23 @@ class ChatDetailViewModel @Inject constructor(
                     _chat.value = chat.copy(
                         setting = res.data
                     )
+                }
+            }
+        }
+    }
+
+    internal fun deleteChat() {
+        viewModelScope.launch {
+            chat.first()?.let { chat ->
+                if (chat.type == ChatType.GROUP) {
+                    val res = deleteChatUseCase(chat.id)
+
+                    if (res is Result.Success) {
+                        _chat.value = res.data
+                        _events.emit(
+                            UiEvent.ShowSnackbar("Chat deleted.")
+                        )
+                    }
                 }
             }
         }

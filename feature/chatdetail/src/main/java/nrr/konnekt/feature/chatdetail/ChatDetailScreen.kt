@@ -81,6 +81,7 @@ import nrr.konnekt.core.designsystem.util.ShadowedBoxDefaults
 import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.model.UpdateStatus
+import nrr.konnekt.core.domain.util.isDeleted
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
@@ -103,6 +104,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
+import nrr.konnekt.core.ui.util.AlertDialogDefaults
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.blockChatAlert
@@ -195,6 +197,7 @@ internal fun ChatDetailScreen(
                     viewModel.cancelInvitations(listOf(invitation.id))
                 },
                 onSaveChanges = viewModel::updateChatSetting,
+                onDeleteGroup = viewModel::deleteChat,
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -223,6 +226,7 @@ private fun ChatDetailScreen(
     onAddMembers: (selectedContacts: List<User>) -> Unit,
     onCancelInvitation: (ChatInvitation) -> Unit,
     onSaveChanges: (ChatSettingEdit) -> Unit,
+    onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier,
     isPersonalChatAdded: Boolean = false,
     pushNotificationEnabled: Boolean = false,
@@ -241,6 +245,8 @@ private fun ChatDetailScreen(
         selectedParticipant = null
         isClickingPendingInvitation = false
     }
+    val alertDialogStyle = AlertDialogDefaults.defaultStyle()
+    val contentColor = LocalContentColor.current
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -249,7 +255,8 @@ private fun ChatDetailScreen(
         Header(
             chat = chat,
             peerLastActive = peerLastActiveAt,
-            editEnabled = isAdmin || (chat.setting?.permissionSettings?.editChatInfo == true),
+            editEnabled = (isAdmin || (chat.setting?.permissionSettings?.editChatInfo == true)) &&
+                    !chat.isDeleted(),
             totalActiveParticipants = activeParticipants.size - 1,
             onNavigateBack = onNavigateBack,
             onShare = onShare,
@@ -262,7 +269,7 @@ private fun ChatDetailScreen(
                 ChatInfo(
                     chat = chat,
                     currentUser = currentUser,
-                    isAdmin = isAdmin,
+                    isChatInfoEditable = isAdmin && !chat.isDeleted(),
                     chatInvitations = chatInvitations,
                     isPersonalChatAdded = isPersonalChatAdded,
                     peerGroupsInCommon = peerGroupsInCommon,
@@ -286,7 +293,24 @@ private fun ChatDetailScreen(
                         showAddMemberDialog = true
                         onAddMemberClick()
                     },
-                    onDeleteGroup = {},
+                    onDeleteGroup = {
+                        alert = Alert(
+                            onConfirm = onDeleteGroup,
+                            title = "Delete Group",
+                            message = "Delete this group? this action cannot be undone.",
+                            confirmText = "Delete",
+                            style = alertDialogStyle.copy(
+                                titleStyle = alertDialogStyle.titleStyle.copy(
+                                    color = Red
+                                ),
+                                messageStyle = alertDialogStyle.messageStyle.copy(
+                                    color = Red
+                                ),
+                                confirmButtonContentColor = Red,
+                                cancelButtonContentColor = contentColor
+                            )
+                        )
+                    },
                     onChatParticipantClick = { participant ->
                         selectedParticipant = participant.user
                     },
@@ -418,7 +442,7 @@ private fun chatInfoTitleStyle(): TextStyle =
 private fun ChatInfo(
     chat: Chat,
     currentUser: User,
-    isAdmin: Boolean,
+    isChatInfoEditable: Boolean,
     chatInvitations: List<ChatInvitation>,
     onClearChat: () -> Unit,
     isPersonalChatAdded: Boolean,
@@ -484,7 +508,7 @@ private fun ChatInfo(
                     onBlockChange = onBlockChange
                 )
                 ChatType.GROUP -> GroupChatInfo(
-                    isAdmin = isAdmin,
+                    isEditable = isChatInfoEditable,
                     currentUser = currentUser,
                     permissionSettings = chat.setting?.permissionSettings ?: ChatPermissionSettings(),
                     participants = chat.participants.sortedBy { participant ->
@@ -589,7 +613,7 @@ private fun PersonalChatActions(
 
 @Composable
 private fun GroupChatInfo(
-    isAdmin: Boolean,
+    isEditable: Boolean,
     currentUser: User,
     permissionSettings: ChatPermissionSettings,
     participants: List<ChatParticipant>,
@@ -631,7 +655,7 @@ private fun GroupChatInfo(
         )
     }
     GroupChatActions(
-        isAdmin = isAdmin,
+        isEditable = isEditable,
         canLeave = participants.firstOrNull { participant ->
             participant.user.id == currentUser.id
         }?.status?.leftAt == null,
@@ -645,7 +669,7 @@ private fun GroupChatInfo(
 
 @Composable
 private fun GroupChatActions(
-    isAdmin: Boolean,
+    isEditable: Boolean,
     canLeave: Boolean,
     permissionSettings: ChatPermissionSettings,
     onClearChat: () -> Unit,
@@ -654,7 +678,7 @@ private fun GroupChatActions(
     onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier,
 ) = ActionsLayout(modifier = modifier) {
-    if (isAdmin || permissionSettings.manageMembers) {
+    if (isEditable || permissionSettings.manageMembers) {
         val contentColor = MaterialTheme.colorScheme.primary
 
         Action(
@@ -671,7 +695,7 @@ private fun GroupChatActions(
         onClick = onLeaveChat,
         modifier = modifier
     )
-    if (isAdmin) Action(
+    if (isEditable) Action(
         iconId = KonnektIcon.delete,
         name = "Delete Group",
         onClick = onDeleteGroup
@@ -1384,6 +1408,7 @@ private fun ChatDetailScreenPreview(
                 onAddMembers = {},
                 onCancelInvitation = {},
                 onSaveChanges = {},
+                onDeleteGroup = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

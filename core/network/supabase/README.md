@@ -459,10 +459,13 @@ begin
     select exists (
         select 1
         from chat_participants cp
+        join chat_participant_statuses cps
+            on cps.user_id = cp.user_id
+            and cps.chat_id = cp.chat_id
         where cp.chat_id = _chat_id
         and cp.user_id = _user_id
         and cp.role = 'admin'
-        and cp.left_at is null
+        and cps.left_at is null
     )
     into _is_admin;
 
@@ -489,12 +492,12 @@ begin
 
                 'permission_settings',
                     case
-                        when cps.chat_id is not null then
+                        when cpss.chat_id is not null then
                             jsonb_build_object(
-                                'chat_id', cps.chat_id,
-                                'edit_chat_info', cps.edit_chat_info,
-                                'send_messages', cps.send_messages,
-                                'manage_members', cps.manage_members
+                                'chat_id', cpss.chat_id,
+                                'edit_chat_info', cpss.edit_chat_info,
+                                'send_messages', cpss.send_messages,
+                                'manage_members', cpss.manage_members
                             )
                         else null
                     end
@@ -518,25 +521,28 @@ begin
 
                         'status',
                             jsonb_build_object(
-                                'user_id', cp.user_id,
-                                'chat_id', cp.chat_id,
-                                'joined_at', cp.joined_at,
-                                'cleared_at', cp.cleared_at,
-                                'left_at', cp.left_at,
-                                'archived_at', cp.archived_at,
-                                'last_read_at', cp.last_read_at
+                                'user_id', s.user_id,
+                                'chat_id', s.chat_id,
+                                'joined_at', s.joined_at,
+                                'cleared_at', s.cleared_at,
+                                'left_at', s.left_at,
+                                'archived_at', s.archived_at,
+                                'last_read_at', s.last_read_at
                             )
                     )
                 )
                 from chat_participants cp
                 join users u on u.id = cp.user_id
+                join chat_participant_statuses s
+                    on s.user_id = cp.user_id
+                    and s.chat_id = cp.chat_id
                 where cp.chat_id = c.id
             )
     )
     into result
     from chats c
     left join chat_settings cs on cs.chat_id = c.id
-    left join chat_permission_settings cps on cps.chat_id = c.id
+    left join chat_permission_settings cpss on cpss.chat_id = c.id
     where c.id = _chat_id;
 
     return result;
