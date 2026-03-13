@@ -28,11 +28,12 @@ import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.feature.chatdetail.navigation.ChatDetailRoute
-import nrr.konnekt.feature.chatdetail.util.UiEvent
 import javax.inject.Inject
 import kotlin.time.Instant
 
@@ -57,6 +58,7 @@ class ChatDetailViewModel @Inject constructor(
         )
     internal val isPersonalChatAdded = peerId == null
     internal var peerGroupsInCommon = mutableStateListOf<Chat>()
+    internal var chatInvitations = mutableStateListOf<ChatInvitation>()
     internal var peerLastActiveAt by mutableStateOf<Instant?>(null)
     internal var currentUserContacts: List<User>? by mutableStateOf(null)
 
@@ -114,6 +116,16 @@ class ChatDetailViewModel @Inject constructor(
                                                     }
                                             )
                                     }
+                            } else {
+                                val res = chatRepository.getChatInvitations(chat.id)
+
+                                if (res is Result.Success) {
+                                    chatInvitations.addAll(
+                                        res.data
+                                            .sortedBy { invitation -> invitation.invitedAt }
+                                            .distinctBy { invitation -> invitation.id }
+                                    )
+                                }
                             }
                             observeChatParticipantsUseCase
                                 .activeParticipants(chat.id)
@@ -209,6 +221,21 @@ class ChatDetailViewModel @Inject constructor(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    internal fun cancelInvitations(invitationIds: List<String>) {
+        viewModelScope.launch {
+            val res = chatRepository.cancelChatInvitations(invitationIds)
+
+            if (res is Result.Success && res.data) {
+                chatInvitations.removeAll { invitation ->
+                    invitationIds.contains(invitation.id)
+                }
+                _events.emit(
+                    UiEvent.ShowSnackbar("Invitations cancelled")
+                )
             }
         }
     }

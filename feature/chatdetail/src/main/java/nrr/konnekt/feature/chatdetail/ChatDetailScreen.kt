@@ -88,6 +88,7 @@ import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.ParticipantRole
@@ -99,8 +100,10 @@ import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
 import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
+import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.getLetterColor
@@ -108,7 +111,6 @@ import nrr.konnekt.core.ui.util.rememberResolvedFile
 import nrr.konnekt.core.ui.util.unblockChatAlert
 import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
 import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
-import nrr.konnekt.feature.chatdetail.util.UiEvent
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -124,12 +126,16 @@ internal fun ChatDetailScreen(
     val chat by viewModel.chat.collectAsStateWithLifecycle(null)
     val activeParticipants by viewModel.activeParticipants.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val snackbarHostState = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         viewModel.events.collect {
             when (it) {
                 is UiEvent.NavigateBack -> navigateBack()
+                is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(
+                    message = it.message
+                )
             }
         }
     }
@@ -142,6 +148,7 @@ internal fun ChatDetailScreen(
                 peerLastActiveAt = viewModel.peerLastActiveAt,
                 currentUserContacts = viewModel.currentUserContacts,
                 peerGroupsInCommon = viewModel.peerGroupsInCommon,
+                chatInvitations = viewModel.chatInvitations,
                 onNavigateBack = navigateBack,
                 onShare = {},
                 onDescChange = {},
@@ -183,6 +190,9 @@ internal fun ChatDetailScreen(
                 },
                 onAddMemberClick = viewModel::updateCurrentUserContacts,
                 onAddMembers = {},
+                onCancelInvitation = { invitation ->
+                    viewModel.cancelInvitations(listOf(invitation.id))
+                },
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -198,6 +208,7 @@ private fun ChatDetailScreen(
     peerGroupsInCommon: List<Chat>,
     peerLastActiveAt: Instant?,
     currentUserContacts: List<User>?,
+    chatInvitations: List<ChatInvitation>,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     onDescChange: (String) -> Unit,
@@ -209,6 +220,7 @@ private fun ChatDetailScreen(
     onBlockChange: (Boolean) -> Unit,
     onAddMemberClick: () -> Unit,
     onAddMembers: (selectedContacts: List<User>) -> Unit,
+    onCancelInvitation: (ChatInvitation) -> Unit,
     modifier: Modifier = Modifier,
     canEditDesc: Boolean = false,
     isPersonalChatAdded: Boolean = false,
@@ -217,9 +229,11 @@ private fun ChatDetailScreen(
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
     var selectedParticipant by retain { mutableStateOf<User?>(null) }
+    var isClickingPendingInvitation by retain { mutableStateOf(false) }
     var showAddMemberDialog by retain { mutableStateOf(false) }
     val resetSelectedParticipant = {
         selectedParticipant = null
+        isClickingPendingInvitation = false
     }
 
     Column(
@@ -244,6 +258,7 @@ private fun ChatDetailScreen(
                         participant.user.id == currentUser.id &&
                                 participant.role == ParticipantRole.ADMIN
                     },
+                    chatInvitations = chatInvitations,
                     canEditDesc = canEditDesc,
                     onDescChange = onDescChange,
                     isPersonalChatAdded = isPersonalChatAdded,
@@ -283,16 +298,16 @@ private fun ChatDetailScreen(
                             chatName = chatName,
                             onConfirm = { onBlockChange(blocked) }
                         )
+                    },
+                    onInvitationClick = { invitation ->
+                        selectedParticipant = invitation.receiver
+                        isClickingPendingInvitation = true
                     }
                 )
             }
         }
     }
 
-    ActionAlertDialog(
-        alert = alert,
-        onDismissRequest = { alert = it }
-    )
     selectedParticipant?.let {
         ProfilePopup(
             data = it.toChatPopupData(),
@@ -305,13 +320,37 @@ private fun ChatDetailScreen(
                 onParticipantMessageClick(it)
                 resetSelectedParticipant()
             }
-        )
+        ) { action ->
+            if (isClickingPendingInvitation) action(
+                KonnektIcon.x,
+                "Cancel Invitation",
+                Red
+            ) {
+                alert = Alert(
+                    onConfirm = {
+                        onCancelInvitation(
+                            chatInvitations.first { invitation ->
+                                invitation.receiver.id == it.id
+                            }
+                        )
+                        resetSelectedParticipant()
+                    },
+                    title = "Cancel Invitation",
+                    message = "Cancel invitation for ${it.username}?"
+                )
+            }
+        }
     }
     if (showAddMemberDialog) AddMemberDialog(
         chatParticipants = chat.participants,
+        existingInvitations = chatInvitations,
         userContacts = currentUserContacts,
         onDismissRequest = { showAddMemberDialog = false },
         onConfirm = onAddMembers
+    )
+    ActionAlertDialog(
+        alert = alert,
+        onDismissRequest = { alert = it }
     )
 }
 
@@ -364,6 +403,7 @@ private fun ChatInfo(
     chat: Chat,
     currentUser: User,
     isAdmin: Boolean,
+    chatInvitations: List<ChatInvitation>,
     onClearChat: () -> Unit,
     canEditDesc: Boolean,
     onDescChange: (String) -> Unit,
@@ -377,6 +417,7 @@ private fun ChatInfo(
     onChatParticipantClick: (ChatParticipant) -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
     onBlockChange: (Boolean) -> Unit,
+    onInvitationClick: (ChatInvitation) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -471,6 +512,7 @@ private fun ChatInfo(
                     participants = chat.participants.sortedBy { participant ->
                         participant.role != ParticipantRole.ADMIN
                     },
+                    chatInvitations = chatInvitations,
                     messageNotificationEnabled = messageNotificationEnabled,
                     onMessageNotificationChange = onMessageNotificationChange,
                     onClearChat = onClearChat,
@@ -478,6 +520,7 @@ private fun ChatInfo(
                     onAddMember = onAddMember,
                     onDeleteGroup = onDeleteGroup,
                     onChatParticipantClick = onChatParticipantClick,
+                    onInvitationClick = onInvitationClick,
                     isParticipantActive = isParticipantActive
                 )
                 else -> Unit
@@ -571,6 +614,7 @@ private fun GroupChatInfo(
     isAdmin: Boolean,
     currentUser: User,
     participants: List<ChatParticipant>,
+    chatInvitations: List<ChatInvitation>,
     messageNotificationEnabled: Boolean,
     onMessageNotificationChange: (Boolean) -> Unit,
     onClearChat: () -> Unit,
@@ -578,6 +622,7 @@ private fun GroupChatInfo(
     onAddMember: () -> Unit,
     onChatParticipantClick: (ChatParticipant) -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
+    onInvitationClick: (ChatInvitation) -> Unit,
     onDeleteGroup: () -> Unit
 ) {
     ChatInfoSection(
@@ -598,6 +643,12 @@ private fun GroupChatInfo(
             participants = participants,
             isParticipantActive = isParticipantActive,
             onClick = onChatParticipantClick
+        )
+    }
+    if (chatInvitations.isNotEmpty()) ChatInfoSection("Pending Invitations") {
+        ChatInvitations(
+            invitations = chatInvitations,
+            onInvitationClick = onInvitationClick
         )
     }
     GroupChatActions(
@@ -934,6 +985,30 @@ private fun ChatParticipants(
 }
 
 @Composable
+private fun ChatInvitations(
+    invitations: List<ChatInvitation>,
+    onInvitationClick: (ChatInvitation) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+    ) {
+        invitations.forEach { invitation ->
+            val user = invitation.receiver
+
+            Contact(
+                user = user,
+                selected = false,
+                added = false,
+                invited = true,
+                enabled = true,
+                onClick = { _, _ -> onInvitationClick(invitation) }
+            )
+        }
+    }
+}
+
+@Composable
 private fun ChatParticipantCard(
     participant: ChatParticipant,
     isActive: Boolean,
@@ -1020,6 +1095,7 @@ private fun ChatParticipantCard(
 @Composable
 private fun AddMemberDialog(
     chatParticipants: List<ChatParticipant>,
+    existingInvitations: List<ChatInvitation>,
     userContacts: List<User>?,
     onDismissRequest: () -> Unit,
     onConfirm: (selectedContacts: List<User>) -> Unit,
@@ -1093,17 +1169,24 @@ private fun AddMemberDialog(
                             },
                             key = { u -> u.id }
                         ) { user ->
+                            val added = chatParticipants.any { participant ->
+                                participant.user.id == user.id
+                            }
+                            val invited = existingInvitations.any { invitation ->
+                                invitation.receiver.id == user.id
+                            }
+
                             Contact(
                                 user = user,
                                 selected = selectedContacts.any { u ->
                                     u.id == user.id
                                 },
+                                added = added,
+                                invited = invited,
+                                enabled = !added && !invited,
                                 onClick = { user, selected ->
                                     if (selected) selectedContacts.add(user)
                                     else selectedContacts.remove(user)
-                                },
-                                added = chatParticipants.any { participant ->
-                                    participant.user.id == user.id
                                 }
                             )
                         }
@@ -1123,6 +1206,8 @@ private fun Contact(
     user: User,
     selected: Boolean,
     added: Boolean,
+    invited: Boolean,
+    enabled: Boolean,
     onClick: (User, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1145,7 +1230,7 @@ private fun Contact(
             .clickable(
                 interactionSource = null,
                 indication = null,
-                enabled = !added,
+                enabled = enabled,
                 onClick = onClick
             )
             .padding(8.dp),
@@ -1170,15 +1255,21 @@ private fun Contact(
         Box(
             modifier = Modifier.weight(0.2f)
         ) {
-            if (!added) RadioButton(
-                selected = selected,
-                onClick = onClick
-            ) else Text(
+            if (invited) Text(
+                text = "Invited",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Gray,
+                    fontWeight = FontWeight.Bold
+                )
+            ) else if (added) Text(
                 text = "Added",
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
+            ) else RadioButton(
+                selected = selected,
+                onClick = onClick
             )
         }
     }
@@ -1217,6 +1308,7 @@ private fun ChatDetailScreenPreview(
                 activeParticipants = emptyList(),
                 peerLastActiveAt = null,
                 currentUserContacts = emptyList(),
+                chatInvitations = emptyList(),
                 onNavigateBack = {},
                 onShare = {},
                 onDescChange = {},
@@ -1228,6 +1320,7 @@ private fun ChatDetailScreenPreview(
                 onBlockChange = {},
                 onAddMemberClick = {},
                 onAddMembers = {},
+                onCancelInvitation = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,6 +56,7 @@ fun ProfilePopup(
     @Composable FlowRowScope.(@Composable (
         iconId: Int,
         text: String,
+        contentColor: Color?,
         onClick: () -> Unit
     ) -> Unit) -> Unit)? = null
 ) {
@@ -139,8 +141,13 @@ fun ProfilePopup(
                         text = "Info",
                         onClick = onInfoClick
                     )
-                    additionalActions?.invoke(this) { iconId, text, onClick ->
-                        Action(iconId, text, onClick)
+                    additionalActions?.invoke(this) { iconId, text, color, onClick ->
+                        Action(
+                            iconId = iconId,
+                            text = text,
+                            onClick = onClick,
+                            contentColor = color ?: MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -163,10 +170,11 @@ private fun Action(
     iconId: Int,
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     CompositionLocalProvider(
-        LocalContentColor provides MaterialTheme.colorScheme.primary
+        LocalContentColor provides contentColor
     ) {
         val shape = RoundedCornerShape(8.dp)
 
@@ -174,7 +182,7 @@ private fun Action(
             modifier = modifier
                 .border(
                     width = 1.dp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = contentColor,
                     shape = shape
                 )
                 .background(
@@ -227,7 +235,7 @@ private fun ProfilePopupPreview(
             onMessageClick = {},
             onInfoClick = {}
         ) { action ->
-            action(KonnektIcon.messageCircleX, "Clear Chat") {}
+            action(KonnektIcon.messageCircleX, "Clear Chat", null) {}
         }
     }
 }
