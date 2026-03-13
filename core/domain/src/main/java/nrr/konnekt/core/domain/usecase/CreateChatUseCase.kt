@@ -1,6 +1,6 @@
 package nrr.konnekt.core.domain.usecase
 
-import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.model.ChatType
 import javax.inject.Inject
@@ -10,7 +10,7 @@ class CreateChatUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         type: ChatType,
-        chatSetting: CreateChatSetting? = null,
+        chatSetting: ChatSettingEdit? = null,
         participantIds: List<String>? = null
     ) = chatRepository.createChat(
         type = type,

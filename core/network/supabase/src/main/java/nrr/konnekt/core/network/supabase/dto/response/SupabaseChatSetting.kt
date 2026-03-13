@@ -2,7 +2,7 @@ package nrr.konnekt.core.network.supabase.dto.response
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 
@@ -16,7 +16,7 @@ internal data class SupabaseChatSetting(
     val iconPath: String?
 )
 
-internal fun CreateChatSetting.toSupabaseChatSetting(
+internal fun ChatSettingEdit.toSupabaseChatSetting(
     chatId: String,
     iconPath: String? = null
 ) = SupabaseChatSetting(

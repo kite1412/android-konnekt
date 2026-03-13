@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
@@ -123,7 +123,7 @@ class ChatsViewModel @Inject constructor(
             createChatActionEnabled = false
             val res = createChatUseCase(
                 type = ChatType.CHAT_ROOM,
-                chatSetting = CreateChatSetting(name)
+                chatSetting = ChatSettingEdit(name)
             )
             createChatActionEnabled = true
             if (res is Result.Success) complete(res.data)
@@ -136,7 +136,7 @@ class ChatsViewModel @Inject constructor(
 
             val res = createChatUseCase(
                 type = ChatType.GROUP,
-                chatSetting = CreateChatSetting(
+                chatSetting = ChatSettingEdit(
                     name = createGroupChatSetting.name,
                     icon = createGroupChatSetting.icon
                 )

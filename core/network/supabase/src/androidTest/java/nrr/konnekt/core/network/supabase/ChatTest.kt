@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.ChatPermissionSettings
@@ -64,7 +64,7 @@ internal class ChatTest : TestSetup() {
     fun createGroupChatSuccess() = runTest {
         val res = repo.createChat(
             type = ChatType.GROUP,
-            chatSetting = CreateChatSetting(
+            chatSetting = ChatSettingEdit(
                 name = "new group with icon",
                 permissionSettings = ChatPermissionSettings(),
                 icon = FileUpload(

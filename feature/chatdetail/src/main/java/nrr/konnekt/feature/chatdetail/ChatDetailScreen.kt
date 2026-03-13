@@ -234,6 +234,10 @@ private fun ChatDetailScreen(
     var selectedParticipant by retain { mutableStateOf<User?>(null) }
     var isClickingPendingInvitation by retain { mutableStateOf(false) }
     var showAddMemberDialog by retain { mutableStateOf(false) }
+    val isAdmin = chat.participants.any { participant ->
+        participant.user.id == currentUser.id &&
+                participant.role == ParticipantRole.ADMIN
+    }
     val resetSelectedParticipant = {
         selectedParticipant = null
         isClickingPendingInvitation = false
@@ -246,9 +250,11 @@ private fun ChatDetailScreen(
         Header(
             chat = chat,
             peerLastActive = peerLastActiveAt,
+            editEnabled = isAdmin || (chat.setting?.permissionSettings?.editChatInfo == true),
             totalActiveParticipants = activeParticipants.size - 1,
             onNavigateBack = onNavigateBack,
-            onShare = onShare
+            onShare = onShare,
+            onEdit = {}
         )
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -257,10 +263,7 @@ private fun ChatDetailScreen(
                 ChatInfo(
                     chat = chat,
                     currentUser = currentUser,
-                    isAdmin = chat.participants.any { participant ->
-                        participant.user.id == currentUser.id &&
-                                participant.role == ParticipantRole.ADMIN
-                    },
+                    isAdmin = isAdmin,
                     chatInvitations = chatInvitations,
                     canEditDesc = canEditDesc,
                     onDescChange = onDescChange,
@@ -324,7 +327,7 @@ private fun ChatDetailScreen(
                 resetSelectedParticipant()
             }
         ) { action ->
-            if (isClickingPendingInvitation) action(
+            if (isClickingPendingInvitation && isAdmin) action(
                 KonnektIcon.x,
                 "Cancel Invitation",
                 Red
@@ -362,9 +365,11 @@ private fun ChatDetailScreen(
 private fun Header(
     chat: Chat,
     totalActiveParticipants: Int,
+    editEnabled: Boolean,
     peerLastActive: Instant?,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -391,6 +396,10 @@ private fun Header(
                 contentDescription = "share",
                 tint = MaterialTheme.colorScheme.primary
             )
+        } else if (editEnabled) TextButton(
+            onClick = onEdit
+        ) {
+            Text("Edit")
         }
     }
 }

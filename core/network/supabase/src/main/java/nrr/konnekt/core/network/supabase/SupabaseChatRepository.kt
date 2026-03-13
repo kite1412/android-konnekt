@@ -22,7 +22,9 @@ import kotlinx.coroutines.flow.shareIn
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
+import nrr.konnekt.core.domain.dto.FileUpload
+import nrr.konnekt.core.domain.dto.toChatSetting
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
@@ -536,12 +538,59 @@ internal class SupabaseChatRepository @Inject constructor(
 
     override suspend fun updateChatSetting(
         chatId: String,
-        chatSetting: ChatSetting
+        chatSetting: ChatSettingEdit
     ): ChatResult<ChatSetting> =
         try {
+            val chat = chats {
+                select {
+                    filter {
+                        SupabaseChat::id eq chatId
+                    }
+                    limit(1)
+                }.decodeSingleOrNull<SupabaseChat>()
+            }
+                ?.let {
+                    val chat = it.toChat()
+
+                    if (chat.type == ChatType.PERSONAL) {
+                        return Error(ChatError.ParticipantRoleViolation)
+                    }
+
+                    val setting = chatSettings {
+                        select {
+                            filter {
+                                SupabaseChatSetting::chatId eq chatId
+                            }
+                            limit(1)
+                        }
+                    }
+                        .decodeSingleOrNull<SupabaseChatSetting>()
+
+                    setting?.let { setting ->
+                        chat.copy(
+                            setting = setting.toChatSetting(
+                                permissionSettings = chatSetting.permissionSettings
+                            )
+                        )
+                    }
+                } ?: return Error(ChatError.ChatNotFound)
+
+            var newIconPath: String? = null
+            chatSetting.icon?.let { newIcon ->
+                val res = updateChatIcon(
+                    chat = chat,
+                    newIcon = newIcon
+                )
+
+                if (res is Result.Success) newIconPath = res.data
+                else return@let res
+            }
+
             rpc.updateChatSetting(
                 chatId = chatId,
-                chatSetting = chatSetting
+                chatSetting = chatSetting.toChatSetting(
+                    iconPath = newIconPath ?: chat.setting?.iconPath
+                )
             )
                 ?.toModel()
                 ?.let(Result<ChatSetting, Nothing>::Success)
@@ -627,7 +676,7 @@ internal class SupabaseChatRepository @Inject constructor(
 
     override suspend fun createChat(
         type: ChatType,
-        chatSetting: CreateChatSetting?,
+        chatSetting: ChatSettingEdit?,
         participantIds: List<String>?
     ): ChatResult<Chat> = performSuspendingAuthenticatedAction { u ->
         if (type == ChatType.PERSONAL && participantIds?.size != 1)
@@ -647,61 +696,23 @@ internal class SupabaseChatRepository @Inject constructor(
             iconPath = null,
             permissionSettings = chatSetting?.permissionSettings
         )
-        var chatIconPath: String? = null
-
         res?.let { chat ->
-            chatSetting?.icon?.let { fileUpload ->
-                with(Bucket.ICON) {
-                    require(
-                        type == ChatType.GROUP
-                                && allowedExtensions.contains(fileUpload.fileExtension)
-                                && fileUpload.content.isNotEmpty()
-                    ) {
-                        "Invalid file upload"
-                    }
-                    val path = createPath(
-                        fileName = "${chat.id}.${fileUpload.fileExtension}",
-                        rootFolder = type.toSupabaseEnum()
-                    )
-                    try {
-                        perform {
-                            upload(
-                                path = path.pathInBucket,
-                                data = fileUpload.content
-                            ) {
-                                this.userMetadata = buildJsonObject {
-                                    put("user_id", u.id)
-                                    put("email", u.email)
-                                }
-                            }
-                            chatIconPath = path.fullPath
-
-                            chatSettings {
-                                update(
-                                    update = {
-                                        SupabaseChatSetting::iconPath setTo path.fullPath
-                                    }
-                                ) {
-                                    filter {
-                                        SupabaseChatSetting::chatId eq chat.id
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        return@let Error(
-                            ChatError.FileUploadError
-                        )
-                    }
-                }
+            val chatIconPath = chatSetting?.icon?.let { newIcon ->
+                updateChatIcon(
+                    chat = chat.toModel(),
+                    newIcon = newIcon
+                )
             }
+
+            if (chatIconPath == null || chatIconPath is Result.Error)
+                return@let chatIconPath
+
 
             Success(
                 data = chat.toModel().run {
                     copy(
                         setting = setting?.copy(
-                            iconPath = chatIconPath
+                            iconPath = (chatIconPath as Result.Success).data
                         )
                     )
                 }
@@ -748,4 +759,50 @@ internal class SupabaseChatRepository @Inject constructor(
         started = SharingStarted.WhileSubscribed(5_000),
         replay = 1
     )
+
+    private suspend fun updateChatIcon(chat: Chat, newIcon: FileUpload): ChatResult<String> =
+        performSuspendingAuthenticatedAction { user ->
+            with(Bucket.ICON) {
+                if(
+                    chat.type != ChatType.PERSONAL &&
+                    newIcon.content.isNotEmpty() &&
+                    allowedExtensions.contains(newIcon.fileExtension)
+                ) Error(ChatError.FileUploadError)
+
+                val path = createPath(
+                    fileName = "${chat.id}.${newIcon.fileExtension}",
+                    rootFolder = chat.type.toSupabaseEnum()
+                )
+                try {
+                    perform {
+                        upload(
+                            path = path.pathInBucket,
+                            data = newIcon.content
+                        ) {
+                            this.userMetadata = buildJsonObject {
+                                put("user_id", user.id)
+                                put("email", user.email)
+                            }
+                        }
+
+                        chatSettings {
+                            update(
+                                update = {
+                                    SupabaseChatSetting::iconPath setTo path.fullPath
+                                }
+                            ) {
+                                filter {
+                                    SupabaseChatSetting::chatId eq chat.id
+                                }
+                            }
+                        }
+
+                        Success(path.fullPath)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Error(ChatError.FileUploadError)
+                }
+            }
+        }
 }

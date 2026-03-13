@@ -1,7 +1,7 @@
 package nrr.konnekt.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
-import nrr.konnekt.core.domain.dto.CreateChatSetting
+import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
@@ -129,7 +129,7 @@ interface ChatRepository {
      */
     suspend fun createChat(
         type: ChatType,
-        chatSetting: CreateChatSetting? = null,
+        chatSetting: ChatSettingEdit? = null,
         participantIds: List<String>? = null
     ): ChatResult<Chat>
 
@@ -170,7 +170,7 @@ interface ChatRepository {
      * @param chatSetting The new chat setting.
      * @return The updated chat setting.
      */
-    suspend fun updateChatSetting(chatId: String, chatSetting: ChatSetting): ChatResult<ChatSetting>
+    suspend fun updateChatSetting(chatId: String, chatSetting: ChatSettingEdit): ChatResult<ChatSetting>
 
     sealed interface ChatError : Error {
         object ChatNotFound : ChatError
