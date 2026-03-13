@@ -90,6 +90,7 @@ import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
@@ -189,7 +190,9 @@ internal fun ChatDetailScreen(
                     )
                 },
                 onAddMemberClick = viewModel::updateCurrentUserContacts,
-                onAddMembers = {},
+                onAddMembers = { users ->
+                    viewModel.inviteToChat(users.map(User::id))
+                },
                 onCancelInvitation = { invitation ->
                     viewModel.cancelInvitations(listOf(invitation.id))
                 },
@@ -509,6 +512,7 @@ private fun ChatInfo(
                 ChatType.GROUP -> GroupChatInfo(
                     isAdmin = isAdmin,
                     currentUser = currentUser,
+                    permissionSettings = chat.setting?.permissionSettings ?: ChatPermissionSettings(),
                     participants = chat.participants.sortedBy { participant ->
                         participant.role != ParticipantRole.ADMIN
                     },
@@ -613,6 +617,7 @@ private fun PersonalChatActions(
 private fun GroupChatInfo(
     isAdmin: Boolean,
     currentUser: User,
+    permissionSettings: ChatPermissionSettings,
     participants: List<ChatParticipant>,
     chatInvitations: List<ChatInvitation>,
     messageNotificationEnabled: Boolean,
@@ -657,6 +662,7 @@ private fun GroupChatInfo(
             participant.user.id == currentUser.id
         }?.status?.leftAt == null,
         onClearChat = onClearChat,
+        permissionSettings = permissionSettings,
         onLeaveChat = onLeaveChat,
         onAddMember = onAddMember,
         onDeleteGroup = onDeleteGroup
@@ -667,13 +673,14 @@ private fun GroupChatInfo(
 private fun GroupChatActions(
     isAdmin: Boolean,
     canLeave: Boolean,
+    permissionSettings: ChatPermissionSettings,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onAddMember: () -> Unit,
     onDeleteGroup: () -> Unit,
     modifier: Modifier = Modifier,
 ) = ActionsLayout(modifier = modifier) {
-    if (isAdmin) {
+    if (isAdmin || permissionSettings.manageMembers) {
         val contentColor = MaterialTheme.colorScheme.primary
 
         Action(

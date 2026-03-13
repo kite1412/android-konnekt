@@ -24,6 +24,7 @@ import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.repository.ChatRepository
+import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
@@ -44,7 +45,8 @@ class ChatDetailViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userPresenceManager: UserPresenceManager,
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase,
-    private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase
+    private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
+    private val inviteToChatUseCase: InviteToChatUseCase
 ) : ViewModel() {
     private val chatId = savedStateHandle.toRoute<ChatDetailRoute>().chatId
     private val peerId = savedStateHandle.toRoute<ChatDetailRoute>().peerId
@@ -236,6 +238,21 @@ class ChatDetailViewModel @Inject constructor(
                 _events.emit(
                     UiEvent.ShowSnackbar("Invitations cancelled")
                 )
+            }
+        }
+    }
+
+    internal fun inviteToChat(receiverIds: List<String>) {
+        viewModelScope.launch {
+            chat.first()?.let { chat ->
+                val res = inviteToChatUseCase(chat.id, receiverIds)
+
+                if (res is Result.Success) {
+                    chatInvitations.addAll(res.data)
+                    _events.emit(
+                        UiEvent.ShowSnackbar("Invitations sent")
+                    )
+                }
             }
         }
     }
