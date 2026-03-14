@@ -33,6 +33,14 @@ interface ChatRepository {
     fun observeLatestChatMessages(): Flow<List<LatestChatMessage>>
 
     /**
+     * Observe a chat.
+     *
+     * @param chatId The ID of the chat to observe.
+     * @return A flow of the chat.
+     */
+    fun observeChat(chatId: String): Flow<Chat>
+
+    /**
      * Observe active participants in a chat.
      *
      * @param chatId The ID of the chat to observe active participants for.

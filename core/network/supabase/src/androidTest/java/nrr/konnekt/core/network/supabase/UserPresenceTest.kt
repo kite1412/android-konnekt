@@ -16,14 +16,20 @@ import org.junit.runner.RunWith
 internal class UserPresenceTest : TestSetup() {
     private val logTag = "UserPresenceTest"
     private lateinit var manager: SupabaseUserPresenceManager
+    private lateinit var userRepo: SupabaseUserRepository
     private lateinit var currentUser: User
 
     @Before
     override fun init() = runBlocking {
         super.init()
+        userRepo = SupabaseUserRepository(
+            authentication = auth,
+            fileNameFormatter = SupabaseFileNameFormatter()
+        )
         manager = SupabaseUserPresenceManager(
             scope = CoroutineScope(Dispatchers.Main),
-            authentication = auth
+            authentication = auth,
+            userRepository = userRepo
         )
         currentUser = initUser()
     }

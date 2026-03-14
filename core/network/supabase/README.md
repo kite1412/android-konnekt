@@ -133,6 +133,7 @@ CREATE TABLE IF NOT EXISTS chat_invitations (
 
 ## Enable realtime for tables:
 - users
+- chats
 - chat_settings
 - chat_permission_settings
 - chat_participants

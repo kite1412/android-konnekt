@@ -1,5 +1,6 @@
 package nrr.konnekt.core.network.supabase.dto.response
 
+import io.github.jan.supabase.realtime.PrimaryKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.model.ChatPermissionSettings
@@ -14,7 +15,13 @@ internal data class SupabaseChatPermissionSettings(
     val sendMessages: Boolean,
     @SerialName("manage_members")
     val manageMembers: Boolean
-)
+) {
+    companion object {
+        val PrimaryKey = PrimaryKey<SupabaseChatPermissionSettings>(columnName = "chat_id") {
+            it.chatId
+        }
+    }
+}
 
 internal fun SupabaseChatPermissionSettings.toModel() =
     ChatPermissionSettings(

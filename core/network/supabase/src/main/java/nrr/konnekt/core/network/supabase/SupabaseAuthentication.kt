@@ -122,10 +122,10 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                         filter {
                             eq("id", it.id)
                         }
-                    }.decodeSingleOrNull<User>()
+                    }.decodeSingleOrNull<SupabaseUser>()
 
                     if (user == null) {
-                        val new = User(
+                        val new = SupabaseUser(
                             id = it.id,
                             email = it.email,
                             imagePath = null,
@@ -134,13 +134,15 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                             createdAt = it.createdAt
                         )
                         insert(new)
-                        _loggedInUser.value = new
-                        _authStatus.value = AuthStatus.Authenticated(new)
-                        logCurrentUser(new)
+                        val model = new.toModel()
+                        _loggedInUser.value = model
+                        _authStatus.value = AuthStatus.Authenticated(model)
+                        logCurrentUser(model)
                     } else {
-                        _loggedInUser.value = user
-                        _authStatus.value = AuthStatus.Authenticated(user)
-                        logCurrentUser(user)
+                        val model = user.toModel()
+                        _loggedInUser.value = model
+                        _authStatus.value = AuthStatus.Authenticated(model)
+                        logCurrentUser(model)
                     }
                 }
             }

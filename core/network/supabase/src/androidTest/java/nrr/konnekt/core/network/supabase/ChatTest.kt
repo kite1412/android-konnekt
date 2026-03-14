@@ -25,6 +25,7 @@ internal class ChatTest : TestSetup() {
     private val logTag = "ChatTest"
 
     private lateinit var repo: SupabaseChatRepository
+    private lateinit var userRepo: SupabaseUserRepository
     private lateinit var userPresenceManager: SupabaseUserPresenceManager
     private lateinit var user: User
 
@@ -32,9 +33,14 @@ internal class ChatTest : TestSetup() {
     override fun init(): Unit = runBlocking {
         super.init()
         user = initUser()
+        userRepo = SupabaseUserRepository(
+            authentication = auth,
+            fileNameFormatter = SupabaseFileNameFormatter()
+        )
         userPresenceManager = SupabaseUserPresenceManager(
             scope = CoroutineScope(Dispatchers.Main),
-            authentication = auth
+            authentication = auth,
+            userRepository = userRepo
         )
         repo = SupabaseChatRepository(
             authentication = auth,
@@ -110,6 +116,19 @@ internal class ChatTest : TestSetup() {
             .onEach {
                 Log.d(logTag, "active participants: $it")
             }.launchIn(this)
+
+        delay(5000)
+        job.cancel()
+    }
+
+    @Test
+    fun observeChatSuccess() = runBlocking {
+        val job = repo
+            .observeChat(getProperty("SUPABASE_CHAT_ID"))
+            .onEach {
+                Log.d(logTag, "chat: $it")
+            }
+            .launchIn(this)
 
         delay(5000)
         job.cancel()

@@ -5,6 +5,7 @@ import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.query.filter.FilterOperation
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
+import io.github.jan.supabase.realtime.selectSingleValueAsFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -64,6 +66,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.dto.response.toUserChatParticipation
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
+import nrr.konnekt.core.network.supabase.util.Tables.CHATS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
@@ -346,6 +349,119 @@ internal class SupabaseChatRepository @Inject constructor(
                     }
             }
         }
+
+    @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
+    override fun observeChat(chatId: String): Flow<Chat> {
+        val chat = combine(
+            flow = performOperation(CHATS) {
+                selectSingleValueAsFlow(
+                    primaryKey = SupabaseChat::id
+                ) {
+                    filter(
+                        FilterOperation(
+                            column = "id",
+                            operator = FilterOperator.EQ,
+                            value = chatId
+                        )
+                    )
+                }
+            }
+                .distinctUntilChanged { old, new ->
+                    old.deletedAt == new.deletedAt
+                }
+                .share(),
+            flow2 = observeChatParticipants(chatId).share()
+        ) { chat, chatParticipants ->
+            chat.toChat()
+                .copy(
+                    participants = chatParticipants
+                )
+        }
+
+        val chatSetting = chat.flatMapLatest { chat ->
+            if (chat.type != ChatType.PERSONAL) performOperation(CHAT_SETTINGS) {
+                selectSingleValueAsFlow(
+                    primaryKey = SupabaseChatSetting.PrimaryKey
+                ) {
+                    filter(
+                        operation = FilterOperation(
+                            column = "chat_id",
+                            operator = FilterOperator.EQ,
+                            value = chat.id
+                        )
+                    )
+                }
+                    .map(SupabaseChatSetting::toChatSetting)
+            } else performOperation(CHAT_PARTICIPANTS) { user ->
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        SupabaseChatParticipant::userId,
+                        SupabaseChatParticipant::chatId
+                    ),
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.EQ,
+                        value = chatId
+                    )
+                )
+                    .map { participants ->
+                        participants.firstOrNull { participants ->
+                            participants.userId != user.id
+                        }
+                    }
+                    .flatMapLatest { participant ->
+                        participant?.let { participant ->
+                            performOperation(USERS) {
+                                selectSingleValueAsFlow(
+                                    primaryKey = SupabaseUser::id
+                                ) {
+                                    filter(
+                                        column = "id",
+                                        operator = FilterOperator.EQ,
+                                        value = participant.userId
+                                    )
+                                }
+                                    .map { user ->
+                                        ChatSetting(
+                                            name = user.username,
+                                            description = user.bio,
+                                            iconPath = user.imagePath
+                                        )
+                                    }
+                            }
+                        } ?: flowOf<ChatSetting?>(null)
+                    }
+            }
+        }.share()
+
+        val permissionSettings = chat.flatMapLatest { chat ->
+            if (chat.type != ChatType.PERSONAL) performOperation(CHAT_PERMISSION_SETTINGS) {
+                selectSingleValueAsFlow(
+                    primaryKey = SupabaseChatPermissionSettings.PrimaryKey
+                ) {
+                    filter(
+                        column = "chat_id",
+                        operator = FilterOperator.EQ,
+                        value = chat.id
+                    )
+                }
+                    .map(SupabaseChatPermissionSettings::toModel)
+                    .share()
+            } else flowOf(null)
+        }
+
+        return combine(
+            flow = chat,
+            flow2 = chatSetting,
+            flow3 = permissionSettings
+        ) { chat, setting, permissionSettings ->
+            chat.copy(
+                setting = setting?.copy(
+                    permissionSettings = permissionSettings
+                )
+            )
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> =

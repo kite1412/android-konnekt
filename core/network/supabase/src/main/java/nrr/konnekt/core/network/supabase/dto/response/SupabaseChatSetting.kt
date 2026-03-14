@@ -1,5 +1,6 @@
 package nrr.konnekt.core.network.supabase.dto.response
 
+import io.github.jan.supabase.realtime.PrimaryKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
@@ -14,7 +15,13 @@ internal data class SupabaseChatSetting(
     val description: String?,
     @SerialName("icon_path")
     val iconPath: String?
-)
+) {
+    companion object {
+        val PrimaryKey = PrimaryKey<SupabaseChatSetting>(columnName = "chat_id") {
+            it.chatId
+        }
+    }
+}
 
 internal fun ChatSettingEdit.toSupabaseChatSetting(
     chatId: String,
