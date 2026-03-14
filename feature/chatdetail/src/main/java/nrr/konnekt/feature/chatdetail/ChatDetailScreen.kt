@@ -198,6 +198,7 @@ internal fun ChatDetailScreen(
                 },
                 onSaveChanges = viewModel::updateChatSetting,
                 onDeleteGroup = viewModel::deleteChat,
+                onPermissionSettingsChange = viewModel::updatePermissionSettings,
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -227,6 +228,7 @@ private fun ChatDetailScreen(
     onCancelInvitation: (ChatInvitation) -> Unit,
     onSaveChanges: (ChatSettingEdit) -> Unit,
     onDeleteGroup: () -> Unit,
+    onPermissionSettingsChange: (ChatPermissionSettings) -> Unit,
     modifier: Modifier = Modifier,
     isPersonalChatAdded: Boolean = false,
     pushNotificationEnabled: Boolean = false,
@@ -330,7 +332,8 @@ private fun ChatDetailScreen(
                     onInvitationClick = { invitation ->
                         selectedParticipant = invitation.receiver
                         isClickingPendingInvitation = true
-                    }
+                    },
+                    onPermissionSettingsChange = onPermissionSettingsChange
                 )
             }
         }
@@ -457,6 +460,7 @@ private fun ChatInfo(
     isParticipantActive: (ChatParticipant) -> Boolean,
     onBlockChange: (Boolean) -> Unit,
     onInvitationClick: (ChatInvitation) -> Unit,
+    onPermissionSettingsChange: (ChatPermissionSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -524,6 +528,7 @@ private fun ChatInfo(
                     onDeleteGroup = onDeleteGroup,
                     onChatParticipantClick = onChatParticipantClick,
                     onInvitationClick = onInvitationClick,
+                    onPermissionSettingsChange = onPermissionSettingsChange,
                     isParticipantActive = isParticipantActive
                 )
                 else -> Unit
@@ -627,18 +632,30 @@ private fun GroupChatInfo(
     onChatParticipantClick: (ChatParticipant) -> Unit,
     isParticipantActive: (ChatParticipant) -> Boolean,
     onInvitationClick: (ChatInvitation) -> Unit,
+    onPermissionSettingsChange: (ChatPermissionSettings) -> Unit,
     onDeleteGroup: () -> Unit
 ) {
+    val grayTitleStyle = chatInfoTitleStyle().copy(
+        color = Gray
+    )
+
     ChatInfoSection(
         title = "Notifications",
-        titleStyle = chatInfoTitleStyle().copy(
-            color = Gray
-        )
+        titleStyle = grayTitleStyle
     ) {
         ToggleSetting(
             desc = "Messages",
             checked = messageNotificationEnabled,
             onCheckedChange = onMessageNotificationChange
+        )
+    }
+    if (isEditable) ChatInfoSection(
+        title = "Member Permissions",
+        titleStyle = grayTitleStyle
+    ) {
+        GroupChatPermissionSettings(
+            settings = permissionSettings,
+            onChanges = onPermissionSettingsChange
         )
     }
     ChatInfoSection("Members") {
@@ -668,6 +685,47 @@ private fun GroupChatInfo(
         onAddMember = onAddMember,
         onDeleteGroup = onDeleteGroup
     )
+}
+
+@Composable
+private fun GroupChatPermissionSettings(
+    settings: ChatPermissionSettings,
+    onChanges: (ChatPermissionSettings) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var settings by retain(settings) {
+        mutableStateOf(settings)
+    }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        ToggleSetting(
+            desc = "Edit Chat Details",
+            checked = settings.editChatInfo,
+            onCheckedChange = {
+                settings = settings.copy(editChatInfo = it)
+                onChanges(settings)
+            }
+        )
+        ToggleSetting(
+            desc = "Manage Members (add/delete)",
+            checked = settings.manageMembers,
+            onCheckedChange = {
+                settings = settings.copy(manageMembers = it)
+                onChanges(settings)
+            }
+        )
+        ToggleSetting(
+            desc = "Send Messages",
+            checked = settings.sendMessages,
+            onCheckedChange = {
+                settings = settings.copy(sendMessages = it)
+                onChanges(settings)
+            }
+        )
+    }
 }
 
 @Composable
@@ -1421,6 +1479,7 @@ private fun ChatDetailScreenPreview(
                 onCancelInvitation = {},
                 onSaveChanges = {},
                 onDeleteGroup = {},
+                onPermissionSettingsChange = {},
                 modifier = Modifier.padding(it),
                 isPersonalChatAdded = true,
                 pushNotificationEnabled = false,

@@ -31,9 +31,11 @@ import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
+import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.ui.util.UiEvent
@@ -289,6 +291,30 @@ class ChatDetailViewModel @Inject constructor(
                         _chat.value = res.data
                         _events.emit(
                             UiEvent.ShowSnackbar("Chat deleted.")
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    internal fun updatePermissionSettings(settings: ChatPermissionSettings) {
+        viewModelScope.launch {
+            chat.first()?.let { chat ->
+                if (chat.type == ChatType.GROUP) {
+                    val res = editChatSettingUseCase(
+                        chatId = chat.id,
+                        chatSetting = ChatSettingEdit(
+                            name = chat.name(),
+                            description = chat.setting?.description,
+                            icon = null,
+                            permissionSettings = settings
+                        )
+                    )
+
+                    if (res is Result.Success) {
+                        _chat.value = chat.copy(
+                            setting = res.data
                         )
                     }
                 }

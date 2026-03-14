@@ -392,7 +392,8 @@ begin
                     'chat_id', cs.chat_id,
                     'name', cs.name,
                     'description', cs.description,
-                    'icon_path', cs.icon_path
+                    'icon_path', cs.icon_path,
+                    'permission_settings', to_jsonb(cps)
                 )
 
             when c.type = 'personal' then (
@@ -434,6 +435,8 @@ begin
     from chats c
     left join chat_settings cs
         on cs.chat_id = c.id
+    left join chat_permission_settings cps
+        on cps.chat_id = c.id
     where c.id = _chat_id;
 
     return result;
