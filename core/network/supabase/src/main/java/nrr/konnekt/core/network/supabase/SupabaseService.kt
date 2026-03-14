@@ -270,7 +270,7 @@ internal abstract class SupabaseService(
         suspend fun getUserChatInvitations(userId: String): List<SupabaseChatInvitationRpc>? =
             performSuspendingAuthenticatedAction {
                 call<List<SupabaseChatInvitationRpc>>(
-                    function = "get_chat_invitations",
+                    function = "get_user_chat_invitations",
                     parameters = {
                         put("_user_id", userId)
                     }

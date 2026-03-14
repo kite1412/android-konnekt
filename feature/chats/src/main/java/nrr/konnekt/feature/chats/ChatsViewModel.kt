@@ -1,6 +1,7 @@
 package nrr.konnekt.feature.chats
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -9,19 +10,24 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
+import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UpdateStatus
+import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chats.util.ChatFilter
@@ -32,54 +38,84 @@ import javax.inject.Inject
 class ChatsViewModel @Inject constructor(
     authentication: Authentication,
     observeChatMessagesUseCase: ObserveChatMessagesUseCase,
+    private val chatRepository: ChatRepository,
     private val findUsersByUsernameUseCase: FindUsersByUsernameUseCase,
     private val createChatUseCase: CreateChatUseCase,
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase
 ) : ViewModel() {
     internal var chatFilter by mutableStateOf(ChatFilter.ALL)
     internal var searchValue by mutableStateOf("")
-    private val _chats = observeChatMessagesUseCase()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
-    internal val chats = combine(
-        flow = _chats,
-        flow2 = snapshotFlow { chatFilter },
-        flow3 = snapshotFlow { searchValue }
-    ) { chats, filter, searchValue ->
-        if (chats == null) return@combine null
 
-        val filterBySearch = if (searchValue.isNotBlank()) chats.filter {
-            it.chat.setting
-                ?.name?.contains(
-                    other = searchValue,
-                    ignoreCase = true
-                ) == true
-        } else chats
-        when (filter) {
-            ChatFilter.ALL -> filterBySearch
-            ChatFilter.PERSONAL -> filterBySearch.filter { it.chat.type == ChatType.PERSONAL }
-            ChatFilter.GROUP -> filterBySearch.filter { it.chat.type == ChatType.GROUP }
-            ChatFilter.CHAT_ROOM -> filterBySearch.filter { it.chat.type == ChatType.CHAT_ROOM }
-        }
-    }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
-    internal val currentUser = authentication.loggedInUser
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
+    private var _chats = emptyFlow<List<LatestChatMessage>?>()
+    internal var chats = emptyFlow<List<LatestChatMessage>?>()
+        private set
+    internal var currentUser = emptyFlow<User?>()
+        private set
     internal var createChatType by mutableStateOf<ChatType?>(null)
     internal var usersByIdentifier by mutableStateOf<List<User>?>(null)
+    internal val chatInvitations = mutableStateListOf<ChatInvitation>()
     internal var createChatActionEnabled by mutableStateOf(true)
     internal var createGroupChatSetting by mutableStateOf(CreateGroupChatSetting())
+
+    init {
+        viewModelScope.launch {
+            currentUser = authentication.loggedInUser
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null
+                )
+            _chats = observeChatMessagesUseCase()
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null
+                )
+            chats = combine(
+                flow = _chats,
+                flow2 = snapshotFlow { chatFilter },
+                flow3 = snapshotFlow { searchValue }
+            ) { chats, filter, searchValue ->
+                if (chats == null) return@combine null
+
+                val filterBySearch = if (searchValue.isNotBlank()) chats.filter {
+                    it.chat.setting
+                        ?.name?.contains(
+                            other = searchValue,
+                            ignoreCase = true
+                        ) == true
+                } else chats
+                when (filter) {
+                    ChatFilter.ALL -> filterBySearch
+                    ChatFilter.PERSONAL -> filterBySearch.filter { it.chat.type == ChatType.PERSONAL }
+                    ChatFilter.GROUP -> filterBySearch.filter { it.chat.type == ChatType.GROUP }
+                    ChatFilter.CHAT_ROOM -> filterBySearch.filter { it.chat.type == ChatType.CHAT_ROOM }
+                }
+            }
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5_000),
+                    initialValue = null
+                )
+
+            currentUser.first { it != null }
+                ?.let { user ->
+                    chatRepository.getUserChatInvitations(user.id)
+                        .let { res ->
+                            if (res is Result.Success) {
+                                _chats.first { chats -> chats != null }
+                                    ?.let { chats ->
+                                        chatInvitations.addAll(
+                                            res.data.filter { invitation ->
+                                                invitation.chat.id !in chats.map { it.chat.id }
+                                            }
+                                        )
+                                    }
+                            }
+                        }
+                }
+        }
+    }
 
     internal fun findUsers(username: String) {
         viewModelScope.launch {

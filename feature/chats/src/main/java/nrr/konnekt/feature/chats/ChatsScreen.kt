@@ -12,6 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,7 +71,9 @@ import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.component.SelectableShadowedButtons
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.DarkGray
+import nrr.konnekt.core.designsystem.theme.GreenPrimaryDarken
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
+import nrr.konnekt.core.designsystem.theme.Lime
 import nrr.konnekt.core.designsystem.theme.RubikIso
 import nrr.konnekt.core.designsystem.util.ButtonDefaults
 import nrr.konnekt.core.designsystem.util.KonnektIcon
@@ -81,6 +84,7 @@ import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.upload.util.ValidationResult
@@ -125,8 +129,8 @@ internal fun ChatsScreen(
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
 ) {
-    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-    val chats by viewModel.chats.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
+    val chats by viewModel.chats.collectAsStateWithLifecycle(null)
 
     currentUser?.let {
         ChatsScreen(
@@ -135,6 +139,7 @@ internal fun ChatsScreen(
             searchValue = viewModel.searchValue,
             createChatType = viewModel.createChatType,
             usersByIdentifier = viewModel.usersByIdentifier,
+            chatInvitations = viewModel.chatInvitations,
             contentPadding = contentPadding,
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
@@ -208,6 +213,7 @@ private fun ChatsScreen(
     searchValue: String,
     createChatType: ChatType?,
     usersByIdentifier: List<User>?,
+    chatInvitations: List<ChatInvitation>,
     contentPadding: PaddingValues,
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
@@ -251,6 +257,7 @@ private fun ChatsScreen(
         ) {
             Header(
                 user = user,
+                chatInvitations = chatInvitations,
                 onCreateChatClick = onCreateChatClick,
                 onAvatarClick = onAvatarClick,
                 modifier = Modifier
@@ -367,6 +374,7 @@ private fun ChatsScreen(
 @Composable
 private fun Header(
     user: User,
+    chatInvitations: List<ChatInvitation>,
     onCreateChatClick: (ChatType) -> Unit,
     onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -395,7 +403,24 @@ private fun Header(
                     onCreateChatClick(type)
                 }
             }
+            val iconColor = Lime
 
+            Box {
+                Icon(
+                    painter = painterResource(KonnektIcon.mailbox),
+                    contentDescription = "chat invitations",
+                    modifier = Modifier.size(24.dp),
+                    tint = iconColor
+                )
+                if (chatInvitations.isNotEmpty()) Box(
+                    Modifier
+                        .offset(x = 2.dp)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(GreenPrimaryDarken)
+                        .align(Alignment.TopEnd)
+                )
+            }
             Box {
                 Icon(
                     painter = painterResource(KonnektIcon.add),
@@ -408,7 +433,7 @@ private fun Header(
                         ) {
                             dropdownExpanded = !dropdownExpanded
                         },
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = iconColor
                 )
                 DropdownMenu(
                     expanded = dropdownExpanded,
@@ -1003,6 +1028,7 @@ private fun ChatsScreenPreview(
                         add(data.user.copy(id = "$i"))
                     }
                 }.toList(),
+                chatInvitations = emptyList(),
                 contentPadding = PaddingValues(16.dp),
                 onSearchValueChange = {},
                 onCreateChatClick = { t ->
