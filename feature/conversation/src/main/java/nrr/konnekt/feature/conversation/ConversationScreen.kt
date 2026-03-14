@@ -108,7 +108,6 @@ import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.designsystem.util.TextFieldDefaults
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UpdateStatus
-import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.util.isDeleted
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.media.AudioRecorder
@@ -117,6 +116,7 @@ import nrr.konnekt.core.media.PlaybackState
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.User
@@ -188,7 +188,7 @@ internal fun ConversationScreen(
     val chat by viewModel.chat.collectAsStateWithLifecycle()
     val messages by viewModel.messages.collectAsStateWithLifecycle(null)
     val readMarkers by viewModel.readMarkers.collectAsStateWithLifecycle(null)
-    val currentUserChatParticipation by viewModel.currentUserChatParticipation.collectAsStateWithLifecycle(null)
+    val currentUserChatParticipant by viewModel.currentUserChatParticipant.collectAsStateWithLifecycle(null)
     val totalActiveParticipants by viewModel.totalActiveParticipants.collectAsStateWithLifecycle()
     val peerLastActive by viewModel.peerLastActive.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
@@ -220,7 +220,7 @@ internal fun ConversationScreen(
             ConversationScreen(
                 currentUser = u,
                 chat = c,
-                currentUserChatParticipation = currentUserChatParticipation,
+                currentUserChatParticipant = currentUserChatParticipant,
                 isLoadingMessages = messages == null && viewModel.fixedChatId != null,
                 messages = messages ?: emptyList(),
                 readMarkers = readMarkers,
@@ -334,7 +334,7 @@ internal fun ConversationScreen(
 private fun ConversationScreen(
     currentUser: User,
     chat: Chat,
-    currentUserChatParticipation: UserChatParticipation?,
+    currentUserChatParticipant: ChatParticipant?,
     isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
     isOnMessagesSelectionMode: Boolean,
@@ -392,7 +392,7 @@ private fun ConversationScreen(
         AnimatedContent(targetState = isOnMessagesSelectionMode) {
             if (!it) Header(
                 chat = chat,
-                currentUserChatParticipation = currentUserChatParticipation,
+                currentUserChatParticipant = currentUserChatParticipant,
                 totalActiveParticipants = totalActiveParticipants,
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
@@ -503,7 +503,7 @@ private fun ConversationScreen(
         }
         AnimatedContent(
             !isLoadingMessages &&
-                    currentUserChatParticipation?.participation?.status?.leftAt == null &&
+                    currentUserChatParticipant?.status?.leftAt == null &&
                     !chat.isDeleted()
         ) { sendEnabled ->
             if (sendEnabled) MessageComposer(
@@ -575,7 +575,7 @@ private fun ConversationScreen(
 @Composable
 private fun Header(
     chat: Chat,
-    currentUserChatParticipation: UserChatParticipation?,
+    currentUserChatParticipant: ChatParticipant?,
     totalActiveParticipants: Int,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
@@ -629,8 +629,8 @@ private fun Header(
                 ) {
                     ConversationActions(
                         blocked = chat.type == ChatType.PERSONAL &&
-                                currentUserChatParticipation?.participation?.status?.leftAt != null,
-                        hasLeftChat = currentUserChatParticipation?.participation?.status?.leftAt != null,
+                                currentUserChatParticipant?.status?.leftAt != null,
+                        hasLeftChat = currentUserChatParticipant?.status?.leftAt != null,
                         chatType = chat.type,
                         dismiss = { dropdownExpanded = false },
                         onClearChat = onClearChat,
@@ -1983,7 +1983,7 @@ private fun ConversationScreenPreview(
                 ConversationScreen(
                     currentUser = user,
                     chat = conversation.chat,
-                    currentUserChatParticipation = null,
+                    currentUserChatParticipant = null,
                     isLoadingMessages = false,
                     messages = conversation.messages,
                     readMarkers = null,

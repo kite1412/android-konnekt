@@ -29,6 +29,7 @@ import nrr.konnekt.core.domain.usecase.DeleteChatUseCase
 import nrr.konnekt.core.domain.usecase.EditChatSettingUseCase
 import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
+import nrr.konnekt.core.domain.usecase.ObserveChatUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.name
@@ -51,6 +52,7 @@ class ChatDetailViewModel @Inject constructor(
     private val userPresenceManager: UserPresenceManager,
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase,
     private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
+    private val observeChatUseCase: ObserveChatUseCase,
     private val inviteToChatUseCase: InviteToChatUseCase,
     private val editChatSettingUseCase: EditChatSettingUseCase,
     private val deleteChatUseCase: DeleteChatUseCase
@@ -146,27 +148,9 @@ class ChatDetailViewModel @Inject constructor(
                                 }
                                 .launchIn(viewModelScope)
 
-                            observeChatParticipantsUseCase
-                                .currentUser(chat.id)
-                                .onEach { currentUserChatParticipation ->
-                                    _chat.value?.let { prev ->
-                                        _chat.value = prev.copy(
-                                            participants = mutableListOf<ChatParticipant>().apply {
-                                                addAll(chat.participants)
-
-                                                indexOfFirst { participant ->
-                                                    currentUserChatParticipation?.participation?.user?.id == participant.user.id
-                                                }
-                                                    .let { index ->
-                                                        if (index != -1) {
-                                                            currentUserChatParticipation?.participation?.let { participation ->
-                                                                set(index, participation)
-                                                            }
-                                                        }
-                                                    }
-                                            }
-                                        )
-                                    }
+                            observeChatUseCase(chat.id)
+                                .onEach { chat ->
+                                    _chat.value = chat
                                 }
                                 .launchIn(viewModelScope)
                         }

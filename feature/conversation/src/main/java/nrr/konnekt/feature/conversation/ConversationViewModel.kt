@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -30,7 +32,6 @@ import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UpdateStatus
-import nrr.konnekt.core.domain.model.UserChatParticipation
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
@@ -41,6 +42,7 @@ import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
 import nrr.konnekt.core.domain.usecase.EditMessageUseCase
 import nrr.konnekt.core.domain.usecase.HideMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
+import nrr.konnekt.core.domain.usecase.ObserveChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
@@ -48,6 +50,7 @@ import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
@@ -75,6 +78,7 @@ class ConversationViewModel @Inject constructor(
     authentication: Authentication,
     private val observeMessagesUseCase: ObserveMessagesUseCase,
     private val observeChatParticipantsUseCase: ObserveChatParticipantsUseCase,
+    private val observeChatUseCase: ObserveChatUseCase,
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
     private val userPresenceManager: UserPresenceManager,
@@ -98,7 +102,7 @@ class ConversationViewModel @Inject constructor(
         )
     internal var messages = emptyFlow<List<Message>>()
     internal var readMarkers = emptyFlow<List<UserReadMarker>>()
-    internal var currentUserChatParticipation = emptyFlow<UserChatParticipation?>()
+    internal var currentUserChatParticipant = emptyFlow<ChatParticipant?>()
     internal var messageInput by mutableStateOf("")
     internal var sendingMessage by mutableStateOf(false)
     internal var composerAction by mutableStateOf<MessageComposerAction?>(null)
@@ -210,8 +214,14 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeFlows(chatId: String) {
-        currentUserChatParticipation = observeChatParticipantsUseCase.currentUser(chatId)
+        currentUserChatParticipant = chat
+            .mapLatest { chat ->
+                chat?.participants?.firstOrNull { participant ->
+                    participant.user.id == currentUser.first()?.id
+                }
+            }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
@@ -223,10 +233,10 @@ class ConversationViewModel @Inject constructor(
                     currentUser.first()?.id?.let { id ->
                         l.firstOrNull()
                             ?.let { message ->
-                                val participation = currentUserChatParticipation.first()
+                                val participation = currentUserChatParticipant.first()
 
                                 participation?.let { userChatParticipation ->
-                                    val status = userChatParticipation.participation.status
+                                    val status = userChatParticipation.status
                                     if (
                                         id != message.sender.id &&
                                         status.leftAt == null
@@ -237,10 +247,9 @@ class ConversationViewModel @Inject constructor(
                             }
                     }
                 },
-            flow2 = currentUserChatParticipation
+            flow2 = currentUserChatParticipant
         ) { messages, userChatParticipation ->
             userChatParticipation
-                ?.participation
                 ?.status
                 ?.let { status ->
                     messages.filter { message ->
@@ -250,10 +259,11 @@ class ConversationViewModel @Inject constructor(
                     }
                 } ?: messages
         }
-        readMarkers = observeChatParticipantsUseCase(chatId)
+        readMarkers = chat
             .onEach {
                 latestCurrentUserChatParticipantStatus = it
-                    .firstOrNull { participant ->
+                    ?.participants
+                    ?.firstOrNull { participant ->
                         participant.user.id == currentUser.first()?.id
                     }
                     ?.status
@@ -262,19 +272,26 @@ class ConversationViewModel @Inject constructor(
                 val currentUser = currentUser.first()
 
                 it
-                    .filter { participant ->
+                    ?.participants
+                    ?.filter { participant ->
                         participant.user.id != currentUser?.id
                     }
-                    .map { participant ->
+                    ?.map { participant ->
                         UserReadMarker(
                             user = participant.user,
                             lastReadAt = participant.status.lastReadAt
                         )
-                    }
+                    } ?: emptyList()
             }
             .onEach {
                 Log.d(LOG_TAG, "read markers: $it")
             }
+
+        observeChatUseCase(chatId)
+            .onEach { chat ->
+                _chat.value = chat
+            }
+            .launchIn(viewModelScope)
     }
 
     private suspend fun updateLastReadAt(chatId: String) {
