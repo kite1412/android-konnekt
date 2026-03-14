@@ -41,6 +41,7 @@ internal fun KonnektNavHost(
         chatsScreen(
             navigateToConversation = navController::navigateToConversation,
             navigateToTempConversation = navController::navigateToTempPersonalConversation,
+            navigateToChatDetail = navController::navigateToChatDetail,
             navigateToProfile = navController::navigateToProfile,
             navigateToArchivedChats = navController::navigateToArchivedChats,
             contentPadding = rootContentPadding(scaffoldPadding)
@@ -78,6 +79,7 @@ internal fun KonnektNavHost(
         archivedChatsScreen(
             navigateBack = navController::popBackStack,
             navigateToConversation = navController::navigateToConversation,
+            navigateToChatDetail = navController::navigateToChatDetail,
             contentPadding = contentPadding(scaffoldPadding)
         )
     }

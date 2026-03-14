@@ -48,6 +48,8 @@ import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.chats
+import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
+import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
 import nrr.konnekt.core.ui.util.ChatDropdownItems
@@ -62,6 +64,7 @@ import nrr.konnekt.core.ui.util.unblockChatAlert
 internal fun ArchivedChatsScreen(
     navigateBack: () -> Unit,
     navigateToConversation: (id: String) -> Unit,
+    navigateToChatDetail: (chatId: String) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ArchivedChatsViewModel = hiltViewModel()
@@ -75,9 +78,8 @@ internal fun ArchivedChatsScreen(
             archivedChats = archivedChats,
             contentPadding = contentPadding,
             onNavigateBack = navigateBack,
-            onChatClick = { latestChatMessage ->
-                navigateToConversation(latestChatMessage.chat.id)
-            },
+            onChatClick = { c -> navigateToConversation(c.id) },
+            onChatInfoClick = { c -> navigateToChatDetail(c.id) },
             onUnarchive = { chat ->
                 viewModel.updateChatParticipantStatus(
                     chatId = chat.id,
@@ -113,7 +115,8 @@ private fun ArchivedChatsScreen(
     archivedChats: List<LatestChatMessage>?,
     contentPadding: PaddingValues,
     onNavigateBack: () -> Unit,
-    onChatClick: (LatestChatMessage) -> Unit,
+    onChatClick: (Chat) -> Unit,
+    onChatInfoClick: (Chat) -> Unit,
     onUnarchive: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onBlockChange: (chat: Chat, blocked: Boolean) -> Unit,
@@ -121,6 +124,10 @@ private fun ArchivedChatsScreen(
     modifier: Modifier = Modifier
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
+    var selectedChat by retain { mutableStateOf<Chat?>(null) }
+    val resetSelectedChat = {
+        selectedChat = null
+    }
 
     Box(
         modifier = modifier
@@ -148,7 +155,8 @@ private fun ArchivedChatsScreen(
                 chats(
                     latestChatMessages = archivedChats,
                     currentUser = currentUser,
-                    onClick = onChatClick
+                    onClick = { onChatClick(it.chat) },
+                    onAvatarClick = { selectedChat = it }
                 ) { dismiss, latestChatMessage ->
                     val chat = latestChatMessage.chat
                     val blocked = chat.isPersonalChatBlocked(currentUser)
@@ -209,6 +217,20 @@ private fun ArchivedChatsScreen(
             text = "Loading chats",
             modifier = Modifier.align(Alignment.Center)
         )
+        selectedChat?.let { chat ->
+            ProfilePopup(
+                data = chat.toChatPopupData(),
+                onDismissRequest = resetSelectedChat,
+                onMessageClick = {
+                    onChatClick(chat)
+                    resetSelectedChat()
+                },
+                onInfoClick = {
+                    onChatInfoClick(chat)
+                    resetSelectedChat()
+                }
+            )
+        }
         ActionAlertDialog(
             alert = alert,
             onDismissRequest = { alert = it }
@@ -263,6 +285,7 @@ private fun ArchivedChatsPreview(
                 contentPadding = paddingValues,
                 onNavigateBack = {},
                 onChatClick = {},
+                onChatInfoClick = {},
                 onUnarchive = {},
                 onClearChat = {},
                 onBlockChange = { _, _ -> },

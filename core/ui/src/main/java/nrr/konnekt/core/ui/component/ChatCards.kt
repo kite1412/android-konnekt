@@ -64,6 +64,7 @@ import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.isSentByCurrentUser
 import nrr.konnekt.core.domain.util.isUnreadByCurrentUser
 import nrr.konnekt.core.model.AttachmentType
+import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.info
@@ -76,6 +77,7 @@ fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
     currentUser: User,
     onClick: (LatestChatMessage) -> Unit,
+    onAvatarClick: (Chat) -> Unit,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
     items(
@@ -86,6 +88,7 @@ fun LazyListScope.chats(
             ChatCard(
                 latestChatMessage = this,
                 onClick = onClick,
+                onAvatarClick = onAvatarClick,
                 messageSentByCurrentUser = message?.isSentByCurrentUser(currentUser) ?: false,
                 messageUnreadByCurrentUser = isUnreadByCurrentUser(currentUser),
                 messageDeletedByCurrentUser = message?.isDeletedByCurrentUser(currentUser) ?: false,
@@ -106,6 +109,7 @@ fun LazyListScope.chats(
 private fun ChatCard(
     latestChatMessage: LatestChatMessage,
     onClick: (LatestChatMessage) -> Unit,
+    onAvatarClick: (Chat) -> Unit,
     messageSentByCurrentUser: Boolean,
     messageUnreadByCurrentUser: Boolean,
     messageDeletedByCurrentUser: Boolean,
@@ -165,6 +169,10 @@ private fun ChatCard(
                             if (chat.type != ChatType.CHAT_ROOM) Box {
                                 AvatarIcon(
                                     name = chat.setting?.name ?: chat.id,
+                                    modifier = Modifier.clickable(
+                                        interactionSource = null,
+                                        indication = null
+                                    ) { onAvatarClick(chat) },
                                     iconPath = chat.setting?.iconPath,
                                     diameter = iconDiameter
                                 )
@@ -386,6 +394,7 @@ private fun ChatCardsPreview(
                     latestChatMessages = data.latestChatMessages,
                     currentUser = data.user,
                     onClick = {},
+                    onAvatarClick = {},
                     dropdownItems = { dismiss, _ ->
                         DropdownItem(
                             text = "Clear Chat",

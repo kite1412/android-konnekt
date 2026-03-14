@@ -23,6 +23,7 @@ fun NavController.navigateToChats(
 fun NavGraphBuilder.chatsScreen(
     navigateToConversation: (chatId: String) -> Unit,
     navigateToTempConversation: (id: String) -> Unit,
+    navigateToChatDetail: (chatId: String) -> Unit,
     navigateToProfile: () -> Unit,
     navigateToArchivedChats: () -> Unit,
     contentPadding: PaddingValues,
@@ -32,6 +33,7 @@ fun NavGraphBuilder.chatsScreen(
         ChatsScreen(
             navigateToConversation = navigateToConversation,
             navigateToTempConversation = navigateToTempConversation,
+            navigateToChatDetail = navigateToChatDetail,
             navigateToProfile = navigateToProfile,
             navigateToArchivedChats = navigateToArchivedChats,
             contentPadding = contentPadding,

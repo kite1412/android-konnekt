@@ -94,6 +94,8 @@ import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
 import nrr.konnekt.core.ui.component.chats
+import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
+import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
@@ -116,6 +118,7 @@ import nrr.konnekt.feature.chats.util.PersonDropdownItems
 internal fun ChatsScreen(
     navigateToConversation: (id: String) -> Unit,
     navigateToTempConversation: (id: String) -> Unit,
+    navigateToChatDetail: (chatId: String) -> Unit,
     navigateToProfile: () -> Unit,
     navigateToArchivedChats: () -> Unit,
     contentPadding: PaddingValues,
@@ -136,6 +139,7 @@ internal fun ChatsScreen(
             onSearchValueChange = { s -> viewModel.searchValue = s },
             onCreateChatClick = { t -> viewModel.createChatType = t },
             onChatClick = { c -> navigateToConversation(c.id) },
+            onChatInfoClick = { c -> navigateToChatDetail(c.id) },
             onArchiveChat = { c ->
                 viewModel.updateUserStatus(
                     chat = c,
@@ -208,6 +212,7 @@ private fun ChatsScreen(
     onSearchValueChange: (String) -> Unit,
     onCreateChatClick: (ChatType) -> Unit,
     onChatClick: (Chat) -> Unit,
+    onChatInfoClick: (Chat) -> Unit,
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
@@ -227,6 +232,10 @@ private fun ChatsScreen(
     modifier: Modifier = Modifier
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
+    var selectedChat by retain { mutableStateOf<Chat?>(null) }
+    val resetSelectedChat = {
+        selectedChat = null
+    }
 
     Box(
         modifier = modifier
@@ -261,6 +270,9 @@ private fun ChatsScreen(
                         chat.isPersonalChatBlocked(user)
                     },
                     onChatClick = onChatClick,
+                    onChatAvatarClick = { c ->
+                        selectedChat = c
+                    },
                     onArchiveChat = { c ->
                         alert = archiveChatAlert(c.name()) {
                             onArchiveChat(c)
@@ -331,6 +343,20 @@ private fun ChatsScreen(
             usersByIdentifier = usersByIdentifier,
             createActionEnabled = createActionEnabled
         )
+        selectedChat?.let { chat ->
+            ProfilePopup(
+                data = chat.toChatPopupData(),
+                onDismissRequest = resetSelectedChat,
+                onMessageClick = {
+                    onChatClick(chat)
+                    resetSelectedChat()
+                },
+                onInfoClick = {
+                    onChatInfoClick(chat)
+                    resetSelectedChat()
+                }
+            )
+        }
         ActionAlertDialog(
             alert = alert,
             onDismissRequest = { alert = it }
@@ -503,6 +529,7 @@ private fun Chats(
     onFilterChange: (ChatFilter) -> Unit,
     onSearchValueChange: (String) -> Unit,
     onChatClick: (Chat) -> Unit,
+    onChatAvatarClick: (Chat) -> Unit,
     onArchiveChat: (Chat) -> Unit,
     onClearChat: (Chat) -> Unit,
     onLeaveChat: (Chat) -> Unit,
@@ -575,6 +602,7 @@ private fun Chats(
                     latestChatMessages = filteredChats,
                     currentUser = user,
                     onClick = { onChatClick(it.chat) },
+                    onAvatarClick = onChatAvatarClick,
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
                             when (type) {
@@ -981,6 +1009,7 @@ private fun ChatsScreenPreview(
                     createChatType = t
                 },
                 onChatClick = {},
+                onChatInfoClick = {},
                 onArchiveChat = {},
                 onClearChat = {},
                 onLeaveChat = {},

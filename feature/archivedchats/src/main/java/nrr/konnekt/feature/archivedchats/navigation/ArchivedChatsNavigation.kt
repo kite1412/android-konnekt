@@ -16,12 +16,14 @@ fun NavController.navigateToArchivedChats() =
 fun NavGraphBuilder.archivedChatsScreen(
     navigateBack: () -> Unit,
     navigateToConversation: (id: String) -> Unit,
+    navigateToChatDetail: (chatId: String) -> Unit,
     contentPadding: PaddingValues
 ) {
     composable<ArchivedChatsRoute> {
         ArchivedChatsScreen(
             navigateBack = navigateBack,
             navigateToConversation = navigateToConversation,
+            navigateToChatDetail = navigateToChatDetail,
             contentPadding = contentPadding
         )
     }
