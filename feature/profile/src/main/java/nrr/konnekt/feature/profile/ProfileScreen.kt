@@ -138,7 +138,6 @@ internal fun ProfileScreen(
             )
         )
     }
-    val resetAlert = { alert = null }
 
     Box(
         modifier = modifier
@@ -162,10 +161,7 @@ internal fun ProfileScreen(
         ShadowedButton(
             onClick = {
                 alert = Alert(
-                    onConfirm = {
-                        onLogout()
-                        resetAlert()
-                    },
+                    onConfirm = onLogout,
                     title = "Logout",
                     message = "Are you sure you want to logout?",
                     style = logoutAlertStyle,
@@ -192,7 +188,7 @@ internal fun ProfileScreen(
     alert?.let {
         ActionAlertDialog(
             alert = alert,
-            onDismissRequest = { resetAlert() }
+            onDismissRequest = { alert = null }
         )
     }
 }

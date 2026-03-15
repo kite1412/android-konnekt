@@ -41,6 +41,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatParticipantStatus
+import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.util.now
@@ -437,7 +438,7 @@ internal class SupabaseChatRepository @Inject constructor(
         }.share()
 
         val permissionSettings = chat.flatMapLatest { chat ->
-            if (chat.type != ChatType.PERSONAL) performOperation(CHAT_PERMISSION_SETTINGS) {
+            if (chat.type == ChatType.GROUP) performOperation(CHAT_PERMISSION_SETTINGS) {
                 selectSingleValueAsFlow(
                     primaryKey = SupabaseChatPermissionSettings.PrimaryKey
                 ) {
@@ -449,7 +450,10 @@ internal class SupabaseChatRepository @Inject constructor(
                 }
                     .map(SupabaseChatPermissionSettings::toModel)
                     .share()
-            } else flowOf(null)
+            } else flowOf(
+                if (chat.type == ChatType.CHAT_ROOM) ChatPermissionSettings()
+                else null
+            )
         }
 
         return combine(

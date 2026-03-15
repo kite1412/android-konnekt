@@ -41,8 +41,10 @@ fun ChatHeader(
     totalActiveParticipants: Int,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    isAdmin: Boolean = false,
     peerLastActive: Instant? = null,
     onClick: (() -> Unit)? = null,
+    onLeaveChatRoom: (() -> Unit)? = null,
     iconSize: Dp = 32.dp,
     iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
@@ -152,16 +154,18 @@ fun ChatHeader(
                 }
             }
         }
-        TextButton(
-            onClick = onNavigateBack
-        ) {
-            Text(
-                text = "Leave",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Red
+        onLeaveChatRoom?.let { onDismissChat ->
+            TextButton(
+                onClick = onDismissChat
+            ) {
+                Text(
+                    text = if (isAdmin) "Dismiss" else "Leave",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Red
+                    )
                 )
-            )
+            }
         }
     }
 }

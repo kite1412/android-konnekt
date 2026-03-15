@@ -145,6 +145,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
 import nrr.konnekt.core.ui.previewparameter.Conversation
 import nrr.konnekt.core.ui.previewparameter.ConversationProvider
+import nrr.konnekt.core.ui.util.AlertDialogDefaults
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.blockChatAlert
@@ -210,9 +211,9 @@ internal fun ConversationScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is UiEvent.NavigateBack -> navigateBack()
                 is UiEvent.ShowSnackbar ->
                     snackbarHostState.showSnackbar(event.message)
+                is UiEvent.NavigateBack -> navigateBack()
             }
         }
     }
@@ -296,6 +297,7 @@ internal fun ConversationScreen(
                         updateLeftAt = UpdateStatus()
                     )
                 },
+                onLeaveChatRoom = viewModel::dismissChatRoom,
                 onBlockChange = { blocked ->
                     viewModel.updateChatParticipationStatus(
                         updateLeftAt = UpdateStatus(!blocked)
@@ -372,6 +374,7 @@ private fun ConversationScreen(
     onBlockChange: (blocked: Boolean) -> Unit,
     onParticipantInfoClick: (User) -> Unit,
     onParticipantMessageClick: (User) -> Unit,
+    onLeaveChatRoom: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -383,6 +386,15 @@ private fun ConversationScreen(
     }
     val messagingEnabled = chat.setting?.permissionSettings?.sendMessages == true
             || currentUserChatParticipant?.role == ParticipantRole.ADMIN
+    val dismissChatAlertStyle = with(AlertDialogDefaults.defaultStyle()) {
+        copy(
+            confirmButtonContentColor = Red,
+            cancelButtonContentColor = LocalContentColor.current,
+            titleStyle = titleStyle.copy(
+                color = Red
+            )
+        )
+    }
 
     Column(
         modifier = modifier
@@ -392,13 +404,27 @@ private fun ConversationScreen(
             .padding(contentPadding),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        val isAdmin = currentUserChatParticipant?.role == ParticipantRole.ADMIN
+
         AnimatedContent(targetState = isOnMessagesSelectionMode) {
             if (!it) Header(
                 chat = chat,
+                isAdmin = isAdmin,
                 currentUserChatParticipant = currentUserChatParticipant,
                 totalActiveParticipants = totalActiveParticipants,
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
+                onLeaveChatRoom = {
+                    val action = if (isAdmin) "Dismiss" else "Leave"
+
+                    alert = Alert(
+                        onConfirm = if (isAdmin) onLeaveChatRoom else onLeaveChat,
+                        title = "$action Chat Room",
+                        message = "Are you sure you want to ${action.lowercase()} this chat room?",
+                        confirmText = action,
+                        style = dismissChatAlertStyle
+                    )
+                },
                 onClearChat = {
                     alert = clearChatAlert(chat.name(), onClearChat)
                 },
@@ -531,7 +557,9 @@ private fun ConversationScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (chat.isDeleted()) "Chat has been deleted."
+                    text = if (chat.isDeleted())
+                            if (chat.type != ChatType.CHAT_ROOM) "Chat has been deleted."
+                            else "Chat room has been dismissed."
                         else if (currentUserChatParticipant?.status?.leftAt != null)
                             if (chat.type == ChatType.PERSONAL) "You blocked this chat."
                             else "You left this chat."
@@ -581,12 +609,14 @@ private fun ConversationScreen(
 @Composable
 private fun Header(
     chat: Chat,
+    isAdmin: Boolean,
     currentUserChatParticipant: ChatParticipant?,
     totalActiveParticipants: Int,
     onNavigateBack: () -> Unit,
     onChatClick: (Chat) -> Unit,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
+    onLeaveChatRoom: () -> Unit,
     onBlockChange: (blocked: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -610,7 +640,10 @@ private fun Header(
             totalActiveParticipants = totalActiveParticipants,
             peerLastActive = peerLastActive,
             onNavigateBack = onNavigateBack,
+            isAdmin = isAdmin,
             onClick = { onChatClick(chat) },
+            onLeaveChatRoom = if (chat.type == ChatType.CHAT_ROOM && chat.deletedAt == null) onLeaveChatRoom
+                else null,
             modifier = Modifier.weight(1f),
             iconSize = iconButtonSize,
             iconTint = iconButtonTint
@@ -2027,6 +2060,7 @@ private fun ConversationScreenPreview(
                     onSendAudioRecording = {},
                     onClearChat = {},
                     onLeaveChat = {},
+                    onLeaveChatRoom = {},
                     onBlockChange = {},
                     onParticipantInfoClick = {},
                     onParticipantMessageClick = {},

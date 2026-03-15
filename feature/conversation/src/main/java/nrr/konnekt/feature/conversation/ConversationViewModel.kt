@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
@@ -39,6 +40,7 @@ import nrr.konnekt.core.domain.repository.MessageResult
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.usecase.CreateChatUseCase
 import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
+import nrr.konnekt.core.domain.usecase.DismissChatRoomUseCase
 import nrr.konnekt.core.domain.usecase.EditMessageUseCase
 import nrr.konnekt.core.domain.usecase.HideMessagesUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
@@ -55,6 +57,7 @@ import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
@@ -87,10 +90,12 @@ class ConversationViewModel @Inject constructor(
     private val createChatUseCase: CreateChatUseCase,
     private val deleteMessagesUseCase: DeleteMessagesUseCase,
     private val hideMessagesUseCase: HideMessagesUseCase,
-    private val editMessageUseCase: EditMessageUseCase
+    private val editMessageUseCase: EditMessageUseCase,
+    private val dismissChatRoomUseCase: DismissChatRoomUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
     private var latestCurrentUserChatParticipantStatus: ChatParticipantStatus? = null
+    private var firstConsumeChatFlow = true
     internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
     internal var fixedChatId: String? by mutableStateOf(null)
     internal val currentUser = authentication
@@ -116,7 +121,6 @@ class ConversationViewModel @Inject constructor(
     internal var idType = IdType.CHAT
         private set
 
-    // NOTE: not observed
     private var _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
 
@@ -254,7 +258,7 @@ class ConversationViewModel @Inject constructor(
                 ?.let { status ->
                     messages.filter { message ->
                         message.sentAt < (status.leftAt ?: Instant.DISTANT_FUTURE) &&
-                                message.sentAt < (this@ConversationViewModel.chat.value?.deletedAt ?: Instant.DISTANT_FUTURE)
+                                message.sentAt < (this@ConversationViewModel.chat.value?.deletedAt ?: Instant.DISTANT_FUTURE) &&
                                 message.sentAt > (status.clearedAt ?: Instant.DISTANT_PAST)
                     }
                 } ?: messages
@@ -290,6 +294,38 @@ class ConversationViewModel @Inject constructor(
         observeChatUseCase(chatId)
             .onEach { chat ->
                 _chat.value = chat
+                firstConsumeChatFlow = false
+            }
+            .launchIn(viewModelScope)
+
+        combine(
+            flow = _chat
+                .distinctUntilChangedBy { it?.deletedAt != null },
+            flow2 = currentUserChatParticipant
+        ) { chat, currentChatParticipant -> chat to currentChatParticipant }
+            .distinctUntilChangedBy { (chat, currentChatParticipant) ->
+                chat?.deletedAt != null || currentChatParticipant?.status?.leftAt != null
+            }
+            .mapLatest { (chat, currentChatParticipant) ->
+                if (
+                    chat?.type == ChatType.CHAT_ROOM &&
+                    (
+                        chat.deletedAt != null ||
+                        currentChatParticipant?.status?.leftAt != null
+                    ) &&
+                    !firstConsumeChatFlow
+                ) {
+                    _events.emit(
+                        UiEvent.ShowSnackbar(
+                            message = if (
+                                chat.deletedAt != null ||
+                                currentChatParticipant?.role == ParticipantRole.ADMIN
+                            ) "Chat room has been dismissed"
+                                else "You've left the chat room"
+                        )
+                    )
+                    _events.emit(UiEvent.NavigateBack)
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -530,5 +566,13 @@ class ConversationViewModel @Inject constructor(
                 }
                 ?.id
         } else null
+    }
+
+    internal fun dismissChatRoom() {
+        viewModelScope.launch {
+            chat.first()?.id?.let { chatId ->
+                dismissChatRoomUseCase(chatId)
+            }
+        }
     }
 }

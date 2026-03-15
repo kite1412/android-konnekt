@@ -311,7 +311,9 @@ private fun ChatCard(
                                         }
                                     } else null
                                 } ?: Text(
-                                    text = if (groupChatDeleted) "Group chat deleted."
+                                    text = if (groupChatDeleted)
+                                            if (chat.type != ChatType.CHAT_ROOM) "Group chat deleted."
+                                            else "Chat room dismissed."
                                         else if (personalChatBlockedByCurrentUser) "You blocked this chat."
                                         else if (chatLeftByCurrentUser) "You left this chat."
                                         else "Start a message...",

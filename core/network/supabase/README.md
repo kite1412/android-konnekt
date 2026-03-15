@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS chat_invitations (
 ```sql
 create or replace function create_chat(
     _type text,
-    _participant_ids text[],
+    _participant_ids uuid[],
     _name text default null,
     _description text default null,
     _icon_path text default null,
@@ -201,7 +201,7 @@ begin
     foreach _pid in array _participant_ids
     loop
         insert into chat_participants (chat_id, user_id, role)
-        values (_chat_id, _pid::uuid, 'member'::participant_role);
+        values (_chat_id, _pid, 'member'::participant_role);
     end loop;
 
     insert into chat_participant_statuses (chat_id, user_id, joined_at, last_read_at)
@@ -271,6 +271,7 @@ begin
         'id', _chat_id,
         'type', _chat_row.type,
         'created_at', _chat_row.created_at,
+        'deleted_at', null,
         'participants', _participants,
         'setting',
         case
