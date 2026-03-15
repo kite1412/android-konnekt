@@ -334,13 +334,21 @@ begin
 
     insert into chat_participant_statuses (
         chat_id,
-        user_id
+        user_id,
+        joined_at,
+        left_at
     )
     values (
         _chat_id,
-        _user_id
+        _user_id,
+        now(),
+        null
     )
-    on conflict (chat_id, user_id) do nothing;
+    on conflict (chat_id, user_id) 
+    do update
+    set
+        joined_at = now(),
+        left_at = null;
 
     update chat_invitations
     set accepted_at = now()
@@ -750,14 +758,25 @@ begin
             chat_id,
             inviter_id,
             receiver_id,
-            invited_at
+            invited_at,
+            canceled_at,
+            accepted_at
         )
         values (
             _cid,
             _user_id,
             _rid::uuid,
-            now()
+            now(),
+            null,
+            null
         )
+        on conflict (chat_id, receiver_id)
+        do update
+        set
+            inviter_id = excluded.inviter_id,
+            invited_at = now(),
+            canceled_at = null,
+            accepted_at = null
         returning id, invited_at
         into _invitation_id, _invited_at;
 
@@ -772,7 +791,9 @@ begin
                     'chat', _chat,
                     'inviter', to_jsonb(_inviter),
                     'receiver', to_jsonb(_receiver),
-                    'invited_at', _invited_at
+                    'invited_at', _invited_at,
+                    'canceled_at', null,
+                    'accepted_at', null
                 )
             );
     end loop;

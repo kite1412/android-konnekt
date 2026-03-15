@@ -48,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -108,7 +107,6 @@ import nrr.konnekt.core.ui.util.AlertDialogDefaults
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.asImageBitmap
 import nrr.konnekt.core.ui.util.blockChatAlert
-import nrr.konnekt.core.ui.util.getLetterColor
 import nrr.konnekt.core.ui.util.toFileUpload
 import nrr.konnekt.core.ui.util.unblockChatAlert
 import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
@@ -638,6 +636,9 @@ private fun GroupChatInfo(
     val grayTitleStyle = chatInfoTitleStyle().copy(
         color = Gray
     )
+    val invitations = chatInvitations.filter { invitation ->
+        invitation.canceledAt == null && invitation.acceptedAt == null
+    }
 
     ChatInfoSection(
         title = "Notifications",
@@ -668,9 +669,9 @@ private fun GroupChatInfo(
             onClick = onChatParticipantClick
         )
     }
-    if (chatInvitations.isNotEmpty()) ChatInfoSection("Pending Invitations") {
+    if (invitations.isNotEmpty()) ChatInfoSection("Pending Invitations") {
         ChatInvitations(
-            invitations = chatInvitations,
+            invitations = invitations,
             onInvitationClick = onInvitationClick
         )
     }
@@ -802,31 +803,6 @@ private fun SmallChatIcon(
         modifier = modifier.border(),
         diameter = iconSize
     )
-}
-
-@Composable
-private fun ChatNameIcon(
-    chatName: String,
-    size: Dp,
-    clipShape: Shape,
-    modifier: Modifier = Modifier
-) {
-    val firstLetter = chatName.first()
-
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(clipShape)
-            .background(firstLetter.getLetterColor()),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = firstLetter.toString(),
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontWeight = FontWeight.Bold
-            )
-        )
-    }
 }
 
 @Composable
@@ -1193,10 +1169,12 @@ private fun AddMemberDialog(
                             key = { u -> u.id }
                         ) { user ->
                             val added = chatParticipants.any { participant ->
-                                participant.user.id == user.id
+                                participant.user.id == user.id && participant.status.leftAt == null
                             }
                             val invited = existingInvitations.any { invitation ->
-                                invitation.receiver.id == user.id
+                                invitation.receiver.id == user.id &&
+                                        invitation.canceledAt == null &&
+                                        invitation.acceptedAt == null
                             }
 
                             Contact(
@@ -1278,16 +1256,16 @@ private fun Contact(
         Box(
             modifier = Modifier.weight(0.2f)
         ) {
-            if (invited) Text(
-                text = "Invited",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = Gray,
-                    fontWeight = FontWeight.Bold
-                )
-            ) else if (added) Text(
+            if (added) Text(
                 text = "Added",
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            ) else if (invited) Text(
+                text = "Invited",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Gray,
                     fontWeight = FontWeight.Bold
                 )
             ) else RadioButton(

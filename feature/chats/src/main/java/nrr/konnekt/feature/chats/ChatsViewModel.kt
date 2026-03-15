@@ -105,7 +105,18 @@ class ChatsViewModel @Inject constructor(
                     _chats.first { chats -> chats != null }
                         ?.let { chats ->
                             chatInvitations = invitations.filter { invitation ->
-                                invitation.chat.id !in chats.map { it.chat.id } &&
+                                val currentUser = currentUser.first()
+
+                                invitation.chat.id !in chats
+                                    .filter { chatMessage ->
+                                        chatMessage.chat.participants
+                                            .firstOrNull { participant ->
+                                                participant.user.id == currentUser?.id
+                                            }
+                                            ?.status
+                                            ?.leftAt == null
+                                    }
+                                    .map { it.chat.id } &&
                                         invitation.acceptedAt == null &&
                                         invitation.canceledAt == null
                             }

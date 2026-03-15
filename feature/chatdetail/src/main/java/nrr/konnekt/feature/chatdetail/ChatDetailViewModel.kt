@@ -69,7 +69,7 @@ class ChatDetailViewModel @Inject constructor(
         )
     internal val isPersonalChatAdded = peerId == null
     internal var peerGroupsInCommon = mutableStateListOf<Chat>()
-    internal var chatInvitations = mutableStateListOf<ChatInvitation>()
+    internal val chatInvitations = mutableStateListOf<ChatInvitation>()
     internal var peerLastActiveAt by mutableStateOf<Instant?>(null)
     internal var currentUserContacts: List<User>? by mutableStateOf(null)
 
