@@ -5,6 +5,7 @@ import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
+import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
@@ -13,11 +14,14 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 data class PreviewParameterData(
     val latestChatMessages: List<LatestChatMessage>,
-    val user: User
+    val user: User,
+    val chatInvitations: List<ChatInvitation>
 )
 
 class PreviewParameterDataProvider
@@ -25,7 +29,7 @@ class PreviewParameterDataProvider
 
     override val values: Sequence<PreviewParameterData>
         get() = sequenceOf(
-            PreviewParameterData(latestChatMessages, user)
+            PreviewParameterData(latestChatMessages, user, chatInvitations)
         )
 
     val user1 = User(
@@ -269,5 +273,128 @@ class PreviewParameterDataProvider
         username = "kite",
         bio = "Empty bio",
         createdAt = Instant.parse("2024-07-01T09:00:00Z")
+    )
+    
+    val chatInvitations = listOf(
+        ChatInvitation(
+            id = "i1",
+            chat = Chat(
+                id = "c11",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Android Devs, With Much Much Much Much Much Longer Name")
+            ),
+            inviter = user1,
+            receiver = user,
+            invitedAt = now() - 2.days
+        ),
+        ChatInvitation(
+            id = "i2",
+            chat = Chat(
+                id = "c12",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Kotlin Enthusiasts")
+            ),
+            inviter = user2,
+            receiver = user,
+            invitedAt = now() - 1.days
+        ),
+        ChatInvitation(
+            id = "i3",
+            chat = Chat(
+                id = "c13",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Designers")
+            ),
+            inviter = user3,
+            receiver = user,
+            invitedAt = now() - 5.hours
+        ),
+        ChatInvitation(
+            id = "i4",
+            chat = Chat(
+                id = "c14",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Gamers")
+            ),
+            inviter = user4,
+            receiver = user,
+            invitedAt = now() - 10.minutes
+        ),
+        ChatInvitation(
+            id = "i5",
+            chat = Chat(
+                id = "c15",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Movie Buffs")
+            ),
+            inviter = user2,
+            receiver = user,
+            invitedAt = now() - 3.days
+        ),
+        ChatInvitation(
+            id = "i6",
+            chat = Chat(
+                id = "c16",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Foodies")
+            ),
+            inviter = user1,
+            receiver = user,
+            invitedAt = now() - 4.days
+        ),
+        ChatInvitation(
+            id = "i7",
+            chat = Chat(
+                id = "c17",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Travelers")
+            ),
+            inviter = user4,
+            receiver = user,
+            invitedAt = now() - 6.days
+        ),
+        ChatInvitation(
+            id = "i8",
+            chat = Chat(
+                id = "c18",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Tech News")
+            ),
+            inviter = user3,
+            receiver = user,
+            invitedAt = now() - 7.days
+        ),
+        ChatInvitation(
+            id = "i9",
+            chat = Chat(
+                id = "c19",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Book Club")
+            ),
+            inviter = user2,
+            receiver = user,
+            invitedAt = now() - 8.days
+        ),
+        ChatInvitation(
+            id = "i10",
+            chat = Chat(
+                id = "c20",
+                type = ChatType.GROUP,
+                createdAt = now(),
+                setting = ChatSetting("Fitness Junkies")
+            ),
+            inviter = user1,
+            receiver = user,
+            invitedAt = now() - 9.days
+        )
     )
 }
