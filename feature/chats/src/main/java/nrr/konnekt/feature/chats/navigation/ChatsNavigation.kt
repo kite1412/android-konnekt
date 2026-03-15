@@ -26,6 +26,7 @@ fun NavGraphBuilder.chatsScreen(
     navigateToChatDetail: (chatId: String) -> Unit,
     navigateToProfile: () -> Unit,
     navigateToArchivedChats: () -> Unit,
+    navigateToChatInvitations: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -36,6 +37,7 @@ fun NavGraphBuilder.chatsScreen(
             navigateToChatDetail = navigateToChatDetail,
             navigateToProfile = navigateToProfile,
             navigateToArchivedChats = navigateToArchivedChats,
+            navigateToChatInvitations = navigateToChatInvitations,
             contentPadding = contentPadding,
             modifier = modifier
         )

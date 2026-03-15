@@ -15,7 +15,11 @@ internal data class SupabaseChatInvitation(
     @SerialName("receiver_id")
     val receiverId: String,
     @SerialName("invited_at")
-    val invitedAt: Instant
+    val invitedAt: Instant,
+    @SerialName("canceled_at")
+    val canceledAt: Instant?,
+    @SerialName("accepted_at")
+    val acceptedAt: Instant?
 ) {
     companion object {
         val PrimaryKey = PrimaryKey<SupabaseChatInvitation>(columnName = "id") {

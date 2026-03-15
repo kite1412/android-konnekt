@@ -14,7 +14,11 @@ internal data class SupabaseChatInvitationRpc(
     val inviter: SupabaseUser,
     val receiver: SupabaseUser,
     @SerialName("invited_at")
-    val invitedAt: Instant
+    val invitedAt: Instant,
+    @SerialName("canceled_at")
+    val canceledAt: Instant?,
+    @SerialName("accepted_at")
+    val acceptedAt: Instant?
 )
 
 internal fun SupabaseChatInvitationRpc.toModel() =
@@ -23,5 +27,7 @@ internal fun SupabaseChatInvitationRpc.toModel() =
         chat = chat.toModel(),
         inviter = inviter.toModel(),
         receiver = receiver.toModel(),
-        invitedAt = invitedAt
+        invitedAt = invitedAt,
+        canceledAt = canceledAt,
+        acceptedAt = acceptedAt
     )

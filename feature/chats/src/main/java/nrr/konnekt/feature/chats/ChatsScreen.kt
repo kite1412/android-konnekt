@@ -125,6 +125,7 @@ internal fun ChatsScreen(
     navigateToChatDetail: (chatId: String) -> Unit,
     navigateToProfile: () -> Unit,
     navigateToArchivedChats: () -> Unit,
+    navigateToChatInvitations: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     viewModel: ChatsViewModel = hiltViewModel()
@@ -199,6 +200,7 @@ internal fun ChatsScreen(
                 )
             },
             onAvatarClick = navigateToProfile,
+            onChatInvitationBadgeClick = navigateToChatInvitations,
             onArchivedChatsClick = navigateToArchivedChats,
             createActionEnabled = viewModel.createChatActionEnabled,
             modifier = modifier
@@ -234,6 +236,7 @@ private fun ChatsScreen(
     onCreateChatRoom: (name: String) -> Unit,
     onAvatarClick: () -> Unit,
     onArchivedChatsClick: () -> Unit,
+    onChatInvitationBadgeClick: () -> Unit,
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -260,6 +263,7 @@ private fun ChatsScreen(
                 chatInvitations = chatInvitations,
                 onCreateChatClick = onCreateChatClick,
                 onAvatarClick = onAvatarClick,
+                onChatInvitationBadgeClick = onChatInvitationBadgeClick,
                 modifier = Modifier
                     .padding(
                         start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
@@ -377,6 +381,7 @@ private fun Header(
     chatInvitations: List<ChatInvitation>,
     onCreateChatClick: (ChatType) -> Unit,
     onAvatarClick: () -> Unit,
+    onChatInvitationBadgeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -405,7 +410,13 @@ private fun Header(
             }
             val iconColor = Lime
 
-            Box {
+            Box(
+                modifier = Modifier.clickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = onChatInvitationBadgeClick
+                )
+            ) {
                 Icon(
                     painter = painterResource(KonnektIcon.mailbox),
                     contentDescription = "chat invitations",
@@ -1051,6 +1062,7 @@ private fun ChatsScreenPreview(
                 onCreateChatRoom = {},
                 onAvatarClick = {},
                 onArchivedChatsClick = {},
+                onChatInvitationBadgeClick = {},
                 createActionEnabled = true,
                 modifier = Modifier.padding(it),
             )

@@ -17,13 +17,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.BrightRed
 import nrr.konnekt.core.designsystem.theme.Gray
@@ -36,14 +40,37 @@ import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.SimpleHeader
+import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.topRadialGradient
 
 @Composable
-internal fun ChatInvitationsScreen(modifier: Modifier = Modifier) {
+internal fun ChatInvitationsScreen(
+    navigateBack: () -> Unit,
+    contentPadding: PaddingValues,
+    modifier: Modifier = Modifier,
+    viewModel: ChatInvitationsViewModel = hiltViewModel()
+) {
+    val snackbarHostState = LocalSnackbarHostState.current
 
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is UiEvent.NavigateBack -> navigateBack()
+            }
+        }
+    }
+    ChatInvitationsScreen(
+        chatInvitations = viewModel.chatInvitations,
+        contentPadding = contentPadding,
+        onNavigateBack = navigateBack,
+        onInvitationAction = viewModel::onInvitationAction,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -86,10 +113,19 @@ private fun ChatInvitationsScreen(
             }
         }
 
-        if (chatInvitations.isNullOrEmpty()) CubicLoading(
-            text = "Loading chat invitations",
-            modifier = Modifier.align(Alignment.Center)
-        )
+        Box(
+            Modifier.align(Alignment.Center)
+        ) {
+            if (chatInvitations == null) CubicLoading("Loading chat invitations")
+            else if (chatInvitations.isEmpty()) Text(
+                text = "No chat invitations",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = Gray
+                )
+            )
+        }
     }
 }
 

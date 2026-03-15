@@ -127,6 +127,8 @@ CREATE TABLE IF NOT EXISTS chat_invitations (
     inviter_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     receiver_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     invited_at timestamptz NOT NULL DEFAULT now(),
+    canceled_at timestamptz,
+    accepted_at timestamptz,
     UNIQUE (chat_id, receiver_id)
 );
 ```
@@ -340,7 +342,8 @@ begin
     )
     on conflict (chat_id, user_id) do nothing;
 
-    delete from chat_invitations
+    update chat_invitations
+    set accepted_at = now()
     where id = _invitation_id;
 
     select role
@@ -821,7 +824,8 @@ begin
         where id = any(_invitation_ids)
         and receiver_id <> _user_id
     ) then
-        delete from chat_invitations
+        update chat_invitations
+        set canceled_at = now()
         where id = any(_invitation_ids);
 
         return true;
@@ -838,7 +842,8 @@ begin
     end if;
 
     if _role = 'admin' then
-        delete from chat_invitations
+        update chat_invitations
+        set canceled_at = now()
         where id = any(_invitation_ids);
 
         return true;
@@ -853,7 +858,8 @@ begin
         raise exception 'User does not have permission to cancel invitations';
     end if;
 
-    delete from chat_invitations
+    update chat_invitations
+    set canceled_at = now()
     where id = any(_invitation_ids);
 
     return true;
@@ -877,6 +883,8 @@ begin
         jsonb_build_object(
             'id', ci.id,
             'invited_at', ci.invited_at,
+            'canceled_at', ci.canceled_at,
+            'accepted_at', ci.accepted_at,
 
             'inviter', to_jsonb(inviter),
             'receiver', to_jsonb(receiver),
@@ -957,6 +965,8 @@ begin
         jsonb_build_object(
             'id', ci.id,
             'invited_at', ci.invited_at,
+            'canceled_at', ci.canceled_at,
+            'accepted_at', ci.accepted_at,
 
             'inviter', to_jsonb(inviter),
             'receiver', to_jsonb(receiver),

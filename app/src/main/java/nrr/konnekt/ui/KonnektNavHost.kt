@@ -13,6 +13,8 @@ import nrr.konnekt.feature.authentication.navigation.authenticationScreen
 import nrr.konnekt.feature.chatdetail.navigation.chatDetailScreen
 import nrr.konnekt.feature.chatdetail.navigation.navigateToChatDetail
 import nrr.konnekt.feature.chatdetail.navigation.navigateToTempPersonalChatDetail
+import nrr.konnekt.feature.chatinvitations.navigation.chatInvitationsScreen
+import nrr.konnekt.feature.chatinvitations.navigation.navigateToChatInvitations
 import nrr.konnekt.feature.chats.navigation.ChatsRoute
 import nrr.konnekt.feature.chats.navigation.chatsScreen
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
@@ -44,6 +46,7 @@ internal fun KonnektNavHost(
             navigateToChatDetail = navController::navigateToChatDetail,
             navigateToProfile = navController::navigateToProfile,
             navigateToArchivedChats = navController::navigateToArchivedChats,
+            navigateToChatInvitations = navController::navigateToChatInvitations,
             contentPadding = rootContentPadding(scaffoldPadding)
         )
         conversationScreen(
@@ -80,6 +83,10 @@ internal fun KonnektNavHost(
             navigateBack = navController::popBackStack,
             navigateToConversation = navController::navigateToConversation,
             navigateToChatDetail = navController::navigateToChatDetail,
+            contentPadding = contentPadding(scaffoldPadding)
+        )
+        chatInvitationsScreen(
+            navigateBack = navController::popBackStack,
             contentPadding = contentPadding(scaffoldPadding)
         )
     }

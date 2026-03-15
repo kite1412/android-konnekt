@@ -7,5 +7,7 @@ data class ChatInvitation(
     val chat: Chat,
     val inviter: User,
     val receiver: User,
-    val invitedAt: Instant
+    val invitedAt: Instant,
+    val canceledAt: Instant? = null,
+    val acceptedAt: Instant? = null
 )

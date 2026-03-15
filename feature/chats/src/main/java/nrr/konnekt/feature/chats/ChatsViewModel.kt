@@ -1,7 +1,6 @@
 package nrr.konnekt.feature.chats
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -55,7 +54,8 @@ class ChatsViewModel @Inject constructor(
         private set
     internal var createChatType by mutableStateOf<ChatType?>(null)
     internal var usersByIdentifier by mutableStateOf<List<User>?>(null)
-    internal val chatInvitations = mutableStateListOf<ChatInvitation>()
+    internal var chatInvitations by mutableStateOf<List<ChatInvitation>>(emptyList())
+        private set
     internal var createChatActionEnabled by mutableStateOf(true)
     internal var createGroupChatSetting by mutableStateOf(CreateGroupChatSetting())
 
@@ -102,15 +102,13 @@ class ChatsViewModel @Inject constructor(
 
             chatRepository.observeCurrentUserChatInvitations()
                 .onEach { invitations ->
-                    val chat = _chats.first { chats -> chats != null }
-                        chat
+                    _chats.first { chats -> chats != null }
                         ?.let { chats ->
-                            chatInvitations.clear()
-                            chatInvitations.addAll(
-                                invitations.filter { invitation ->
-                                    invitation.chat.id !in chats.map { it.chat.id }
-                                }
-                            )
+                            chatInvitations = invitations.filter { invitation ->
+                                invitation.chat.id !in chats.map { it.chat.id } &&
+                                        invitation.acceptedAt == null &&
+                                        invitation.canceledAt == null
+                            }
                         }
                 }
                 .launchIn(viewModelScope)
