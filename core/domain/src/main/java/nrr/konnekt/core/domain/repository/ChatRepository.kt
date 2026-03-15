@@ -172,6 +172,15 @@ interface ChatRepository {
     ): ChatResult<Boolean>
 
     /**
+     * Dismiss a chat room.
+     *
+     * @param chatId The ID of the chat room to dismiss.
+     */
+    suspend fun dismissChatRoom(
+        chatId: String
+    ): ChatResult<Boolean>
+
+    /**
      * Update current user chat participant status.
      *
      * @param update The update payload.

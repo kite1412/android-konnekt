@@ -1052,6 +1052,62 @@ end;
 $$;
 ```
 
+### dismiss_chat_room
+```sql
+create or replace function dismiss_chat_room(
+    _chat_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+as $$
+declare
+    _user_id uuid := auth.uid();
+    _chat chats;
+    _role participant_role;
+begin
+
+    select *
+    into _chat
+    from chats
+    where id = _chat_id;
+
+    if not found then
+        raise exception 'Chat not found';
+    end if;
+
+    if _chat.type != 'chat_room' then
+        raise exception 'Only chat_room can be dismissed';
+    end if;
+
+    select role
+    into _role
+    from chat_participants
+    where chat_id = _chat_id
+      and user_id = _user_id;
+
+    if not found then
+        raise exception 'User is not a participant of this chat';
+    end if;
+
+    if _role != 'admin' then
+        raise exception 'Only admins can dismiss the chat room';
+    end if;
+
+    update chats
+    set deleted_at = now()
+    where id = _chat_id;
+
+    update chat_participant_statuses
+    set left_at = now()
+    where chat_id = _chat_id
+      and left_at is null;
+
+    return true;
+end;
+$$;
+```
+
 ### update_chat_setting
 ```sql
 create or replace function update_chat_setting(

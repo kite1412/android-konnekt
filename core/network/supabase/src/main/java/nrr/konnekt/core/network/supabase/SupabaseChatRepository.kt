@@ -889,6 +889,11 @@ internal class SupabaseChatRepository @Inject constructor(
             ?.let(Result<Boolean, Nothing>::Success)
             ?: Error(ChatError.Unknown)
 
+    override suspend fun dismissChatRoom(chatId: String): ChatResult<Boolean> =
+        rpc.dismissChatRoom(chatId)
+            ?.let(Result<Boolean, Nothing>::Success)
+            ?: Error(ChatError.Unknown)
+
     private suspend fun getCurrentUserChatParticipation(chatId: String) =
         performSuspendingAuthenticatedAction { user ->
             chatParticipants {

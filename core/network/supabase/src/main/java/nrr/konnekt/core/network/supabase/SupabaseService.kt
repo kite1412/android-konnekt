@@ -324,5 +324,16 @@ internal abstract class SupabaseService(
                 }
             )
         }
+
+        suspend fun dismissChatRoom(
+            chatId: String
+        ): Boolean? = performSuspendingAuthenticatedAction {
+            call<Boolean>(
+                function = "dismiss_chat_room",
+                parameters = {
+                    put("_chat_id", chatId)
+                }
+            )
+        }
     }
 }
