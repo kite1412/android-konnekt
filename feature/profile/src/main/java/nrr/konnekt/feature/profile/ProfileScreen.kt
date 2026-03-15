@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nrr.konnekt.core.designsystem.component.OutlinedTextField
+import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.DarkGray
 import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
@@ -71,14 +72,21 @@ import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.UserEdit
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.toDateString
+import nrr.konnekt.core.network.upload.util.FileUploadValidator
 import nrr.konnekt.core.network.upload.util.ValidationResult
+import nrr.konnekt.core.ui.component.ActionAlertDialog
+import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.AvatarIcon
+import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.AlertDialogDefaults
 import nrr.konnekt.core.ui.util.UiEvent
+import nrr.konnekt.core.ui.util.bottomRadialGradient
 import nrr.konnekt.core.ui.util.toFileUpload
+import nrr.konnekt.core.designsystem.util.ButtonDefaults as AppButtonDefaults
 
 @Composable
 internal fun ProfileScreen(
@@ -105,6 +113,7 @@ internal fun ProfileScreen(
             contentPadding = contentPadding,
             onUserChange = viewModel::updateProfile,
             onNavigateBack = navigateBack,
+            onLogout = viewModel::logout,
             modifier = modifier
         )
     }
@@ -116,22 +125,74 @@ internal fun ProfileScreen(
     contentPadding: PaddingValues,
     onUserChange: (UserEdit) -> Unit,
     onNavigateBack: () -> Unit,
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    var alert by retain { mutableStateOf<Alert?>(null) }
+    val logoutAlertStyle = with(AlertDialogDefaults.defaultStyle()) {
+        copy(
+            confirmButtonContentColor = Red,
+            cancelButtonContentColor = LocalContentColor.current,
+            titleStyle = titleStyle.copy(
+                color = Red
+            )
+        )
+    }
+    val resetAlert = { alert = null }
+
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+            .bottomRadialGradient()
+            .padding(contentPadding)
     ) {
-        Header(
-            onNavigateBack = onNavigateBack,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column(
+            modifier = modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Header(
+                onNavigateBack = onNavigateBack,
+                modifier = Modifier.fillMaxWidth()
+            )
+            UserInfo(
+                user = user,
+                onUserChange = onUserChange
+            )
+        }
+        ShadowedButton(
+            onClick = {
+                alert = Alert(
+                    onConfirm = {
+                        onLogout()
+                        resetAlert()
+                    },
+                    title = "Logout",
+                    message = "Are you sure you want to logout?",
+                    style = logoutAlertStyle,
+                    confirmText = "Logout"
+                )
+            },
+            modifier = Modifier.align(Alignment.BottomEnd),
+            style = AppButtonDefaults.defaultShadowedStyle(
+                backgroundColor = Red
+            )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(KonnektIcon.logOut),
+                    contentDescription = "logout"
+                )
+                Text("Logout")
+            }
+        }
+    }
 
-        UserInfo(
-            user = user,
-            onUserChange = onUserChange
+    alert?.let {
+        ActionAlertDialog(
+            alert = alert,
+            onDismissRequest = { resetAlert() }
         )
     }
 }
@@ -540,17 +601,28 @@ private fun ProfileScreenPreview(
     @PreviewParameter(PreviewParameterDataProvider::class)
     data: PreviewParameterData
 ) {
+    val context = LocalContext.current
+    val constraints = LocalFileUploadConstraints.current
+
     KonnektTheme {
         Scaffold {
-            ProfileScreen(
-                user = data.user.copy(
-                    username = "kite1412",
-                    bio = ""
-                ),
-                contentPadding = it,
-                onUserChange = {},
-                onNavigateBack = {}
-            )
+            CompositionLocalProvider(
+                LocalFileUploadValidator provides FileUploadValidator(
+                    context = context,
+                    constraints = constraints
+                )
+            ) {
+                ProfileScreen(
+                    user = data.user.copy(
+                        username = "kite1412",
+                        bio = ""
+                    ),
+                    contentPadding = it,
+                    onUserChange = {},
+                    onNavigateBack = {},
+                    onLogout = {}
+                )
+            }
         }
     }
 }

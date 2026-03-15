@@ -8,4 +8,5 @@ android {
 
 dependencies {
     implementation(projects.core.network.upload.util)
+    implementation(projects.core.network.upload.domain)
 }

@@ -19,7 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    authentication: Authentication,
+    private val authentication: Authentication,
     private val updateProfileUseCase: UpdateProfileUseCase
 ) : ViewModel() {
     private val _currentUser = MutableStateFlow<User?>(null)
@@ -49,6 +49,19 @@ class ProfileViewModel @Inject constructor(
                     )
                 )
             }
+        }
+    }
+
+    internal fun logout() {
+        viewModelScope.launch {
+            val res = authentication.logout()
+
+            _events.emit(
+                UiEvent.ShowSnackbar(
+                    message = if (res is Result.Success && res.data) "Logged out."
+                        else "Fail to logout."
+                )
+            )
         }
     }
 }
