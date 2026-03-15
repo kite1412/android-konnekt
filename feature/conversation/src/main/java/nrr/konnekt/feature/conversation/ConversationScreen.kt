@@ -119,6 +119,7 @@ import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.model.util.toDateAndTimeString
@@ -380,6 +381,8 @@ private fun ConversationScreen(
     val resetUser = {
         selectedUser = null
     }
+    val messagingEnabled = chat.setting?.permissionSettings?.sendMessages == true
+            || currentUserChatParticipant?.role == ParticipantRole.ADMIN
 
     Column(
         modifier = modifier
@@ -504,12 +507,13 @@ private fun ConversationScreen(
         AnimatedContent(
             !isLoadingMessages &&
                     currentUserChatParticipant?.status?.leftAt == null &&
-                    !chat.isDeleted()
+                    !chat.isDeleted() &&
+                    messagingEnabled
         ) { sendEnabled ->
             if (sendEnabled) MessageComposer(
                 message = messageInput,
                 sendingMessage = sendingMessage,
-                sendEnabled = true,
+                sendEnabled = messagingEnabled,
                 onMessageChange = onMessageInputChange,
                 attachments = composerAttachments,
                 onAddAttachment = onAddComposerAttachment,
@@ -527,9 +531,11 @@ private fun ConversationScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (chat.type == ChatType.PERSONAL) "You blocked this chat."
-                    else if (chat.isDeleted()) "Chat has been deleted."
-                    else "You left this chat.",
+                    text = if (chat.isDeleted()) "Chat has been deleted."
+                        else if (currentUserChatParticipant?.status?.leftAt != null)
+                            if (chat.type == ChatType.PERSONAL) "You blocked this chat."
+                            else "You left this chat."
+                        else "Sending messages is disabled.",
                     color = Gray
                 )
             }
