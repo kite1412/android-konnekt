@@ -46,6 +46,7 @@ import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.util.now
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseAttachment
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChat
+import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatInvitation
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipant
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatParticipantStatus
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseChatPermissionSettings
@@ -67,6 +68,7 @@ import nrr.konnekt.core.network.supabase.dto.response.toUserChatParticipation
 import nrr.konnekt.core.network.supabase.util.Bucket
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.CHATS
+import nrr.konnekt.core.network.supabase.util.Tables.CHAT_INVITATIONS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANTS
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PARTICIPANT_STATUSES
 import nrr.konnekt.core.network.supabase.util.Tables.CHAT_PERMISSION_SETTINGS
@@ -639,6 +641,25 @@ internal class SupabaseChatRepository @Inject constructor(
             }
         }
 
+    @OptIn(SupabaseExperimental::class)
+    override fun observeCurrentUserChatInvitations(): Flow<List<ChatInvitation>> =
+        performOperation(CHAT_INVITATIONS) { user ->
+            selectAsFlow(
+                primaryKey = SupabaseChatInvitation.PrimaryKey,
+                filter = FilterOperation(
+                    column = "receiver_id",
+                    operator = FilterOperator.EQ,
+                    value = user.id
+                )
+            )
+                .map {
+                    val res = getUserChatInvitations(user.id)
+
+                    if (res is Result.Success) res.data
+                    else emptyList()
+                }
+        }
+
     override suspend fun updateCurrentUserChatParticipantStatus(
         update: UpdateChatParticipantStatus
     ): ChatResult<ChatParticipantStatus> = with(update) {
@@ -748,14 +769,6 @@ internal class SupabaseChatRepository @Inject constructor(
 
     override suspend fun getChatInvitations(chatId: String): ChatResult<List<ChatInvitation>> =
         rpc.getChatInvitations(chatId)
-            ?.let { invitations ->
-                Success(invitations.map(SupabaseChatInvitationRpc::toModel))
-            }
-            ?: Error(ChatError.Unknown)
-
-
-    override suspend fun getUserChatInvitations(userId: String): ChatResult<List<ChatInvitation>> =
-        rpc.getUserChatInvitations(userId)
             ?.let { invitations ->
                 Success(invitations.map(SupabaseChatInvitationRpc::toModel))
             }
@@ -931,4 +944,11 @@ internal class SupabaseChatRepository @Inject constructor(
                 }
             }
         }
+
+    private suspend fun getUserChatInvitations(userId: String): ChatResult<List<ChatInvitation>> =
+        rpc.getUserChatInvitations(userId)
+            ?.let { invitations ->
+                Success(invitations.map(SupabaseChatInvitationRpc::toModel))
+            }
+            ?: Error(ChatError.Unknown)
 }

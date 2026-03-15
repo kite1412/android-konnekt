@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
@@ -98,22 +100,20 @@ class ChatsViewModel @Inject constructor(
                     initialValue = null
                 )
 
-            currentUser.first { it != null }
-                ?.let { user ->
-                    chatRepository.getUserChatInvitations(user.id)
-                        .let { res ->
-                            if (res is Result.Success) {
-                                _chats.first { chats -> chats != null }
-                                    ?.let { chats ->
-                                        chatInvitations.addAll(
-                                            res.data.filter { invitation ->
-                                                invitation.chat.id !in chats.map { it.chat.id }
-                                            }
-                                        )
-                                    }
-                            }
+            chatRepository.observeCurrentUserChatInvitations()
+                .onEach { invitations ->
+                    val chat = _chats.first { chats -> chats != null }
+                        chat
+                        ?.let { chats ->
+                            chatInvitations.clear()
+                            chatInvitations.addAll(
+                                invitations.filter { invitation ->
+                                    invitation.chat.id !in chats.map { it.chat.id }
+                                }
+                            )
                         }
                 }
+                .launchIn(viewModelScope)
         }
     }
 

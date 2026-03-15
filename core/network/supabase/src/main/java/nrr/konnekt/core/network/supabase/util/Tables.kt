@@ -11,4 +11,5 @@ internal object Tables {
     const val USER_ACTIVITY_STATUSES = "user_activity_statuses"
     const val ATTACHMENTS = "attachments"
     const val CHAT_PARTICIPANT_STATUSES = "chat_participant_statuses"
+    const val CHAT_INVITATIONS = "chat_invitations"
 }

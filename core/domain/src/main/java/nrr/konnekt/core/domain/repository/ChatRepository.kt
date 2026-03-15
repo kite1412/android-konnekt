@@ -72,6 +72,13 @@ interface ChatRepository {
     fun observeCurrentUserChatParticipations(): Flow<List<UserChatParticipation>>
 
     /**
+     * Observe chat invitations of the current user.
+     *
+     * @return A flow emitting the list of ChatInvitation entries for the current user.
+     */
+    fun observeCurrentUserChatInvitations(): Flow<List<ChatInvitation>>
+
+    /**
      * Get a chat by its ID.
      *
      * @param chatId The ID of the chat to get.
@@ -102,14 +109,6 @@ interface ChatRepository {
      * @return A list of chat invitations.
      */
     suspend fun getChatInvitations(chatId: String): ChatResult<List<ChatInvitation>>
-
-    /**
-     * Get user's chat invitations from other users.
-     *
-     * @param userId The ID of the user to get chat invitations for.
-     * @return A list of chat invitations.
-     */
-    suspend fun getUserChatInvitations(userId: String): ChatResult<List<ChatInvitation>>
 
     /**
      * Join a chat.

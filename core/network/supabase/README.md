@@ -138,6 +138,7 @@ CREATE TABLE IF NOT EXISTS chat_invitations (
 - chat_permission_settings
 - chat_participants
 - chat_participant_statuses
+- chat_invitations
 - messages
 - user_message_statuses
 
