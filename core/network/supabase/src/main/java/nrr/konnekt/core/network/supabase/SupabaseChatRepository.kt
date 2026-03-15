@@ -660,6 +660,25 @@ internal class SupabaseChatRepository @Inject constructor(
                 }
         }
 
+    @OptIn(SupabaseExperimental::class)
+    override fun observeChatInvitations(chatId: String): Flow<List<ChatInvitation>> =
+        performOperation(CHAT_INVITATIONS) {
+            selectAsFlow(
+                primaryKey = SupabaseChatInvitation.PrimaryKey,
+                filter = FilterOperation(
+                    column = "chat_id",
+                    operator = FilterOperator.EQ,
+                    value = chatId
+                )
+            )
+                .map { _ ->
+                    val res = getChatInvitations(chatId)
+
+                    if (res is Result.Success) res.data
+                    else emptyList()
+                }
+        }
+
     override suspend fun updateCurrentUserChatParticipantStatus(
         update: UpdateChatParticipantStatus
     ): ChatResult<ChatParticipantStatus> = with(update) {
@@ -767,13 +786,6 @@ internal class SupabaseChatRepository @Inject constructor(
             Error(ChatError.Unknown)
         }
 
-    override suspend fun getChatInvitations(chatId: String): ChatResult<List<ChatInvitation>> =
-        rpc.getChatInvitations(chatId)
-            ?.let { invitations ->
-                Success(invitations.map(SupabaseChatInvitationRpc::toModel))
-            }
-            ?: Error(ChatError.Unknown)
-
     override suspend fun joinChat(invitationId: String): ChatResult<ChatParticipant> =
         performSuspendingAuthenticatedAction {
             val res = rpc.joinChat(invitationId)
@@ -809,7 +821,7 @@ internal class SupabaseChatRepository @Inject constructor(
         type: ChatType,
         chatSetting: ChatSettingEdit?,
         participantIds: List<String>?
-    ): ChatResult<Chat> = performSuspendingAuthenticatedAction { u ->
+    ): ChatResult<Chat> = performSuspendingAuthenticatedAction {
         if (type == ChatType.PERSONAL && participantIds?.size != 1)
             return@performSuspendingAuthenticatedAction Error(
                 ChatError.ParticipantLimitViolation
@@ -947,6 +959,13 @@ internal class SupabaseChatRepository @Inject constructor(
 
     private suspend fun getUserChatInvitations(userId: String): ChatResult<List<ChatInvitation>> =
         rpc.getUserChatInvitations(userId)
+            ?.let { invitations ->
+                Success(invitations.map(SupabaseChatInvitationRpc::toModel))
+            }
+            ?: Error(ChatError.Unknown)
+
+    private suspend fun getChatInvitations(chatId: String): ChatResult<List<ChatInvitation>> =
+        rpc.getChatInvitations(chatId)
             ?.let { invitations ->
                 Success(invitations.map(SupabaseChatInvitationRpc::toModel))
             }

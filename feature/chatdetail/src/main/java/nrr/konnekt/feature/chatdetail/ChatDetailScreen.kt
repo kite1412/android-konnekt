@@ -126,6 +126,7 @@ internal fun ChatDetailScreen(
     val chat by viewModel.chat.collectAsStateWithLifecycle(null)
     val activeParticipants by viewModel.activeParticipants.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val chatInvitations by viewModel.chatInvitations.collectAsStateWithLifecycle(emptyList())
     val snackbarHostState = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
 
@@ -148,7 +149,7 @@ internal fun ChatDetailScreen(
                 peerLastActiveAt = viewModel.peerLastActiveAt,
                 currentUserContacts = viewModel.currentUserContacts,
                 peerGroupsInCommon = viewModel.peerGroupsInCommon,
-                chatInvitations = viewModel.chatInvitations,
+                chatInvitations = chatInvitations,
                 onNavigateBack = navigateBack,
                 onShare = {},
                 onClearChat = {

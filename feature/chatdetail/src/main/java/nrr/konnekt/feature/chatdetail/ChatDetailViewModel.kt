@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -69,7 +70,8 @@ class ChatDetailViewModel @Inject constructor(
         )
     internal val isPersonalChatAdded = peerId == null
     internal var peerGroupsInCommon = mutableStateListOf<Chat>()
-    internal val chatInvitations = mutableStateListOf<ChatInvitation>()
+    internal var chatInvitations = emptyFlow<List<ChatInvitation>>()
+        private set
     internal var peerLastActiveAt by mutableStateOf<Instant?>(null)
     internal var currentUserContacts: List<User>? by mutableStateOf(null)
 
@@ -128,15 +130,13 @@ class ChatDetailViewModel @Inject constructor(
                                             )
                                     }
                             } else {
-                                val res = chatRepository.getChatInvitations(chat.id)
-
-                                if (res is Result.Success) {
-                                    chatInvitations.addAll(
-                                        res.data
-                                            .sortedBy { invitation -> invitation.invitedAt }
-                                            .distinctBy { invitation -> invitation.id }
+                                chatInvitations = chatRepository
+                                    .observeChatInvitations(chat.id)
+                                    .stateIn(
+                                        scope = viewModelScope,
+                                        started = SharingStarted.WhileSubscribed(5000),
+                                        initialValue = emptyList()
                                     )
-                                }
                             }
                             observeChatParticipantsUseCase
                                 .activeParticipants(chat.id)
@@ -223,9 +223,6 @@ class ChatDetailViewModel @Inject constructor(
             val res = chatRepository.cancelChatInvitations(invitationIds)
 
             if (res is Result.Success && res.data) {
-                chatInvitations.removeAll { invitation ->
-                    invitationIds.contains(invitation.id)
-                }
                 _events.emit(
                     UiEvent.ShowSnackbar("Invitations cancelled")
                 )
@@ -239,7 +236,6 @@ class ChatDetailViewModel @Inject constructor(
                 val res = inviteToChatUseCase(chat.id, receiverIds)
 
                 if (res is Result.Success) {
-                    chatInvitations.addAll(res.data)
                     _events.emit(
                         UiEvent.ShowSnackbar("Invitations sent")
                     )
