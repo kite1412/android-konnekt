@@ -814,6 +814,18 @@ begin
         raise exception 'Invitations must belong to the same chat';
     end if;
 
+    if not exists (
+        select 1
+        from chat_invitations
+        where id = any(_invitation_ids)
+        and receiver_id <> _user_id
+    ) then
+        delete from chat_invitations
+        where id = any(_invitation_ids);
+
+        return true;
+    end if;
+
     select role
     into _role
     from chat_participants

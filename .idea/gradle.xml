@@ -43,6 +43,7 @@
             <option value="$PROJECT_DIR$/feature/archivedchats" />
             <option value="$PROJECT_DIR$/feature/authentication" />
             <option value="$PROJECT_DIR$/feature/chatdetail" />
+            <option value="$PROJECT_DIR$/feature/chatinvitations" />
             <option value="$PROJECT_DIR$/feature/chats" />
             <option value="$PROJECT_DIR$/feature/conversation" />
             <option value="$PROJECT_DIR$/feature/profile" />
