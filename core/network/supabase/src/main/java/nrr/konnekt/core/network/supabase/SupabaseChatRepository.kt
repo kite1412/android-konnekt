@@ -104,15 +104,14 @@ internal class SupabaseChatRepository @Inject constructor(
     private val joinedChats by lazy {
         participatedIn.flatMapLatest { participations ->
             flow {
-                emit(
-                    chats {
-                        select {
-                            filter {
-                                SupabaseChat::id isIn participations.map { c -> c.chatId }
+                participations.firstOrNull()?.participation?.let { participation ->
+                    getJoinedChats(participation.user.id)
+                        .let { res ->
+                            if (res is Result.Success) {
+                                emit(res.data)
                             }
-                        }.decodeList<SupabaseChat>()
-                    }
-                )
+                        }
+                } ?: emit(emptyList())
             }
         }
     }
@@ -150,7 +149,7 @@ internal class SupabaseChatRepository @Inject constructor(
     private val personalChatParticipants by lazy {
         performAuthenticatedAction { u ->
             joinedChats.flatMapLatest { c ->
-                c.filter { it.type == ChatType.PERSONAL.toSupabaseEnum() }
+                c.filter { it.type == ChatType.PERSONAL }
                     .let { filtered ->
                         chatParticipants {
                             select {
@@ -205,8 +204,8 @@ internal class SupabaseChatRepository @Inject constructor(
         ) { chats, settings, otherUsers, currentUserParticipations ->
             chats.map { c ->
                 c
-                    .toChat(
-                        setting = if (c.type != ChatType.PERSONAL.toSupabaseEnum()) settings
+                    .copy(
+                        setting = if (c.type != ChatType.PERSONAL) settings
                             .firstOrNull { s -> s.first == c.id }
                             ?.second
                         else otherUsers
@@ -217,14 +216,23 @@ internal class SupabaseChatRepository @Inject constructor(
                                     name = it.username,
                                     iconPath = it.imagePath
                                 )
-                            }
-                    )
-                    .copy(
-                        participants = currentUserParticipations
-                            .filter { participation ->
-                                participation.chatId == c.id
-                            }
-                            .map(UserChatParticipation::participation)
+                            },
+                        participants = c.participants.toMutableList().apply {
+                            currentUserParticipations
+                                .firstOrNull { participation ->
+                                    participation.chatId == c.id
+                                }
+                                ?.participation
+                                ?.let { participation ->
+                                    indexOfFirst { participant ->
+                                        participant.user.id == participation.user.id
+                                    }
+                                        .takeIf { i -> i != -1 }
+                                        ?.let { i ->
+                                            set(i, participation)
+                                        }
+                                }
+                        }
                     )
             }
         }

@@ -385,8 +385,9 @@ private fun ConversationScreen(
     val resetUser = {
         selectedUser = null
     }
-    val messagingEnabled = chat.setting?.permissionSettings?.sendMessages == true
-            || currentUserChatParticipant?.role == ParticipantRole.ADMIN
+    val messagingEnabled = chat.type == ChatType.PERSONAL ||
+            chat.setting?.permissionSettings?.sendMessages == true ||
+            currentUserChatParticipant?.role == ParticipantRole.ADMIN
     val isAdmin = currentUserChatParticipant?.role == ParticipantRole.ADMIN
     val dismissChatAlertStyle = with(AlertDialogDefaults.defaultStyle()) {
         copy(
