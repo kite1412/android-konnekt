@@ -202,10 +202,11 @@ internal fun ChatsScreen(
                 )
             },
             onUserSearch = viewModel::findUsers,
-            onCreateChatRoom = { name ->
+            onCreateChatRoom = { name, participants ->
                 viewModel.createChatRoom(
                     name = name,
-                    complete = { c -> navigateToConversation(c.id) }
+                    participants = participants,
+                    complete = navigateToConversation
                 )
             },
             onAvatarClick = navigateToProfile,
@@ -243,7 +244,7 @@ private fun ChatsScreen(
     onCreateGroupChat: () -> Unit,
     onUserSearch: (String) -> Unit,
     onUserClick: (User) -> Unit,
-    onCreateChatRoom: (name: String) -> Unit,
+    onCreateChatRoom: (name: String, participants: List<User>) -> Unit,
     onAvatarClick: () -> Unit,
     onArchivedChatsClick: () -> Unit,
     onChatInvitationBadgeClick: () -> Unit,
@@ -605,7 +606,9 @@ private fun Chats(
             }
             ?.let { participant ->
                 with(participant.status) {
-                    archivedAt == null
+                    archivedAt == null &&
+                            (data.chat.type != ChatType.CHAT_ROOM ||
+                                    participant.status.leftAt == null)
                 }
             } ?: true
     }
@@ -650,6 +653,8 @@ private fun Chats(
                     currentUser = user,
                     onClick = { onChatClick(it.chat) },
                     onAvatarClick = onChatAvatarClick,
+                    onLeaveChatRoom = onLeaveChat,
+                    onJoinChatRoom = onChatClick,
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
                             when (type) {
@@ -689,7 +694,7 @@ private fun CreateChatPopup(
     onCreateGroupChat: () -> Unit,
     onSearch: (username: String) -> Unit,
     onUserClick: (User) -> Unit,
-    onCreateChatRoom: (name: String) -> Unit,
+    onCreateChatRoom: (name: String, participants: List<User>) -> Unit,
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -719,7 +724,11 @@ private fun CreateChatPopup(
             )
             ChatType.CHAT_ROOM -> CreateChatRoom(
                 userContacts = userContacts,
-                onCreate = { dismissOnAction { onCreateChatRoom(it) } },
+                onCreate = { name, participants ->
+                    dismissOnAction {
+                        onCreateChatRoom(name, participants)
+                    }
+                },
                 enabled = createActionEnabled
             )
             ChatType.GROUP -> CreateGroupChat(
@@ -831,7 +840,7 @@ private fun checkNameConstraints(name: String) = chatNameConstraints(name, "")
 @Composable
 private fun CreateChatRoom(
     userContacts: List<User>?,
-    onCreate: (name: String) -> Unit,
+    onCreate: (name: String, participants: List<User>) -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -924,7 +933,10 @@ private fun CreateChatRoom(
             } else CubicLoading("Loading contacts")
         }
         ShadowedButton(
-            onClick = { onCreate(name) },
+            onClick = {
+                onCreate(name, selectedContacts)
+                selectedContacts.clear()
+            },
             enabled = enabled && checkNameConstraints(name),
         ) {
             Text(text = "Create")
@@ -1149,7 +1161,7 @@ private fun ChatsScreenPreview(
                 onCreateGroupChat = {},
                 onUserClick = {},
                 onUserSearch = {},
-                onCreateChatRoom = {},
+                onCreateChatRoom = { _, _ -> },
                 onAvatarClick = {},
                 onArchivedChatsClick = {},
                 onChatInvitationBadgeClick = {},

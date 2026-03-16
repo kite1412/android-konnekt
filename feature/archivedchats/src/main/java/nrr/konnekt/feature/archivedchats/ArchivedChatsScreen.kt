@@ -149,7 +149,9 @@ private fun ArchivedChatsScreen(
                     latestChatMessages = archivedChats,
                     currentUser = currentUser,
                     onClick = { onChatClick(it.chat) },
-                    onAvatarClick = { selectedChat = it }
+                    onAvatarClick = { selectedChat = it },
+                    onLeaveChatRoom = onLeaveChat,
+                    onJoinChatRoom = {}
                 ) { dismiss, latestChatMessage ->
                     val chat = latestChatMessage.chat
                     val blocked = chat.isPersonalChatBlocked(currentUser)

@@ -83,6 +83,8 @@ class ChatsViewModel @Inject constructor(
             ) { chats, filter, searchValue ->
                 if (chats == null) return@combine null
 
+                val chats = chats
+                    .sortedBy { it.chat.type != ChatType.CHAT_ROOM }
                 val filterBySearch = if (searchValue.isNotBlank()) chats.filter {
                     it.chat.setting
                         ?.name?.contains(
@@ -193,7 +195,8 @@ class ChatsViewModel @Inject constructor(
 
     internal fun createChatRoom(
         name: String,
-        complete: (Chat) -> Unit
+        participants: List<User>,
+        complete: (String) -> Unit
     ) {
         viewModelScope.launch {
             createChatActionEnabled = false
@@ -204,10 +207,13 @@ class ChatsViewModel @Inject constructor(
                     permissionSettings = ChatPermissionSettings(
                         manageMembers = true
                     )
-                )
+                ),
+                participantIds = participants
+                    .takeIf { it.isNotEmpty() }
+                    ?.map(User::id)
             )
             createChatActionEnabled = true
-            if (res is Result.Success) complete(res.data)
+            if (res is Result.Success) complete(res.data.id)
         }
     }
 

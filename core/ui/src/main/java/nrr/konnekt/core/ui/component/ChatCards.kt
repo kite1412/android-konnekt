@@ -77,6 +77,8 @@ fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
     currentUser: User,
     onClick: (LatestChatMessage) -> Unit,
+    onLeaveChatRoom: (Chat) -> Unit,
+    onJoinChatRoom: (Chat) -> Unit,
     onAvatarClick: (Chat) -> Unit,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
@@ -89,6 +91,8 @@ fun LazyListScope.chats(
                 latestChatMessage = this,
                 onClick = onClick,
                 onAvatarClick = onAvatarClick,
+                onLeaveChatRoom = onLeaveChatRoom,
+                onJoinChatRoom = onJoinChatRoom,
                 messageSentByCurrentUser = message?.isSentByCurrentUser(currentUser) ?: false,
                 messageUnreadByCurrentUser = isUnreadByCurrentUser(currentUser),
                 messageDeletedByCurrentUser = message?.isDeletedByCurrentUser(currentUser) ?: false,
@@ -110,6 +114,8 @@ private fun ChatCard(
     latestChatMessage: LatestChatMessage,
     onClick: (LatestChatMessage) -> Unit,
     onAvatarClick: (Chat) -> Unit,
+    onLeaveChatRoom: (Chat) -> Unit,
+    onJoinChatRoom: (Chat) -> Unit,
     messageSentByCurrentUser: Boolean,
     messageUnreadByCurrentUser: Boolean,
     messageDeletedByCurrentUser: Boolean,
@@ -140,15 +146,22 @@ private fun ChatCard(
         ShadowedButton(
             onClick = { onClick(latestChatMessage) },
             modifier = modifier.fillMaxWidth(),
+            enabled = latestChatMessage.chat.type != ChatType.CHAT_ROOM,
             style = ButtonDefaults.defaultShadowedStyle(
                 contentPadding = PaddingValues(
                     horizontal = 10.dp,
                     vertical = 16.dp
                 ),
                 space = 6.dp,
-                backgroundColor = if (messageUnreadByCurrentUser && !personalChatBlockedByCurrentUser && !chatLeftByCurrentUser)
-                    animatedBg
+                backgroundColor = if (
+                    latestChatMessage.chat.type == ChatType.CHAT_ROOM ||
+                    messageUnreadByCurrentUser &&
+                    !personalChatBlockedByCurrentUser &&
+                    !chatLeftByCurrentUser
+                ) animatedBg
                 else MaterialTheme.colorScheme.primary,
+                disabledBackgroundColor = animatedBg,
+                disabledShadowColor = MaterialTheme.colorScheme.onPrimary
             ),
             bounceBack = true
         ) {
@@ -193,9 +206,9 @@ private fun ChatCard(
                                 painter = painterResource(KonnektIcon.messageDashed),
                                 contentDescription = "chat room",
                                 modifier = Modifier
-                                    .size(iconDiameter)
+                                    .size(iconDiameter * 1.5f)
                                     .background(
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = animatedBg,
                                         shape = CircleShape
                                     )
                                     .padding(4.dp)
@@ -224,7 +237,7 @@ private fun ChatCard(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            CompositionLocalProvider(
+                            if (chat.type != ChatType.CHAT_ROOM) CompositionLocalProvider(
                                 LocalTextStyle provides MaterialTheme.typography.bodySmall
                             ) {
                                 message?.let { m ->
@@ -311,9 +324,7 @@ private fun ChatCard(
                                         }
                                     } else null
                                 } ?: Text(
-                                    text = if (groupChatDeleted)
-                                            if (chat.type != ChatType.CHAT_ROOM) "Group chat deleted."
-                                            else "Chat room dismissed."
+                                    text = if (groupChatDeleted) "Group chat deleted."
                                         else if (personalChatBlockedByCurrentUser) "You blocked this chat."
                                         else if (chatLeftByCurrentUser) "You left this chat."
                                         else "Start a message...",
@@ -327,10 +338,15 @@ private fun ChatCard(
                                         else LocalContentColor.current
                                     )
                                 )
-                            }
+                            } else Text(
+                                text = "You're invited to a chat room",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = DarkGray
+                                )
+                            )
                         }
                     }
-                    Row(
+                    if (chat.type != ChatType.CHAT_ROOM) Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         message?.sentAt?.let {
@@ -358,7 +374,7 @@ private fun ChatCard(
                                     }
                             )
                             dropdownItems?.let {
-                                if (chat.type != ChatType.CHAT_ROOM) DropdownMenu(
+                                DropdownMenu(
                                     expanded = expandDropdown,
                                     onDismissRequest = {
                                         expandDropdown = false
@@ -368,6 +384,44 @@ private fun ChatCard(
                                             expandDropdown = false
                                         }
                                     }
+                                )
+                            }
+                        }
+                    } else Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Join",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val iconModifier = Modifier.size(16.dp)
+
+                            ShadowedButton(
+                                onClick = { onLeaveChatRoom(chat) },
+                                style = ButtonDefaults.defaultShadowedStyle(
+                                    backgroundColor = Red
+                                )
+                            ) {
+                                Icon(
+                                    painter = painterResource(KonnektIcon.x),
+                                    contentDescription = "leave",
+                                    modifier = iconModifier
+                                )
+                            }
+                            ShadowedButton(
+                                onClick = { onJoinChatRoom(chat) }
+                            ) {
+                                Icon(
+                                    painter = painterResource(KonnektIcon.check),
+                                    contentDescription = "join",
+                                    modifier = iconModifier
                                 )
                             }
                         }
@@ -397,6 +451,8 @@ private fun ChatCardsPreview(
                     currentUser = data.user,
                     onClick = {},
                     onAvatarClick = {},
+                    onLeaveChatRoom = {},
+                    onJoinChatRoom = {},
                     dropdownItems = { dismiss, _ ->
                         DropdownItem(
                             text = "Clear Chat",

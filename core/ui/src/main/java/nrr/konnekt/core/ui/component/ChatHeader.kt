@@ -48,7 +48,7 @@ fun ChatHeader(
     iconSize: Dp = 32.dp,
     iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
-    val name = @Composable { style: TextStyle ->
+    val name: @Composable (TextStyle) -> Unit = { style ->
         Text(
             text = chatName,
             style = style.copy(
@@ -133,6 +133,7 @@ fun ChatHeader(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             name(MaterialTheme.typography.titleSmall)

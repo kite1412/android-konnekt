@@ -165,7 +165,7 @@ declare
     _setting_row chat_settings;
     _personal_setting jsonb;
     _permission_row chat_permission_settings;
-    _pid text;
+    _pid uuid;
     _participant_count integer;
     _participants jsonb;
 begin
