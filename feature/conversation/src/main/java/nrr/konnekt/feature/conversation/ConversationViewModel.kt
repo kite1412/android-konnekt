@@ -201,17 +201,22 @@ class ConversationViewModel @Inject constructor(
                         }
                         .launchIn(viewModelScope)
                 else {
-                    observeChatParticipantsUseCase
-                        .activeParticipants(chat.id)
-                        .onEach { chatParticipants ->
-                            val currentUser = currentUser.first()
-
-                            _totalActiveParticipants.value = chatParticipants
-                                .filter { participant ->
-                                    currentUser?.id != participant.user.id
-                                }
+                    combine(
+                        flow = _chat,
+                        flow2 = observeChatParticipantsUseCase.activeParticipants(chat.id)
+                    ) { chat, activeParticipants ->
+                        chat?.let { chat ->
+                            _totalActiveParticipants.value = activeParticipants.filter { activeParticipant ->
+                                chat.participants
+                                    .firstOrNull { participant ->
+                                        participant.user.id == activeParticipant.user.id
+                                    }
+                                    ?.status
+                                    ?.leftAt == null
+                            }
                                 .size
                         }
+                    }
                         .launchIn(viewModelScope)
                 }
             }
@@ -220,6 +225,13 @@ class ConversationViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeFlows(chatId: String) {
+        observeChatUseCase(chatId)
+            .onEach { chat ->
+                _chat.value = chat
+                firstConsumeChatFlow = false
+            }
+            .launchIn(viewModelScope)
+
         currentUserChatParticipant = chat
             .mapLatest { chat ->
                 chat?.participants?.firstOrNull { participant ->
@@ -231,6 +243,7 @@ class ConversationViewModel @Inject constructor(
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = null
             )
+
         messages = combine(
             flow = observeMessagesUseCase(chatId)
                 .onEach { l ->
@@ -290,13 +303,6 @@ class ConversationViewModel @Inject constructor(
             .onEach {
                 Log.d(LOG_TAG, "read markers: $it")
             }
-
-        observeChatUseCase(chatId)
-            .onEach { chat ->
-                _chat.value = chat
-                firstConsumeChatFlow = false
-            }
-            .launchIn(viewModelScope)
 
         combine(
             flow = _chat

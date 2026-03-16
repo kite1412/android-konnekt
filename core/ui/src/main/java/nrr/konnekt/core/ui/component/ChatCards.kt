@@ -141,6 +141,7 @@ private fun ChatCard(
         )
     )
     val primary = MaterialTheme.colorScheme.primary
+    val isChatDeletedOrLeft = chatLeftByCurrentUser || groupChatDeleted
 
     CompositionLocalProvider(
         LocalContentColor provides MaterialTheme.colorScheme.onPrimary
@@ -162,7 +163,7 @@ private fun ChatCard(
                     !chatLeftByCurrentUser
                 ) animatedBg
                 else primary,
-                disabledBackgroundColor = if (latestChatMessage.chat.deletedAt != null)
+                disabledBackgroundColor = if (isChatDeletedOrLeft)
                     primary
                 else animatedBg,
                 disabledShadowColor = MaterialTheme.colorScheme.onPrimary
@@ -212,7 +213,7 @@ private fun ChatCard(
                                 modifier = Modifier
                                     .size(iconDiameter * 1.5f)
                                     .background(
-                                        color = if (chat.deletedAt != null) primary else animatedBg,
+                                        color = if (isChatDeletedOrLeft) primary else animatedBg,
                                         shape = CircleShape
                                     )
                                     .padding(4.dp)
@@ -344,13 +345,13 @@ private fun ChatCard(
                                 )
                             } else Column {
                                 Text(
-                                    text = if (chat.deletedAt == null) "You're invited to a chat room"
+                                    text = if (!isChatDeletedOrLeft) "You're invited to a chat room"
                                        else "Chat room has ended.",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = DarkGray
                                     )
                                 )
-                                if (chat.deletedAt != null) CompositionLocalProvider(
+                                if (isChatDeletedOrLeft) CompositionLocalProvider(
                                     LocalContentColor provides DarkGray
                                 ) {
                                     Row(
@@ -411,7 +412,7 @@ private fun ChatCard(
                                 )
                             }
                         }
-                    } else if (chat.deletedAt == null) Column(
+                    } else if (!isChatDeletedOrLeft) Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
