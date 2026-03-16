@@ -2,6 +2,7 @@ package nrr.konnekt.feature.chats
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -29,15 +30,20 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.retain.retain
@@ -58,6 +64,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -71,6 +78,7 @@ import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.component.SelectableShadowedButtons
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.DarkGray
+import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.GreenPrimaryDarken
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
@@ -139,6 +147,7 @@ internal fun ChatsScreen(
             chats = chats,
             searchValue = viewModel.searchValue,
             createChatType = viewModel.createChatType,
+            userContacts = viewModel.contacts,
             usersByIdentifier = viewModel.usersByIdentifier,
             chatInvitations = viewModel.chatInvitations,
             contentPadding = contentPadding,
@@ -214,6 +223,7 @@ private fun ChatsScreen(
     chats: List<LatestChatMessage>?,
     searchValue: String,
     createChatType: ChatType?,
+    userContacts: List<User>?,
     usersByIdentifier: List<User>?,
     chatInvitations: List<ChatInvitation>,
     contentPadding: PaddingValues,
@@ -344,6 +354,7 @@ private fun ChatsScreen(
         )
         if (createChatType != null) CreateChatPopup(
             type = createChatType,
+            userContacts = userContacts,
             dismiss = dismissPopup,
             createGroupChatSetting = createGroupChatSetting,
             onCreateGroupChatSettingChange = onCreateGroupChatSettingChange,
@@ -670,6 +681,8 @@ private fun Chats(
 @Composable
 private fun CreateChatPopup(
     type: ChatType,
+    userContacts: List<User>?,
+    usersByIdentifier: List<User>?,
     dismiss: () -> Unit,
     createGroupChatSetting: CreateGroupChatSetting,
     onCreateGroupChatSettingChange: (CreateGroupChatSetting) -> Unit,
@@ -678,8 +691,7 @@ private fun CreateChatPopup(
     onUserClick: (User) -> Unit,
     onCreateChatRoom: (name: String) -> Unit,
     createActionEnabled: Boolean,
-    modifier: Modifier = Modifier,
-    usersByIdentifier: List<User>? = null
+    modifier: Modifier = Modifier
 ) {
     var userIdentifier by rememberSaveable { mutableStateOf("") }
     val dismissOnAction = { action: () -> Unit ->
@@ -706,6 +718,7 @@ private fun CreateChatPopup(
                 clickUserEnabled = createActionEnabled
             )
             ChatType.CHAT_ROOM -> CreateChatRoom(
+                userContacts = userContacts,
                 onCreate = { dismissOnAction { onCreateChatRoom(it) } },
                 enabled = createActionEnabled
             )
@@ -817,11 +830,13 @@ private fun checkNameConstraints(name: String) = chatNameConstraints(name, "")
 
 @Composable
 private fun CreateChatRoom(
+    userContacts: List<User>?,
     onCreate: (name: String) -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     var name by rememberSaveable { mutableStateOf("") }
+    val selectedContacts = retain { mutableStateListOf<User>() }
 
     Column(
         modifier = modifier,
@@ -838,6 +853,76 @@ private fun CreateChatRoom(
             ),
             singleLine = true
         )
+        AnimatedContent(
+            targetState = userContacts,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) { userContacts ->
+            if (userContacts != null) {
+                if (userContacts.isNotEmpty()) Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Invite Your Friends",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic
+                        )
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(
+                                max = 250.dp
+                            )
+                            .background(
+                                color = MaterialTheme.colorScheme.background,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(8.dp)
+                    ) {
+                        items(
+                            items = userContacts,
+                            key = { it.id }
+                        ) { user ->
+                            val onClick: () -> Unit = {
+                                if (selectedContacts.contains(user))
+                                    selectedContacts.remove(user)
+                                else selectedContacts.add(user)
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(
+                                        interactionSource = null,
+                                        indication = null,
+                                        onClick = onClick
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                User(
+                                    user = user,
+                                    onClick = { onClick() },
+                                    enabled = true,
+                                    modifier = Modifier.weight(0.9f)
+                                )
+                                RadioButton(
+                                    selected = selectedContacts.contains(user),
+                                    onClick = onClick
+                                )
+                            }
+                        }
+                    }
+                } else Text(
+                    text = "You don't have any contacts",
+                    style = LocalTextStyle.current.copy(
+                        color = Gray,
+                        fontStyle = FontStyle.Italic
+                    )
+                )
+            } else CubicLoading("Loading contacts")
+        }
         ShadowedButton(
             onClick = { onCreate(name) },
             enabled = enabled && checkNameConstraints(name),
@@ -857,7 +942,11 @@ private fun User(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(enabled) {
+            .clickable(
+                enabled = enabled,
+                interactionSource = null,
+                indication = null
+            ) {
                 onClick(user)
             }
             .padding(8.dp),
@@ -1034,6 +1123,7 @@ private fun ChatsScreenPreview(
                 user = data.user,
                 searchValue = "",
                 createChatType = createChatType,
+                userContacts = emptyList(),
                 usersByIdentifier = mutableListOf<User>().apply {
                     repeat(10) { i ->
                         add(data.user.copy(id = "$i"))

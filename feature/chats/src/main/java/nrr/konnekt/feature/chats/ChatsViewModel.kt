@@ -53,6 +53,8 @@ class ChatsViewModel @Inject constructor(
         private set
     internal var currentUser = emptyFlow<User?>()
         private set
+    internal var contacts by mutableStateOf<List<User>?>(null)
+        private set
     internal var createChatType by mutableStateOf<ChatType?>(null)
     internal var usersByIdentifier by mutableStateOf<List<User>?>(null)
     internal var chatInvitations by mutableStateOf<List<ChatInvitation>>(emptyList())
@@ -124,6 +126,34 @@ class ChatsViewModel @Inject constructor(
                         }
                 }
                 .launchIn(viewModelScope)
+
+            currentUser.first { it != null }?.id?.let { userId ->
+                chatRepository.getJoinedChats(
+                    userId = userId,
+                    type = ChatType.PERSONAL
+                )
+                    .let { res ->
+                        if (res is Result.Success) {
+                            contacts = res.data
+                                .filter { chat ->
+                                    chat.type == ChatType.PERSONAL &&
+                                            chat.participants
+                                                .firstOrNull { participant ->
+                                                    participant.user.id == userId
+                                                }
+                                                ?.status
+                                                ?.leftAt == null
+                                }
+                                .mapNotNull { chatMessage ->
+                                    chatMessage.participants
+                                        .firstOrNull { participant ->
+                                            participant.user.id != userId
+                                        }
+                                        ?.user
+                                }
+                        }
+                    }
+            }
         }
     }
 

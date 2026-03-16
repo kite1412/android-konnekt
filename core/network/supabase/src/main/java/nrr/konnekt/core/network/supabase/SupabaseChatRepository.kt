@@ -291,6 +291,7 @@ internal class SupabaseChatRepository @Inject constructor(
     /*
         NOTE:
         - only observes current user message statuses
+        - only observes current user chat participations
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeLatestChatMessages(): Flow<List<LatestChatMessage>> =
