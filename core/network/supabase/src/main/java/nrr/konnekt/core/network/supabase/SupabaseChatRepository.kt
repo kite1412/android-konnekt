@@ -851,7 +851,7 @@ internal class SupabaseChatRepository @Inject constructor(
                 )
             }
 
-            if (chatIconPath == null || chatIconPath is Result.Error)
+            if (chatIconPath is Result.Error)
                 return@let chatIconPath
 
 
@@ -859,7 +859,7 @@ internal class SupabaseChatRepository @Inject constructor(
                 data = chat.toModel().run {
                     copy(
                         setting = setting?.copy(
-                            iconPath = (chatIconPath as Result.Success).data
+                            iconPath = (chatIconPath as? Result.Success)?.data
                         )
                     )
                 }
