@@ -72,6 +72,7 @@ import nrr.konnekt.core.model.util.toStringFormatted
 import nrr.konnekt.core.model.util.toStringIgnoreSecond
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import kotlin.time.Instant
 
 fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
@@ -139,6 +140,7 @@ private fun ChatCard(
             repeatMode = RepeatMode.Reverse
         )
     )
+    val primary = MaterialTheme.colorScheme.primary
 
     CompositionLocalProvider(
         LocalContentColor provides MaterialTheme.colorScheme.onPrimary
@@ -159,8 +161,10 @@ private fun ChatCard(
                     !personalChatBlockedByCurrentUser &&
                     !chatLeftByCurrentUser
                 ) animatedBg
-                else MaterialTheme.colorScheme.primary,
-                disabledBackgroundColor = animatedBg,
+                else primary,
+                disabledBackgroundColor = if (latestChatMessage.chat.deletedAt != null)
+                    primary
+                else animatedBg,
                 disabledShadowColor = MaterialTheme.colorScheme.onPrimary
             ),
             bounceBack = true
@@ -208,7 +212,7 @@ private fun ChatCard(
                                 modifier = Modifier
                                     .size(iconDiameter * 1.5f)
                                     .background(
-                                        color = animatedBg,
+                                        color = if (chat.deletedAt != null) primary else animatedBg,
                                         shape = CircleShape
                                     )
                                     .padding(4.dp)
@@ -220,7 +224,7 @@ private fun ChatCard(
                                 modifier = Modifier
                                     .offset(x = 4.dp, y = 4.dp)
                                     .background(
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = primary,
                                         shape = CircleShape
                                     )
                                     .padding(4.dp)
@@ -338,12 +342,36 @@ private fun ChatCard(
                                         else LocalContentColor.current
                                     )
                                 )
-                            } else Text(
-                                text = "You're invited to a chat room",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = DarkGray
+                            } else Column {
+                                Text(
+                                    text = if (chat.deletedAt == null) "You're invited to a chat room"
+                                       else "Chat room has ended.",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = DarkGray
+                                    )
                                 )
-                            )
+                                if (chat.deletedAt != null) CompositionLocalProvider(
+                                    LocalContentColor provides DarkGray
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val style = MaterialTheme.typography.bodySmall.copy(
+                                            fontStyle = FontStyle.Italic
+                                        )
+
+                                        Icon(
+                                            painter = painterResource(KonnektIcon.users),
+                                            contentDescription = "total participants",
+                                            modifier = Modifier.size(style.fontSize.value.dp)
+                                        )
+                                        Text(
+                                            text = chat.participants.size.toString(),
+                                            style = style
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     if (chat.type != ChatType.CHAT_ROOM) Row(
@@ -351,11 +379,7 @@ private fun ChatCard(
                     ) {
                         message?.sentAt?.let {
                             Text(
-                                text = it.info().run {
-                                    if (isToday) localDateTime.time.toStringIgnoreSecond()
-                                    else if (daysAgo == 1) "Yesterday"
-                                    else localDateTime.date.toStringFormatted()
-                                },
+                                text = timeString(it),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -387,7 +411,7 @@ private fun ChatCard(
                                 )
                             }
                         }
-                    } else Column(
+                    } else if (chat.deletedAt == null) Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -425,12 +449,36 @@ private fun ChatCard(
                                 )
                             }
                         }
+                    } else chat.deletedAt?.let { deletedAt ->
+                        Column(
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            val style = MaterialTheme.typography.bodySmall
+
+                            Text(
+                                text = "Ended At",
+                                style = style.copy(
+                                    color = DarkGray
+                                )
+                            )
+                            Text(
+                                text = timeString(deletedAt),
+                                style = style
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+private fun timeString(instant: Instant) =
+    instant.info().run {
+        if (isToday) localDateTime.time.toStringIgnoreSecond()
+        else if (daysAgo == 1) "Yesterday"
+        else localDateTime.date.toStringFormatted()
+    }
 
 @Preview
 @Composable

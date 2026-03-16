@@ -608,6 +608,7 @@ private fun Chats(
                 with(participant.status) {
                     archivedAt == null &&
                             (data.chat.type != ChatType.CHAT_ROOM ||
+                                    chatFilter == ChatFilter.CHAT_ROOM ||
                                     participant.status.leftAt == null)
                 }
             } ?: true
