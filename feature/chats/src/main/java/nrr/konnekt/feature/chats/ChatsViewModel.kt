@@ -29,6 +29,7 @@ import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
+import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
 import nrr.konnekt.feature.chats.util.ChatFilter
@@ -168,7 +169,12 @@ class ChatsViewModel @Inject constructor(
             createChatActionEnabled = false
             val res = createChatUseCase(
                 type = ChatType.CHAT_ROOM,
-                chatSetting = ChatSettingEdit(name)
+                chatSetting = ChatSettingEdit(
+                    name = name,
+                    permissionSettings = ChatPermissionSettings(
+                        manageMembers = true
+                    )
+                )
             )
             createChatActionEnabled = true
             if (res is Result.Success) complete(res.data)

@@ -3,6 +3,7 @@ package nrr.konnekt.feature.conversation
 import android.Manifest
 import android.util.Log
 import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -386,6 +387,7 @@ private fun ConversationScreen(
     }
     val messagingEnabled = chat.setting?.permissionSettings?.sendMessages == true
             || currentUserChatParticipant?.role == ParticipantRole.ADMIN
+    val isAdmin = currentUserChatParticipant?.role == ParticipantRole.ADMIN
     val dismissChatAlertStyle = with(AlertDialogDefaults.defaultStyle()) {
         copy(
             confirmButtonContentColor = Red,
@@ -395,7 +397,23 @@ private fun ConversationScreen(
             )
         )
     }
+    val onLeaveChatRoomAlert = {
+        val action = if (isAdmin) "Dismiss" else "Leave"
 
+        alert = Alert(
+            onConfirm = if (isAdmin) onLeaveChatRoom else onLeaveChat,
+            title = "$action Chat Room",
+            message = "Are you sure you want to ${action.lowercase()} this chat room?",
+            confirmText = action,
+            style = dismissChatAlertStyle
+        )
+    }
+
+    BackHandler(
+        enabled = chat.type == ChatType.CHAT_ROOM &&
+                currentUserChatParticipant?.status?.leftAt == null,
+        onBack = onLeaveChatRoomAlert
+    )
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -404,8 +422,6 @@ private fun ConversationScreen(
             .padding(contentPadding),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        val isAdmin = currentUserChatParticipant?.role == ParticipantRole.ADMIN
-
         AnimatedContent(targetState = isOnMessagesSelectionMode) {
             if (!it) Header(
                 chat = chat,
@@ -414,17 +430,7 @@ private fun ConversationScreen(
                 totalActiveParticipants = totalActiveParticipants,
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
-                onLeaveChatRoom = {
-                    val action = if (isAdmin) "Dismiss" else "Leave"
-
-                    alert = Alert(
-                        onConfirm = if (isAdmin) onLeaveChatRoom else onLeaveChat,
-                        title = "$action Chat Room",
-                        message = "Are you sure you want to ${action.lowercase()} this chat room?",
-                        confirmText = action,
-                        style = dismissChatAlertStyle
-                    )
-                },
+                onLeaveChatRoom = onLeaveChatRoomAlert,
                 onClearChat = {
                     alert = clearChatAlert(chat.name(), onClearChat)
                 },
