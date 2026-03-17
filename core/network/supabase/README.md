@@ -415,21 +415,19 @@ begin
         values (_chat_id, _name, _description, _icon_path)
         returning * into _setting_row;
 
-        if _type = 'group' then
-            insert into chat_permission_settings (
-                chat_id,
-                manage_members,
-                send_messages,
-                edit_chat_info
-            )
-            values (
-                _chat_id,
-                coalesce((_permission_settings->>'manage_members')::boolean, false),
-                coalesce((_permission_settings->>'send_messages')::boolean, true),
-                coalesce((_permission_settings->>'edit_chat_info')::boolean, false)
-            )
-            returning * into _permission_row;
-        end if;
+        insert into chat_permission_settings (
+            chat_id,
+            manage_members,
+            send_messages,
+            edit_chat_info
+        )
+        values (
+            _chat_id,
+            coalesce((_permission_settings->>'manage_members')::boolean, false),
+            coalesce((_permission_settings->>'send_messages')::boolean, true),
+            coalesce((_permission_settings->>'edit_chat_info')::boolean, false)
+        )
+        returning * into _permission_row;
     end if;
 
     return jsonb_build_object(

@@ -688,7 +688,7 @@ private fun Header(
                     ) {
                         val iconButtonSize = 24.dp
 
-                        if (isAdmin) IconButton(
+                        if (chat.setting?.permissionSettings?.manageMembers == true) IconButton(
                             onClick = onAddMember
                         ) {
                             Icon(
