@@ -711,8 +711,8 @@ private fun Chats(
                                     onBlockChange = { onBlockChatChange(this, it) }
                                 )
                                 ChatType.GROUP -> GroupDropdownItems(
+                                    hasLeft = hasLeftByCurrentUser(user),
                                     dismiss = dismiss,
-                                    archived = false,
                                     onArchive = { onArchiveChat(this) },
                                     onClearChat = { onClearChat(this) },
                                     onLeaveChat = { onLeaveChat(this) }

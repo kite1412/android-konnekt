@@ -31,19 +31,19 @@ internal fun ColumnScope.PersonDropdownItems(
 
 @Composable
 internal fun ColumnScope.GroupDropdownItems(
-    archived: Boolean,
+    hasLeft: Boolean,
     dismiss: () -> Unit,
     onArchive: () -> Unit,
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit
 ) {
     CommonDropdownItems(
-        archived = archived,
+        archived = false,
         dismiss = dismiss,
         onArchive = onArchive,
         onClearChat = onClearChat
     )
-    ChatDropdownItems.Leave(
+    if (!hasLeft) ChatDropdownItems.Leave(
         dismiss = dismiss,
         onLeaveChat = onLeaveChat
     )
