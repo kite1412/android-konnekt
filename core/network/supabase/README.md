@@ -145,6 +145,167 @@ CREATE TABLE IF NOT EXISTS chat_invitations (
 - user_message_statuses
 
 ## RPCs
+### invite_to_chat
+```sql
+create or replace function invite_to_chat(
+    _chat_id uuid,
+    _receiver_ids uuid[]
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+    _user_id uuid := auth.uid();
+    _cid uuid := _chat_id::uuid;
+    _rid text;
+    _chat_row record;
+    _setting_row chat_settings;
+    _permission_row chat_permission_settings;
+    _participants jsonb;
+    _chat jsonb;
+    _inviter users;
+    _receiver users;
+    _invitation_id uuid;
+    _invited_at timestamptz;
+    _role participant_role;
+    _can_invite boolean := false;
+    _result jsonb := '[]'::jsonb;
+begin
+
+    select * into _inviter
+    from users
+    where id = _user_id;
+
+    select *
+    into _chat_row
+    from chats
+    where id = _cid;
+
+    if not found then
+        raise exception 'chat not found'
+        using errcode = 'P0003';
+    end if;
+
+    select role
+    into _role
+    from chat_participants
+    where chat_id = _cid
+    and user_id = _user_id;
+
+    if _role is null then
+        raise exception 'user is not a participant of this chat'
+        using errcode = 'P0004';
+    end if;
+
+    select * into _permission_row
+    from chat_permission_settings
+    where chat_id = _cid;
+
+    if _role = 'admin' then
+        _can_invite := true;
+    elsif _role = 'member' then
+        _can_invite := coalesce(_permission_row.manage_members, false);
+    end if;
+
+    if not _can_invite then
+        raise exception 'you do not have permission to invite members'
+        using errcode = 'P0005';
+    end if;
+
+    select * into _setting_row
+    from chat_settings
+    where chat_id = _cid;
+
+    select jsonb_agg(
+        jsonb_build_object(
+            'user', to_jsonb(u),
+            'role', cp.role,
+            'status', to_jsonb(cps)
+        )
+    )
+    into _participants
+    from chat_participants cp
+    join users u
+        on u.id = cp.user_id
+    join chat_participant_statuses cps
+        on cps.user_id = cp.user_id
+       and cps.chat_id = cp.chat_id
+    where cp.chat_id = _cid;
+
+    _chat :=
+        jsonb_build_object(
+            'id', _chat_row.id,
+            'type', _chat_row.type,
+            'created_at', _chat_row.created_at,
+            'deleted_at', _chat_row.deleted_at,
+            'participants', _participants,
+            'setting',
+            jsonb_build_object(
+                'chat_id', _setting_row.chat_id,
+                'name', _setting_row.name,
+                'description', _setting_row.description,
+                'icon_path', _setting_row.icon_path,
+                'permission_settings',
+                case
+                    when _permission_row.chat_id is not null
+                    then to_jsonb(_permission_row)
+                    else null
+                end
+            )
+        );
+
+    foreach _rid in array _receiver_ids
+    loop
+        insert into chat_invitations (
+            chat_id,
+            inviter_id,
+            receiver_id,
+            invited_at,
+            canceled_at,
+            accepted_at
+        )
+        values (
+            _cid,
+            _user_id,
+            _rid::uuid,
+            now(),
+            null,
+            null
+        )
+        on conflict (chat_id, receiver_id)
+        do update
+        set
+            inviter_id = excluded.inviter_id,
+            invited_at = now(),
+            canceled_at = null,
+            accepted_at = null
+        returning id, invited_at
+        into _invitation_id, _invited_at;
+
+        select * into _receiver
+        from users
+        where id = _rid::uuid;
+
+        _result :=
+            _result || jsonb_build_array(
+                jsonb_build_object(
+                    'id', _invitation_id,
+                    'chat', _chat,
+                    'inviter', to_jsonb(_inviter),
+                    'receiver', to_jsonb(_receiver),
+                    'invited_at', _invited_at,
+                    'canceled_at', null,
+                    'accepted_at', null
+                )
+            );
+    end loop;
+
+    return _result;
+
+end;
+$$;
+```
+
 ### create_chat
 ```sql
 create or replace function create_chat(
@@ -198,11 +359,15 @@ begin
         end
     );
 
-    foreach _pid in array _participant_ids
-    loop
-        insert into chat_participants (chat_id, user_id, role)
-        values (_chat_id, _pid, 'member'::participant_role);
-    end loop;
+    if _type = 'personal' then
+        foreach _pid in array _participant_ids
+        loop
+            insert into chat_participants (chat_id, user_id, role)
+            values (_chat_id, _pid, 'member'::participant_role);
+        end loop;
+    else
+        perform invite_to_chat(_chat_id, _participant_ids);
+    end if;
 
     insert into chat_participant_statuses (chat_id, user_id, joined_at, last_read_at)
     select _chat_id, user_id, now(), now()
@@ -640,167 +805,6 @@ begin
         );
 
     return coalesce(result, '[]'::jsonb);
-end;
-$$;
-```
-
-### invite_to_chat
-```sql
-create or replace function invite_to_chat(
-    _chat_id uuid,
-    _receiver_ids uuid[]
-)
-returns jsonb
-language plpgsql
-as $$
-declare
-    _user_id uuid := auth.uid();
-    _cid uuid := _chat_id::uuid;
-    _rid text;
-    _chat_row record;
-    _setting_row chat_settings;
-    _permission_row chat_permission_settings;
-    _participants jsonb;
-    _chat jsonb;
-    _inviter users;
-    _receiver users;
-    _invitation_id uuid;
-    _invited_at timestamptz;
-    _role participant_role;
-    _can_invite boolean := false;
-    _result jsonb := '[]'::jsonb;
-begin
-
-    select * into _inviter
-    from users
-    where id = _user_id;
-
-    select *
-    into _chat_row
-    from chats
-    where id = _cid;
-
-    if not found then
-        raise exception 'chat not found'
-        using errcode = 'P0003';
-    end if;
-
-    select role
-    into _role
-    from chat_participants
-    where chat_id = _cid
-    and user_id = _user_id;
-
-    if _role is null then
-        raise exception 'user is not a participant of this chat'
-        using errcode = 'P0004';
-    end if;
-
-    select * into _permission_row
-    from chat_permission_settings
-    where chat_id = _cid;
-
-    if _role = 'admin' then
-        _can_invite := true;
-    elsif _role = 'member' then
-        _can_invite := coalesce(_permission_row.manage_members, false);
-    end if;
-
-    if not _can_invite then
-        raise exception 'you do not have permission to invite members'
-        using errcode = 'P0005';
-    end if;
-
-    select * into _setting_row
-    from chat_settings
-    where chat_id = _cid;
-
-    select jsonb_agg(
-        jsonb_build_object(
-            'user', to_jsonb(u),
-            'role', cp.role,
-            'status', to_jsonb(cps)
-        )
-    )
-    into _participants
-    from chat_participants cp
-    join users u
-        on u.id = cp.user_id
-    join chat_participant_statuses cps
-        on cps.user_id = cp.user_id
-       and cps.chat_id = cp.chat_id
-    where cp.chat_id = _cid;
-
-    _chat :=
-        jsonb_build_object(
-            'id', _chat_row.id,
-            'type', _chat_row.type,
-            'created_at', _chat_row.created_at,
-            'deleted_at', _chat_row.deleted_at,
-            'participants', _participants,
-            'setting',
-            jsonb_build_object(
-                'chat_id', _setting_row.chat_id,
-                'name', _setting_row.name,
-                'description', _setting_row.description,
-                'icon_path', _setting_row.icon_path,
-                'permission_settings',
-                case
-                    when _permission_row.chat_id is not null
-                    then to_jsonb(_permission_row)
-                    else null
-                end
-            )
-        );
-
-    foreach _rid in array _receiver_ids
-    loop
-        insert into chat_invitations (
-            chat_id,
-            inviter_id,
-            receiver_id,
-            invited_at,
-            canceled_at,
-            accepted_at
-        )
-        values (
-            _cid,
-            _user_id,
-            _rid::uuid,
-            now(),
-            null,
-            null
-        )
-        on conflict (chat_id, receiver_id)
-        do update
-        set
-            inviter_id = excluded.inviter_id,
-            invited_at = now(),
-            canceled_at = null,
-            accepted_at = null
-        returning id, invited_at
-        into _invitation_id, _invited_at;
-
-        select * into _receiver
-        from users
-        where id = _rid::uuid;
-
-        _result :=
-            _result || jsonb_build_array(
-                jsonb_build_object(
-                    'id', _invitation_id,
-                    'chat', _chat,
-                    'inviter', to_jsonb(_inviter),
-                    'receiver', to_jsonb(_receiver),
-                    'invited_at', _invited_at,
-                    'canceled_at', null,
-                    'accepted_at', null
-                )
-            );
-    end loop;
-
-    return _result;
-
 end;
 $$;
 ```
