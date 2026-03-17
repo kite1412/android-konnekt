@@ -78,8 +78,6 @@ fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
     currentUser: User,
     onClick: (Chat) -> Unit,
-    onLeaveChatRoom: (Chat) -> Unit,
-    onJoinChatRoom: (Chat) -> Unit,
     onAvatarClick: (Chat) -> Unit,
     dropdownItems: (@Composable ColumnScope.(dismiss: () -> Unit, LatestChatMessage) -> Unit)? = null
 ) {
@@ -88,12 +86,10 @@ fun LazyListScope.chats(
         key = { i -> latestChatMessages[i].chat.id }
     ) {
         with(latestChatMessages[it]) {
-            ChatCard(
+            if (chat.type != ChatType.CHAT_ROOM) ChatCard(
                 latestChatMessage = this,
                 onClick = onClick,
                 onAvatarClick = onAvatarClick,
-                onLeaveChatRoom = onLeaveChatRoom,
-                onJoinChatRoom = onJoinChatRoom,
                 messageSentByCurrentUser = message?.isSentByCurrentUser(currentUser) ?: false,
                 messageUnreadByCurrentUser = isUnreadByCurrentUser(currentUser),
                 messageDeletedByCurrentUser = message?.isDeletedByCurrentUser(currentUser) ?: false,
@@ -105,18 +101,19 @@ fun LazyListScope.chats(
                         c(this, dismiss, this@with)
                     }
                 }
+            ) else ChatRoomCard(
+                chat = chat,
+                currentUser = currentUser
             )
         }
     }
 }
 
 @Composable
-fun ChatCard(
+internal fun ChatCard(
     latestChatMessage: LatestChatMessage,
     onClick: (Chat) -> Unit,
     onAvatarClick: (Chat) -> Unit,
-    onLeaveChatRoom: (Chat) -> Unit,
-    onJoinChatRoom: (Chat) -> Unit,
     messageSentByCurrentUser: Boolean,
     messageUnreadByCurrentUser: Boolean,
     messageDeletedByCurrentUser: Boolean,
@@ -157,7 +154,6 @@ fun ChatCard(
                 ),
                 space = 6.dp,
                 backgroundColor = if (
-                    latestChatMessage.chat.type == ChatType.CHAT_ROOM ||
                     messageUnreadByCurrentUser &&
                     !personalChatBlockedByCurrentUser &&
                     !chatLeftByCurrentUser
@@ -184,7 +180,7 @@ fun ChatCard(
                         val smallIconSize = iconDiameter / 4
 
                         Box {
-                            if (chat.type != ChatType.CHAT_ROOM) Box {
+                            Box {
                                 AvatarIcon(
                                     name = chat.setting?.name ?: chat.id,
                                     modifier = Modifier.clickable(
@@ -207,17 +203,7 @@ fun ChatCard(
                                         .align(Alignment.BottomEnd),
                                     tint = Color.White
                                 )
-                            } else Icon(
-                                painter = painterResource(KonnektIcon.messageDashed),
-                                contentDescription = "chat room",
-                                modifier = Modifier
-                                    .size(iconDiameter * 1.5f)
-                                    .background(
-                                        color = if (isChatDeletedOrLeft) primary else animatedBg,
-                                        shape = CircleShape
-                                    )
-                                    .padding(4.dp)
-                            )
+                            }
 
                             if (chat.type == ChatType.GROUP) Icon(
                                 painter = painterResource(KonnektIcon.users),
@@ -242,7 +228,7 @@ fun ChatCard(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (chat.type != ChatType.CHAT_ROOM) CompositionLocalProvider(
+                            CompositionLocalProvider(
                                 LocalTextStyle provides MaterialTheme.typography.bodySmall
                             ) {
                                 message?.let { m ->
@@ -343,39 +329,10 @@ fun ChatCard(
                                         else LocalContentColor.current
                                     )
                                 )
-                            } else Column {
-                                Text(
-                                    text = if (!isChatDeletedOrLeft) "You're invited to a chat room"
-                                       else "Chat room has ended.",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = DarkGray
-                                    )
-                                )
-                                if (isChatDeletedOrLeft) CompositionLocalProvider(
-                                    LocalContentColor provides DarkGray
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        val style = MaterialTheme.typography.bodySmall.copy(
-                                            fontStyle = FontStyle.Italic
-                                        )
-
-                                        Icon(
-                                            painter = painterResource(KonnektIcon.users),
-                                            contentDescription = "total participants",
-                                            modifier = Modifier.size(style.fontSize.value.dp)
-                                        )
-                                        Text(
-                                            text = chat.participants.size.toString(),
-                                            style = style
-                                        )
-                                    }
-                                }
                             }
                         }
                     }
-                    if (chat.type != ChatType.CHAT_ROOM) Row(
+                    Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         message?.sentAt?.let {
@@ -412,61 +369,6 @@ fun ChatCard(
                                 )
                             }
                         }
-                    } else if (!isChatDeletedOrLeft) Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Join",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            val iconModifier = Modifier.size(16.dp)
-
-                            ShadowedButton(
-                                onClick = { onLeaveChatRoom(chat) },
-                                style = ButtonDefaults.defaultShadowedStyle(
-                                    backgroundColor = Red
-                                )
-                            ) {
-                                Icon(
-                                    painter = painterResource(KonnektIcon.x),
-                                    contentDescription = "leave",
-                                    modifier = iconModifier
-                                )
-                            }
-                            ShadowedButton(
-                                onClick = { onJoinChatRoom(chat) }
-                            ) {
-                                Icon(
-                                    painter = painterResource(KonnektIcon.check),
-                                    contentDescription = "join",
-                                    modifier = iconModifier
-                                )
-                            }
-                        }
-                    } else chat.deletedAt?.let { deletedAt ->
-                        Column(
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            val style = MaterialTheme.typography.bodySmall
-
-                            Text(
-                                text = "Ended At",
-                                style = style.copy(
-                                    color = DarkGray
-                                )
-                            )
-                            Text(
-                                text = timeString(deletedAt),
-                                style = style
-                            )
-                        }
                     }
                 }
             }
@@ -474,7 +376,7 @@ fun ChatCard(
     }
 }
 
-private fun timeString(instant: Instant) =
+internal fun timeString(instant: Instant) =
     instant.info().run {
         if (isToday) localDateTime.time.toStringIgnoreSecond()
         else if (daysAgo == 1) "Yesterday"
@@ -500,8 +402,6 @@ private fun ChatCardsPreview(
                     currentUser = data.user,
                     onClick = {},
                     onAvatarClick = {},
-                    onLeaveChatRoom = {},
-                    onJoinChatRoom = {},
                     dropdownItems = { dismiss, _ ->
                         DropdownItem(
                             text = "Clear Chat",

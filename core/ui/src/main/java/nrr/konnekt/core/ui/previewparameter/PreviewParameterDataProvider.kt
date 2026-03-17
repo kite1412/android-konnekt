@@ -6,10 +6,13 @@ import nrr.konnekt.core.model.Attachment
 import nrr.konnekt.core.model.AttachmentType
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
+import nrr.konnekt.core.model.ChatParticipant
+import nrr.konnekt.core.model.ChatParticipantStatus
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatSetting
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.Message
+import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
@@ -79,6 +82,13 @@ class PreviewParameterDataProvider
                     iconPath = null,
                     description = null,
                     permissionSettings = null
+                ),
+                participants = listOf(
+                    ChatParticipant(
+                        user = user1,
+                        role = ParticipantRole.ADMIN,
+                        status = ChatParticipantStatus(now())
+                    )
                 )
             ),
             message = Message(

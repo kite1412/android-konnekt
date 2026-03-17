@@ -85,7 +85,6 @@ import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateStatus
 import nrr.konnekt.core.domain.util.hasLeftByCurrentUser
-import nrr.konnekt.core.domain.util.isDeleted
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
@@ -99,7 +98,7 @@ import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.AvatarIcon
-import nrr.konnekt.core.ui.component.ChatCard
+import nrr.konnekt.core.ui.component.ChatRoomInvitationCard
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
@@ -700,8 +699,6 @@ private fun Chats(
                     currentUser = user,
                     onClick = onChatClick,
                     onAvatarClick = onChatAvatarClick,
-                    onLeaveChatRoom = onLeaveChat,
-                    onJoinChatRoom = onChatClick,
                     dropdownItems = { dismiss, latestChatMessage ->
                         with(latestChatMessage.chat) {
                             when (type) {
@@ -739,18 +736,10 @@ private fun LazyListScope.chatRoomInvitations(
         items = invitations,
         key = { it.id }
     ) { invitation ->
-        ChatCard(
-            latestChatMessage = LatestChatMessage(invitation.chat),
-            onClick = {},
-            onAvatarClick = {},
-            onLeaveChatRoom = { onRejectInvitation(invitation) },
-            onJoinChatRoom = { onAcceptInvitation(invitation) },
-            messageSentByCurrentUser = false,
-            messageUnreadByCurrentUser = true,
-            messageDeletedByCurrentUser = false,
-            chatLeftByCurrentUser = false,
-            personalChatBlockedByCurrentUser = false,
-            groupChatDeleted = invitation.chat.isDeleted()
+        ChatRoomInvitationCard(
+            invitation = invitation,
+            onJoinChat = onAcceptInvitation,
+            onRejectInvitation = onRejectInvitation
         )
     }
 }
