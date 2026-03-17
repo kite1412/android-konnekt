@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -480,17 +479,18 @@ internal class SupabaseChatRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeActiveParticipants(chatId: String): Flow<List<ChatParticipant>> =
-        userPresenceManager.activeUsers
-            .flatMapLatest { userStatuses ->
-                if (userStatuses.isNotEmpty()) flowOf(
-                    rpc.getChatParticipants(chatId)
-                        ?.filter { p ->
-                            userStatuses.firstOrNull { us -> us.userId == p.user.id } != null
-                        }
-                        ?.map(GetChatParticipant::toChatParticipant)
-                        ?: emptyList()
-                ) else emptyFlow()
-            }
+        combine(
+            flow = userPresenceManager.activeUsers,
+            flow2 = observeChatParticipants(chatId)
+        ) { activeUsers, participants ->
+            participants
+                .filter { participant ->
+                    activeUsers
+                        .firstOrNull { activeUser ->
+                            activeUser.userId == participant.user.id
+                        } != null
+                }
+        }
 
     @OptIn(SupabaseExperimental::class, ExperimentalCoroutinesApi::class)
     override fun observeChatParticipants(chatId: String): Flow<List<ChatParticipant>> {
@@ -506,19 +506,22 @@ internal class SupabaseChatRepository @Inject constructor(
                     value = chatId
                 )
             )
+                .share()
         }
-        val participantStatuses = performOperation(CHAT_PARTICIPANT_STATUSES) {
-            selectAsFlow(
-                primaryKeys = listOf(
-                    SupabaseChatParticipantStatus::chatId,
-                    SupabaseChatParticipantStatus::userId
-                ),
-                filter = FilterOperation(
-                    column = "chat_id",
-                    operator = FilterOperator.EQ,
-                    value = chatId
+        val participantStatuses = participants.flatMapLatest {
+            performOperation(CHAT_PARTICIPANT_STATUSES) {
+                selectAsFlow(
+                    primaryKeys = listOf(
+                        SupabaseChatParticipantStatus::chatId,
+                        SupabaseChatParticipantStatus::userId
+                    ),
+                    filter = FilterOperation(
+                        column = "chat_id",
+                        operator = FilterOperator.EQ,
+                        value = chatId
+                    )
                 )
-            )
+            }
         }
         val users = participants.flatMapLatest { participants ->
             performOperation(USERS) {
@@ -541,15 +544,22 @@ internal class SupabaseChatRepository @Inject constructor(
             flow2 = participantStatuses,
             flow3 = users
         ) { participants, statuses, users ->
-            participants.map { participant ->
-                participant.toModel(
-                    user = users.first { u -> u.id == participant.userId },
-                    status = statuses
-                        .first { status ->
-                            status.userId == participant.userId
-                        }
-                        .toModel()
-                )
+            participants.mapNotNull { participant ->
+                val user = users.firstOrNull { u -> u.id == participant.userId }
+                val status = statuses
+                    .firstOrNull { status ->
+                        status.userId == participant.userId
+                    }
+                    ?.toModel()
+
+                user?.let { user ->
+                    status?.let { status ->
+                        participant.toModel(
+                            user = user,
+                            status = status
+                        )
+                    }
+                }
             }
         }
     }
