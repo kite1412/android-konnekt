@@ -50,6 +50,7 @@ import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Error
 import nrr.konnekt.core.domain.util.Result
+import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatParticipant
@@ -115,6 +116,8 @@ class ConversationViewModel @Inject constructor(
         private set
     internal var selectedMessageAction by mutableStateOf<SelectedMessageAction?>(null)
     internal var editingMessage by mutableStateOf<Message?>(null)
+    internal var userContacts by mutableStateOf<List<User>?>(null)
+        private set
     internal val composerAttachments = mutableStateListOf<ComposerAttachment>()
     internal val selectedMessages = mutableStateListOf<Message>()
     internal val hiddenMessageIds = mutableStateListOf<String>()
@@ -578,6 +581,35 @@ class ConversationViewModel @Inject constructor(
         viewModelScope.launch {
             chat.first()?.id?.let { chatId ->
                 dismissChatRoomUseCase(chatId)
+            }
+        }
+    }
+
+    internal fun loadUserContacts() {
+        if (userContacts == null) {
+            viewModelScope.launch {
+                currentUser.first()?.let { user ->
+                    val res = chatRepository.getJoinedChats(
+                        userId = user.id,
+                        type = ChatType.PERSONAL
+                    )
+
+                    if (res is Result.Success) {
+                        val filtered = res.data
+                            .filter { chat ->
+                                !chat.isPersonalChatBlocked(user)
+                            }
+
+                        userContacts = filtered
+                            .mapNotNull { chat ->
+                                chat.participants
+                                    .firstOrNull { participant ->
+                                        participant.user.id != user.id
+                                    }
+                                    ?.user
+                            }
+                    }
+                }
             }
         }
     }

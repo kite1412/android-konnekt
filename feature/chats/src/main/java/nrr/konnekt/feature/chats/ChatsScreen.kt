@@ -2,7 +2,6 @@ package nrr.konnekt.feature.chats
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -30,14 +29,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,7 +59,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -78,7 +72,6 @@ import nrr.konnekt.core.designsystem.component.OutlinedTextField
 import nrr.konnekt.core.designsystem.component.SelectableShadowedButtons
 import nrr.konnekt.core.designsystem.component.ShadowedButton
 import nrr.konnekt.core.designsystem.theme.DarkGray
-import nrr.konnekt.core.designsystem.theme.Gray
 import nrr.konnekt.core.designsystem.theme.GreenPrimaryDarken
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.designsystem.theme.Lime
@@ -105,6 +98,8 @@ import nrr.konnekt.core.ui.component.AvatarIcon
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
+import nrr.konnekt.core.ui.component.MemberInvite
+import nrr.konnekt.core.ui.component.UserCard
 import nrr.konnekt.core.ui.component.chats
 import nrr.konnekt.core.ui.component.profilepopup.ProfilePopup
 import nrr.konnekt.core.ui.component.profilepopup.toChatPopupData
@@ -781,7 +776,7 @@ private fun SearchUser(
                         count = users.size,
                         key = { users[it].id }
                     ) {
-                        User(
+                        UserCard(
                             user = users[it],
                             onClick = onUserClick,
                             enabled = clickUserEnabled
@@ -863,76 +858,14 @@ private fun CreateChatRoom(
             ),
             singleLine = true
         )
-        AnimatedContent(
-            targetState = userContacts,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) { userContacts ->
-            if (userContacts != null) {
-                if (userContacts.isNotEmpty()) Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Invite Your Friends",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontStyle = FontStyle.Italic
-                        )
-                    )
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(
-                                max = 250.dp
-                            )
-                            .background(
-                                color = MaterialTheme.colorScheme.background,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(8.dp)
-                    ) {
-                        items(
-                            items = userContacts,
-                            key = { it.id }
-                        ) { user ->
-                            val onClick: () -> Unit = {
-                                if (selectedContacts.contains(user))
-                                    selectedContacts.remove(user)
-                                else selectedContacts.add(user)
-                            }
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(
-                                        interactionSource = null,
-                                        indication = null,
-                                        onClick = onClick
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                User(
-                                    user = user,
-                                    onClick = { onClick() },
-                                    enabled = true,
-                                    modifier = Modifier.weight(0.9f)
-                                )
-                                RadioButton(
-                                    selected = selectedContacts.contains(user),
-                                    onClick = onClick
-                                )
-                            }
-                        }
-                    }
-                } else Text(
-                    text = "You don't have any contacts",
-                    style = LocalTextStyle.current.copy(
-                        color = Gray,
-                        fontStyle = FontStyle.Italic
-                    )
-                )
-            } else CubicLoading("Loading contacts")
-        }
+        MemberInvite(
+            userContacts = userContacts,
+            selectedContacts = selectedContacts,
+            onSelectContact = { user, selected ->
+                if (selected) selectedContacts.add(user)
+                else selectedContacts.remove(user)
+            }
+        )
         ShadowedButton(
             onClick = {
                 onCreate(name, selectedContacts)
@@ -941,49 +874,6 @@ private fun CreateChatRoom(
             enabled = enabled && checkNameConstraints(name),
         ) {
             Text(text = "Create")
-        }
-    }
-}
-
-@Composable
-private fun User(
-    user: User,
-    onClick: (User) -> Unit,
-    enabled: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = enabled,
-                interactionSource = null,
-                indication = null
-            ) {
-                onClick(user)
-            }
-            .padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AvatarIcon(
-                name = user.username,
-                iconPath = user.imagePath
-            )
-            Column {
-                Text(user.username)
-                Text(
-                    text = user.email,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontStyle = FontStyle.Italic,
-                        color = DarkGray
-                    )
-                )
-            }
         }
     }
 }

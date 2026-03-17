@@ -40,6 +40,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +60,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -130,9 +132,11 @@ import nrr.konnekt.core.ui.UriException
 import nrr.konnekt.core.ui.UriExceptionReason
 import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
+import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.ChatHeader
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownMenu
+import nrr.konnekt.core.ui.component.MemberInvite
 import nrr.konnekt.core.ui.component.MessageBubble
 import nrr.konnekt.core.ui.component.MessageSeenIndicator
 import nrr.konnekt.core.ui.component.ProgressBar
@@ -224,6 +228,15 @@ internal fun ConversationScreen(
                 currentUser = u,
                 chat = c,
                 currentUserChatParticipant = currentUserChatParticipant,
+                userContacts = chat?.let { chat ->
+                    viewModel
+                        .userContacts
+                        ?.filter { user ->
+                            !chat.participants.any { participant ->
+                                user.id == participant.user.id
+                            }
+                        }
+                },
                 isLoadingMessages = messages == null && viewModel.fixedChatId != null,
                 messages = messages ?: emptyList(),
                 readMarkers = readMarkers,
@@ -326,6 +339,8 @@ internal fun ConversationScreen(
                         else navController.navigateToTempPersonalConversation(user.id)
                     }
                 },
+                onAddMemberClick = viewModel::loadUserContacts,
+                onAddMember = {},
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -339,6 +354,7 @@ private fun ConversationScreen(
     currentUser: User,
     chat: Chat,
     currentUserChatParticipant: ChatParticipant?,
+    userContacts: List<User>?,
     isLoadingMessages: Boolean,
     totalActiveParticipants: Int,
     isOnMessagesSelectionMode: Boolean,
@@ -376,12 +392,15 @@ private fun ConversationScreen(
     onParticipantInfoClick: (User) -> Unit,
     onParticipantMessageClick: (User) -> Unit,
     onLeaveChatRoom: () -> Unit,
+    onAddMemberClick: () -> Unit,
+    onAddMember: (List<User>) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
     var selectedUser by retain { mutableStateOf<User?>(null) }
+    var showAddMemberDialog by retain { mutableStateOf(false) }
     val resetUser = {
         selectedUser = null
     }
@@ -432,6 +451,10 @@ private fun ConversationScreen(
                 onNavigateBack = onNavigateBack,
                 onChatClick = onChatClick,
                 onLeaveChatRoom = onLeaveChatRoomAlert,
+                onAddMember = {
+                    onAddMemberClick()
+                    showAddMemberDialog = true
+                },
                 onClearChat = {
                     alert = clearChatAlert(chat.name(), onClearChat)
                 },
@@ -593,10 +616,12 @@ private fun ConversationScreen(
             onDeleteClick = onDeleteClick
         )
 
-    ActionAlertDialog(
-        alert = alert,
-        onDismissRequest = { alert = it }
+    if (showAddMemberDialog) MemberInviteDialog(
+        userContacts = userContacts,
+        onDismissRequest = { showAddMemberDialog = false },
+        onInviteMembers = { }
     )
+
     selectedUser?.let { user ->
         ProfilePopup(
             data = user.toChatPopupData(),
@@ -611,6 +636,10 @@ private fun ConversationScreen(
             }
         )
     }
+    ActionAlertDialog(
+        alert = alert,
+        onDismissRequest = { alert = it }
+    )
 }
 
 @Composable
@@ -624,6 +653,7 @@ private fun Header(
     onClearChat: () -> Unit,
     onLeaveChat: () -> Unit,
     onLeaveChatRoom: () -> Unit,
+    onAddMember: () -> Unit,
     onBlockChange: (blocked: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -647,13 +677,45 @@ private fun Header(
             totalActiveParticipants = totalActiveParticipants,
             peerLastActive = peerLastActive,
             onNavigateBack = onNavigateBack,
-            isAdmin = isAdmin,
             onClick = { onChatClick(chat) },
-            onLeaveChatRoom = if (chat.type == ChatType.CHAT_ROOM && chat.deletedAt == null) onLeaveChatRoom
-                else null,
             modifier = Modifier.weight(1f),
             iconSize = iconButtonSize,
-            iconTint = iconButtonTint
+            iconTint = iconButtonTint,
+            chatRoomActions = if (chat.deletedAt == null) {
+                {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val iconButtonSize = 24.dp
+
+                        if (isAdmin) IconButton(
+                            onClick = onAddMember
+                        ) {
+                            Icon(
+                                painter = painterResource(KonnektIcon.userAdd),
+                                contentDescription = "add member",
+                                modifier = Modifier.size(iconButtonSize),
+                                tint = iconButtonTint
+                            )
+                        }
+                        if (
+                            chat.type == ChatType.CHAT_ROOM &&
+                            chat.deletedAt == null
+                        ) IconButton(
+                            onClick = onLeaveChatRoom,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = Red
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(KonnektIcon.logOut),
+                                contentDescription = if (isAdmin) "dismiss chat room" else "leave chat room",
+                                modifier = Modifier.size(iconButtonSize)
+                            )
+                        }
+                    }
+                }
+            } else null
         )
         if (chat.type != ChatType.CHAT_ROOM) {
             var dropdownExpanded by remember { mutableStateOf(false) }
@@ -827,6 +889,56 @@ private fun DeleteMessagesDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MemberInviteDialog(
+    userContacts: List<User>?,
+    onDismissRequest: () -> Unit,
+    onInviteMembers: (List<User>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selectedContacts = retain { mutableStateListOf<User>() }
+    val onDismissRequest = {
+        selectedContacts.clear()
+        onDismissRequest()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        title = "Invite to Chat Room",
+        cancelButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                colors = ButtonDefaults.buttonColors(
+                    contentColor = Red,
+                    containerColor = Color.Transparent
+                )
+            ) {
+                Text("Cancel")
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onInviteMembers(selectedContacts)
+                    onDismissRequest()
+                }
+            ) {
+                Text("Invite")
+            }
+        }
+    ) {
+        MemberInvite(
+            userContacts = userContacts,
+            selectedContacts = selectedContacts,
+            onSelectContact = { user, selected ->
+                if (selected) selectedContacts.add(user)
+                else selectedContacts.remove(user)
+            }
+        )
     }
 }
 
@@ -2030,6 +2142,7 @@ private fun ConversationScreenPreview(
                     currentUser = user,
                     chat = conversation.chat,
                     currentUserChatParticipant = null,
+                    userContacts = null,
                     isLoadingMessages = false,
                     messages = conversation.messages,
                     readMarkers = null,
@@ -2071,6 +2184,8 @@ private fun ConversationScreenPreview(
                     onBlockChange = {},
                     onParticipantInfoClick = {},
                     onParticipantMessageClick = {},
+                    onAddMemberClick = {},
+                    onAddMember = {},
                     contentPadding = it,
                     modifier = Modifier.padding(it),
                     peerLastActive = now()

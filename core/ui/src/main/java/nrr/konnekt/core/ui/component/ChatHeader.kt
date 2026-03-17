@@ -12,7 +12,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -28,7 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import nrr.konnekt.core.designsystem.theme.Gray
-import nrr.konnekt.core.designsystem.theme.Red
 import nrr.konnekt.core.designsystem.util.KonnektIcon
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.ui.util.ActiveStatus
@@ -42,10 +40,9 @@ fun ChatHeader(
     totalActiveParticipants: Int,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    isAdmin: Boolean = false,
     peerLastActive: Instant? = null,
     onClick: (() -> Unit)? = null,
-    onLeaveChatRoom: (() -> Unit)? = null,
+    chatRoomActions: (@Composable () -> Unit)? = null,
     iconSize: Dp = 32.dp,
     iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
@@ -161,18 +158,6 @@ fun ChatHeader(
                 }
             }
         }
-        onLeaveChatRoom?.let { onDismissChat ->
-            TextButton(
-                onClick = onDismissChat
-            ) {
-                Text(
-                    text = if (isAdmin) "Dismiss" else "Leave",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Red
-                    )
-                )
-            }
-        }
+        chatRoomActions?.invoke()
     }
 }
