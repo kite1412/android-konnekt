@@ -16,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadConstraints
 import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.compositionlocal.SnackbarHostStateWrapper
+import nrr.konnekt.feature.authentication.navigation.AuthenticationRoute
 
 @Composable
 internal fun KonnektApp(
@@ -75,6 +77,15 @@ internal fun KonnektApp(
                     },
                     startAnimation = isSignedIn != null
                 ) else {
+                    LaunchedEffect(isSignedIn) {
+                        if (isSignedIn == false) {
+                            navController.popBackStack(
+                                route = AuthenticationRoute::class,
+                                inclusive = false,
+                                saveState = false
+                            )
+                        }
+                    }
                     Scaffold(modifier = modifier) { p ->
                         Box(
                             modifier = Modifier
