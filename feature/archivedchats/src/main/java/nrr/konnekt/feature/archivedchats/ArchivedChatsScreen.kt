@@ -148,7 +148,7 @@ private fun ArchivedChatsScreen(
                 chats(
                     latestChatMessages = archivedChats,
                     currentUser = currentUser,
-                    onClick = { onChatClick(it.chat) },
+                    onClick = onChatClick,
                     onAvatarClick = { selectedChat = it },
                     onLeaveChatRoom = onLeaveChat,
                     onJoinChatRoom = {}

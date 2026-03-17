@@ -340,7 +340,7 @@ internal fun ConversationScreen(
                     }
                 },
                 onAddMemberClick = viewModel::loadUserContacts,
-                onAddMember = {},
+                onInviteMembers = viewModel::inviteToChat,
                 contentPadding = contentPadding,
                 modifier = modifier,
                 peerLastActive = peerLastActive
@@ -393,7 +393,7 @@ private fun ConversationScreen(
     onParticipantMessageClick: (User) -> Unit,
     onLeaveChatRoom: () -> Unit,
     onAddMemberClick: () -> Unit,
-    onAddMember: (List<User>) -> Unit,
+    onInviteMembers: (List<User>) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     peerLastActive: Instant? = null
@@ -619,7 +619,7 @@ private fun ConversationScreen(
     if (showAddMemberDialog) MemberInviteDialog(
         userContacts = userContacts,
         onDismissRequest = { showAddMemberDialog = false },
-        onInviteMembers = { }
+        onInviteMembers = onInviteMembers
     )
 
     selectedUser?.let { user ->
@@ -2185,7 +2185,7 @@ private fun ConversationScreenPreview(
                     onParticipantInfoClick = {},
                     onParticipantMessageClick = {},
                     onAddMemberClick = {},
-                    onAddMember = {},
+                    onInviteMembers = {},
                     contentPadding = it,
                     modifier = Modifier.padding(it),
                     peerLastActive = now()

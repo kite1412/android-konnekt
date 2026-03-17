@@ -77,7 +77,7 @@ import kotlin.time.Instant
 fun LazyListScope.chats(
     latestChatMessages: List<LatestChatMessage>,
     currentUser: User,
-    onClick: (LatestChatMessage) -> Unit,
+    onClick: (Chat) -> Unit,
     onLeaveChatRoom: (Chat) -> Unit,
     onJoinChatRoom: (Chat) -> Unit,
     onAvatarClick: (Chat) -> Unit,
@@ -111,9 +111,9 @@ fun LazyListScope.chats(
 }
 
 @Composable
-private fun ChatCard(
+fun ChatCard(
     latestChatMessage: LatestChatMessage,
-    onClick: (LatestChatMessage) -> Unit,
+    onClick: (Chat) -> Unit,
     onAvatarClick: (Chat) -> Unit,
     onLeaveChatRoom: (Chat) -> Unit,
     onJoinChatRoom: (Chat) -> Unit,
@@ -147,7 +147,7 @@ private fun ChatCard(
         LocalContentColor provides MaterialTheme.colorScheme.onPrimary
     ) {
         ShadowedButton(
-            onClick = { onClick(latestChatMessage) },
+            onClick = { onClick(latestChatMessage.chat) },
             modifier = modifier.fillMaxWidth(),
             enabled = latestChatMessage.chat.type != ChatType.CHAT_ROOM,
             style = ButtonDefaults.defaultShadowedStyle(

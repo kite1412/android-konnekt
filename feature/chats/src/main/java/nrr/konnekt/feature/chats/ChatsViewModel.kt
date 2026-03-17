@@ -7,7 +7,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
@@ -27,11 +29,13 @@ import nrr.konnekt.core.domain.usecase.FindUsersByUsernameUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatMessagesUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
 import nrr.konnekt.core.domain.util.Result
+import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.feature.chats.util.ChatFilter
 import nrr.konnekt.feature.chats.util.CreateGroupChatSetting
 import javax.inject.Inject
@@ -61,6 +65,9 @@ class ChatsViewModel @Inject constructor(
         private set
     internal var createChatActionEnabled by mutableStateOf(true)
     internal var createGroupChatSetting by mutableStateOf(CreateGroupChatSetting())
+
+    private val _events = MutableSharedFlow<UiEvent>()
+    internal val events = _events.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -250,6 +257,33 @@ class ChatsViewModel @Inject constructor(
                     updateClearedAt = if (updateClearedAt) UpdateStatus() else null
                 )
             )
+        }
+    }
+
+    internal fun acceptChatInvitation(
+        invitation: ChatInvitation,
+        onComplete: (chatId: String) -> Unit
+    ) {
+        viewModelScope.launch {
+            chatRepository.joinChat(invitation.id)
+                .let { res ->
+                    if (res is Result.Success) {
+                        _events.emit(UiEvent.ShowSnackbar("Joined \"${invitation.chat.name()}\"."))
+                        onComplete(invitation.chat.id)
+                    }
+                }
+        }
+    }
+
+    internal fun rejectChatInvitation(invitation: ChatInvitation) {
+        viewModelScope.launch {
+            chatRepository
+                .cancelChatInvitations(listOf(invitation.id))
+                .let { res ->
+                    if (res is Result.Success && res.data) {
+                        _events.emit(UiEvent.ShowSnackbar("Chat invitation rejected."))
+                    }
+                }
         }
     }
 }

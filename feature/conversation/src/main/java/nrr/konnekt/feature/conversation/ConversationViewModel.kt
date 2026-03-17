@@ -43,6 +43,7 @@ import nrr.konnekt.core.domain.usecase.DeleteMessagesUseCase
 import nrr.konnekt.core.domain.usecase.DismissChatRoomUseCase
 import nrr.konnekt.core.domain.usecase.EditMessageUseCase
 import nrr.konnekt.core.domain.usecase.HideMessagesUseCase
+import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
@@ -92,7 +93,8 @@ class ConversationViewModel @Inject constructor(
     private val deleteMessagesUseCase: DeleteMessagesUseCase,
     private val hideMessagesUseCase: HideMessagesUseCase,
     private val editMessageUseCase: EditMessageUseCase,
-    private val dismissChatRoomUseCase: DismissChatRoomUseCase
+    private val dismissChatRoomUseCase: DismissChatRoomUseCase,
+    private val inviteToChatUseCase: InviteToChatUseCase
 ) : ViewModel() {
     private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
     private var latestCurrentUserChatParticipantStatus: ChatParticipantStatus? = null
@@ -204,22 +206,14 @@ class ConversationViewModel @Inject constructor(
                         }
                         .launchIn(viewModelScope)
                 else {
-                    combine(
-                        flow = _chat,
-                        flow2 = observeChatParticipantsUseCase.activeParticipants(chat.id)
-                    ) { chat, activeParticipants ->
-                        chat?.let { chat ->
-                            _totalActiveParticipants.value = activeParticipants.filter { activeParticipant ->
-                                chat.participants
-                                    .firstOrNull { participant ->
-                                        participant.user.id == activeParticipant.user.id
-                                    }
-                                    ?.status
-                                    ?.leftAt == null
-                            }
+                    observeChatParticipantsUseCase.activeParticipants(chat.id)
+                        .onEach { activeParticipants ->
+                            _totalActiveParticipants.value = activeParticipants
+                                .filter { participant ->
+                                    participant.status.leftAt == null
+                                }
                                 .size
                         }
-                    }
                         .launchIn(viewModelScope)
                 }
             }
@@ -610,6 +604,24 @@ class ConversationViewModel @Inject constructor(
                             }
                     }
                 }
+            }
+        }
+    }
+
+    internal fun inviteToChat(users: List<User>) {
+        viewModelScope.launch {
+            chat.first()?.let { chat ->
+                inviteToChatUseCase(
+                    chatId = chat.id,
+                    receiverIds = users.map(User::id)
+                )
+                    .let { res ->
+                        if (res is Result.Success) {
+                            _events.emit(UiEvent.ShowSnackbar(
+                                message = "${res.data.size} users invited.")
+                            )
+                        }
+                    }
             }
         }
     }

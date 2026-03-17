@@ -15,6 +15,7 @@ import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.ChatInvitation
+import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.ui.util.UiEvent
 import javax.inject.Inject
 
@@ -32,7 +33,9 @@ class ChatInvitationsViewModel @Inject constructor(
         chatRepository.observeCurrentUserChatInvitations()
             .onEach { invitations ->
                 chatInvitations = invitations.filter { invitation ->
-                    invitation.acceptedAt == null && invitation.canceledAt == null
+                    invitation.chat.type != ChatType.CHAT_ROOM &&
+                            invitation.acceptedAt == null &&
+                            invitation.canceledAt == null
                 }
             }
             .launchIn(viewModelScope)

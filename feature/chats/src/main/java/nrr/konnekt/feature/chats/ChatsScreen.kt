@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -82,6 +84,8 @@ import nrr.konnekt.core.designsystem.util.TextFieldErrorIndicator
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateStatus
+import nrr.konnekt.core.domain.util.hasLeftByCurrentUser
+import nrr.konnekt.core.domain.util.isDeleted
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
@@ -95,6 +99,7 @@ import nrr.konnekt.core.ui.component.ActionAlertDialog
 import nrr.konnekt.core.ui.component.Alert
 import nrr.konnekt.core.ui.component.AlertDialog
 import nrr.konnekt.core.ui.component.AvatarIcon
+import nrr.konnekt.core.ui.component.ChatCard
 import nrr.konnekt.core.ui.component.CubicLoading
 import nrr.konnekt.core.ui.component.DropdownItem
 import nrr.konnekt.core.ui.component.DropdownMenu
@@ -107,6 +112,7 @@ import nrr.konnekt.core.ui.compositionlocal.LocalFileUploadValidator
 import nrr.konnekt.core.ui.compositionlocal.LocalSnackbarHostState
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterData
 import nrr.konnekt.core.ui.previewparameter.PreviewParameterDataProvider
+import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.core.ui.util.archiveChatAlert
 import nrr.konnekt.core.ui.util.blockChatAlert
 import nrr.konnekt.core.ui.util.bottomRadialGradient
@@ -135,7 +141,17 @@ internal fun ChatsScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle(null)
     val chats by viewModel.chats.collectAsStateWithLifecycle(null)
+    val snackbarHostState = LocalSnackbarHostState.current
 
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackbar ->
+                    snackbarHostState.showSnackbar(event.message)
+                else -> Unit
+            }
+        }
+    }
     currentUser?.let {
         ChatsScreen(
             user = it,
@@ -207,6 +223,12 @@ internal fun ChatsScreen(
             onAvatarClick = navigateToProfile,
             onChatInvitationBadgeClick = navigateToChatInvitations,
             onArchivedChatsClick = navigateToArchivedChats,
+            onRejectChatInvitation = viewModel::rejectChatInvitation,
+            onAcceptChatInvitation = { invitation ->
+                viewModel.acceptChatInvitation(invitation) { chatId ->
+                    navigateToConversation(chatId)
+                }
+            },
             createActionEnabled = viewModel.createChatActionEnabled,
             modifier = modifier
         )
@@ -243,6 +265,8 @@ private fun ChatsScreen(
     onAvatarClick: () -> Unit,
     onArchivedChatsClick: () -> Unit,
     onChatInvitationBadgeClick: () -> Unit,
+    onAcceptChatInvitation: (ChatInvitation) -> Unit,
+    onRejectChatInvitation: (ChatInvitation) -> Unit,
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -266,7 +290,9 @@ private fun ChatsScreen(
         ) {
             Header(
                 user = user,
-                chatInvitations = chatInvitations,
+                chatInvitations = chatInvitations.filterNot { invitation ->
+                    invitation.chat.type == ChatType.CHAT_ROOM
+                },
                 onCreateChatClick = onCreateChatClick,
                 onAvatarClick = onAvatarClick,
                 onChatInvitationBadgeClick = onChatInvitationBadgeClick,
@@ -281,6 +307,10 @@ private fun ChatsScreen(
                 Chats(
                     user = user,
                     latestChatMessages = it,
+                    chatRoomInvitations = chatInvitations.filter { invitation ->
+                        invitation.chat.type == ChatType.CHAT_ROOM &&
+                                invitation.chat.deletedAt == null
+                    },
                     searchValue = searchValue,
                     chatFilter = chatFilter,
                     isPersonalChatBlocked = { chat ->
@@ -317,6 +347,8 @@ private fun ChatsScreen(
                     onSearchValueChange = onSearchValueChange,
                     onFilterChange = onFilterChange,
                     onArchivedChatsClick = onArchivedChatsClick,
+                    onAcceptChatInvitation = onAcceptChatInvitation,
+                    onRejectChatInvitation = onRejectChatInvitation,
                     contentPadding = contentPadding
                 )
             }
@@ -566,6 +598,7 @@ private fun TypeFilter(
 private fun Chats(
     user: User,
     latestChatMessages: List<LatestChatMessage>,
+    chatRoomInvitations: List<ChatInvitation>,
     searchValue: String,
     chatFilter: ChatFilter,
     isPersonalChatBlocked: (Chat) -> Boolean,
@@ -578,6 +611,8 @@ private fun Chats(
     onLeaveChat: (Chat) -> Unit,
     onBlockChatChange: (Chat, blocked: Boolean) -> Unit,
     onArchivedChatsClick: () -> Unit,
+    onAcceptChatInvitation: (ChatInvitation) -> Unit,
+    onRejectChatInvitation: (ChatInvitation) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -594,20 +629,26 @@ private fun Chats(
             }
         }
     }
-    val filteredChats = latestChatMessages.filter { data ->
-        data.chat.participants
-            .firstOrNull { participant ->
-                participant.user.id == user.id
-            }
-            ?.let { participant ->
-                with(participant.status) {
-                    archivedAt == null &&
-                            (data.chat.type != ChatType.CHAT_ROOM ||
-                                    chatFilter == ChatFilter.CHAT_ROOM ||
-                                    participant.status.leftAt == null)
+    val filteredChats = latestChatMessages
+        .filter { data ->
+            data.chat.participants
+                .firstOrNull { participant ->
+                    participant.user.id == user.id
                 }
-            } ?: true
-    }
+                ?.let { participant ->
+                    with(participant.status) {
+                        archivedAt == null &&
+                                (data.chat.type != ChatType.CHAT_ROOM ||
+                                        chatFilter == ChatFilter.CHAT_ROOM &&
+                                        data.chat.hasLeftByCurrentUser(user))
+                    }
+                } ?: true
+        }
+        .run {
+            if (chatFilter == ChatFilter.CHAT_ROOM) sortedByDescending { data ->
+                data.chat.deletedAt
+            } else this
+        }
 
     Column(
         modifier = modifier.nestedScroll(nestedScrollConnection),
@@ -644,10 +685,20 @@ private fun Chats(
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (
+                    (chatFilter == ChatFilter.ALL ||
+                    chatFilter == ChatFilter.CHAT_ROOM) &&
+                    chatRoomInvitations.isNotEmpty()
+                ) chatRoomInvitations(
+                    invitations = chatRoomInvitations,
+                    onRejectInvitation = onRejectChatInvitation,
+                    onAcceptInvitation = onAcceptChatInvitation
+                )
+
                 chats(
                     latestChatMessages = filteredChats,
                     currentUser = user,
-                    onClick = { onChatClick(it.chat) },
+                    onClick = onChatClick,
                     onAvatarClick = onChatAvatarClick,
                     onLeaveChatRoom = onLeaveChat,
                     onJoinChatRoom = onChatClick,
@@ -676,6 +727,31 @@ private fun Chats(
                 )
             }
         }
+    }
+}
+
+private fun LazyListScope.chatRoomInvitations(
+    invitations: List<ChatInvitation>,
+    onRejectInvitation: (ChatInvitation) -> Unit,
+    onAcceptInvitation: (ChatInvitation) -> Unit
+) {
+    items(
+        items = invitations,
+        key = { it.id }
+    ) { invitation ->
+        ChatCard(
+            latestChatMessage = LatestChatMessage(invitation.chat),
+            onClick = {},
+            onAvatarClick = {},
+            onLeaveChatRoom = { onRejectInvitation(invitation) },
+            onJoinChatRoom = { onAcceptInvitation(invitation) },
+            messageSentByCurrentUser = false,
+            messageUnreadByCurrentUser = true,
+            messageDeletedByCurrentUser = false,
+            chatLeftByCurrentUser = false,
+            personalChatBlockedByCurrentUser = false,
+            groupChatDeleted = invitation.chat.isDeleted()
+        )
     }
 }
 
@@ -1056,6 +1132,8 @@ private fun ChatsScreenPreview(
                 onAvatarClick = {},
                 onArchivedChatsClick = {},
                 onChatInvitationBadgeClick = {},
+                onRejectChatInvitation = {},
+                onAcceptChatInvitation = {},
                 createActionEnabled = true,
                 modifier = Modifier.padding(it),
             )
