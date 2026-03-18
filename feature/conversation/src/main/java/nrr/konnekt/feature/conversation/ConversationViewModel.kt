@@ -212,7 +212,7 @@ class ConversationViewModel @Inject constructor(
                                 .filter { participant ->
                                     participant.status.leftAt == null
                                 }
-                                .size
+                                .size.minus(if (chat.type == ChatType.GROUP) 1 else 0)
                         }
                         .launchIn(viewModelScope)
                 }

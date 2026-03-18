@@ -104,15 +104,25 @@ internal class SupabaseChatRepository @Inject constructor(
                 }
                 .share()
             val joinedChats = participatedIn.flatMapLatest { participations ->
-                flow {
-                    participations.firstOrNull()?.participation?.let { participation ->
-                        getJoinedChats(participation.user.id)
-                            .let { res ->
-                                if (res is Result.Success) {
-                                    emit(res.data)
-                                }
+                performOperation(CHATS) { user ->
+                    selectAsFlow(
+                        primaryKey = SupabaseChat::id,
+                        filter = FilterOperation(
+                            column = "id",
+                            operator = FilterOperator.IN,
+                            value = participations.map(UserChatParticipation::chatId)
+                        )
+                    )
+                        .flatMapLatest { chats ->
+                            flow {
+                                val res = getJoinedChats(user.id)
+
+                                emit(
+                                    if (res is Result.Success) res.data
+                                    else chats.map(SupabaseChat::toChat)
+                                )
                             }
-                    } ?: emit(emptyList())
+                        }
                 }
             }
             val chatSettings = joinedChats.flatMapLatest { c ->
@@ -216,7 +226,7 @@ internal class SupabaseChatRepository @Inject constructor(
                                             .takeIf { i -> i != -1 }
                                             ?.let { i ->
                                                 set(i, participation)
-                                            }
+                                            } ?: add(participation)
                                     }
                             }
                         )

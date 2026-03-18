@@ -15,7 +15,11 @@ internal data class SupabaseChatParticipant(
     @SerialName("user_id")
     val userId: String,
     val role: String
-)
+) {
+    companion object {
+        val PrimaryKeys = listOf(SupabaseChatParticipant::chatId, SupabaseChatParticipant::userId)
+    }
+}
 
 internal fun SupabaseChatParticipant.toModel(user: User, status: ChatParticipantStatus) =
     ChatParticipant(
