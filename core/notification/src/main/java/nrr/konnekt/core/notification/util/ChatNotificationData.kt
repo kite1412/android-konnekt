@@ -7,6 +7,7 @@ import kotlin.time.Instant
 data class ChatNotificationData(
     val id: String,
     val name: String,
+    val isGroup: Boolean,
     val icon: Bitmap?,
     val messages: List<MessageData>
 )

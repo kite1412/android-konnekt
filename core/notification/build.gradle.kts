@@ -9,6 +9,8 @@ android {
 
 dependencies {
     implementation(projects.core.domain)
+    implementation(projects.core.network.upload.domain)
+    implementation(projects.core.network.upload.util)
 
     implementation(libs.androidx.core.ktx)
 }

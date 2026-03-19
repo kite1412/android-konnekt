@@ -14,7 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class NotificationTest {
+internal class NotificationTest {
     @Test
     fun sendMessagesNotificationSuccess() {
         with(ApplicationProvider.getApplicationContext<Context>()) {

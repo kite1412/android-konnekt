@@ -4,10 +4,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import nrr.konnekt.core.network.upload.domain.FileResolver
 import nrr.konnekt.core.network.upload.domain.util.DownloadStatus
+import nrr.konnekt.core.network.upload.util.annotation.DelegateResolver
 import nrr.konnekt.core.storage.file.FileCache
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CachingFileResolver(
-    private val delegate: FileResolver,
+@Singleton
+class CachingFileResolver @Inject constructor(
+    @param:DelegateResolver private val delegate: FileResolver,
     private val cache: FileCache
 ) : FileResolver {
 

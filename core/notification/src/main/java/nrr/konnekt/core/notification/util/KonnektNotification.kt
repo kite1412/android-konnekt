@@ -11,6 +11,7 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import nrr.konnekt.core.notification.R
 import nrr.konnekt.core.notification.receiver.ReplyReceiver
@@ -18,7 +19,7 @@ import nrr.konnekt.core.notification.receiver.ReplyReceiver
 private const val MAIN_ACTIVITY_NAME = "nrr.konnekt.MainActivity"
 private const val SCHEME = "konnekt://"
 
-sealed class KonnektNotification(
+internal sealed class KonnektNotification(
     val channelId: String,
     val channelName: String,
     val channelDescription: String,
@@ -49,11 +50,17 @@ sealed class KonnektNotification(
                     data = "$SCHEME_HOST/${chatId}".toUri()
                 )
             ) {
-                setContentTitle(chat.name)
-                setLargeIcon(chat.icon)
+                chat.icon?.let { icon ->
+                    setSmallIcon(IconCompat.createWithBitmap(icon))
+                } ?: setSmallIcon(
+                    if (chat.isGroup) R.drawable.person_2
+                    else R.drawable.person
+                )
 
                 val messages = mutableListOf<NotificationCompat.MessagingStyle.Message>()
                 val style = NotificationCompat.MessagingStyle(currentPerson)
+                    .setConversationTitle(chat.name)
+                    .setGroupConversation(chat.isGroup)
 
                 chat.messages
                     .sortedBy { it.sentAt }
