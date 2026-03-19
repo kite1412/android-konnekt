@@ -15,6 +15,7 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.domain)
     implementation(projects.core.data)
+    implementation(projects.core.notification)
     implementation(projects.core.storage.file)
     implementation(projects.core.network.upload.domain)
     implementation(projects.core.network.upload.util)
