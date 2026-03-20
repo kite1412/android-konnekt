@@ -19,7 +19,7 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.upload.util.CachingFileResolver
 import nrr.konnekt.core.notification.util.ChatNotificationData
 import nrr.konnekt.core.notification.util.KonnektNotification
-import nrr.konnekt.core.notification.util.notificationManager
+import nrr.konnekt.core.notification.util.notify
 import nrr.konnekt.core.notification.util.toCircularBitmap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,7 +37,7 @@ class NotificationManager @Inject constructor(
     ) {
         CoroutineScope(Dispatchers.Default).launch {
             getCurrentPerson()?.let { person ->
-                context.notificationManager.notify(
+                context.notify(
                     /*id = */data.id.hashCode(),
                     /*notification = */KonnektNotification.Messages.createNotification(
                         context = context,

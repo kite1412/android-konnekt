@@ -10,3 +10,6 @@ internal fun safeOnReceive(
 ) {
     if (context != null && intent != null) block(context, intent)
 }
+
+internal fun createIntentAction(name: String) =
+    "nrr.konnekt.core.notification.${name.uppercase().replace(' ', '_')}"

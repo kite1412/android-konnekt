@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
 import nrr.konnekt.core.notification.R
+import nrr.konnekt.core.notification.util.createIntentAction
 import nrr.konnekt.core.notification.util.safeOnReceive
 
 internal class ReplyReceiver : BroadcastReceiver() {
@@ -24,6 +25,7 @@ internal class ReplyReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        val REPLY_ACTION = createIntentAction("REPLY_ACTION")
         const val EXTRA_TEXT_REPLY = "extra_text_reply"
         const val EXTRA_CHAT_ID = "extra_chat_id"
 
@@ -32,6 +34,7 @@ internal class ReplyReceiver : BroadcastReceiver() {
                 .setLabel("Reply")
                 .build()
             val replyIntent = Intent(context, ReplyReceiver::class.java).apply {
+                action = REPLY_ACTION
                 putExtra(EXTRA_CHAT_ID, chatId)
             }
             val replyPendingIntent = PendingIntent.getBroadcast(

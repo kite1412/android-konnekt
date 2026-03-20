@@ -5,7 +5,19 @@
     <application>
         <receiver
             android:name=".receiver.ReplyReceiver"
+            android:enabled="true"
             android:exported="false">
+            <intent-filter>
+                <action android:name="nrr.konnekt.core.notification.REPLY_ACTION" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".receiver.MarkAsReadReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="nrr.konnekt.core.notification.MARK_AS_READ_ACTION" />
+            </intent-filter>
         </receiver>
     </application>
 </manifest>

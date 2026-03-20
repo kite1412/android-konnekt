@@ -14,6 +14,7 @@ import androidx.core.app.Person
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import nrr.konnekt.core.notification.R
+import nrr.konnekt.core.notification.receiver.MarkAsReadReceiver
 import nrr.konnekt.core.notification.receiver.ReplyReceiver
 
 private const val MAIN_ACTIVITY_NAME = "nrr.konnekt.MainActivity"
@@ -77,11 +78,16 @@ internal sealed class KonnektNotification(
 
                 setStyle(style)
 
-                val action = ReplyReceiver.createReplyNotificationAction(
+                val markAsReadAction = MarkAsReadReceiver.createMarkAsReadAction(
                     context = context,
                     chatId = chatId
                 )
-                addAction(action)
+                val replyAction = ReplyReceiver.createReplyNotificationAction(
+                    context = context,
+                    chatId = chatId
+                )
+                addAction(markAsReadAction)
+                addAction(replyAction)
             }
         }
     }
