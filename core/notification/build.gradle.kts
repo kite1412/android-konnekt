@@ -13,4 +13,6 @@ dependencies {
     implementation(projects.core.network.upload.util)
 
     implementation(libs.androidx.core.ktx)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 }

@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.konnekt.android.application.compose)
+    alias(libs.plugins.google.services)
     alias(libs.plugins.konnekt.hilt)
 }
 
