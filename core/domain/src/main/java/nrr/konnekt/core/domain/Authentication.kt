@@ -58,10 +58,18 @@ interface Authentication {
      */
     suspend fun logout(): AuthResult<Boolean>
 
+    /**
+     * Store the FCM token for the current user.
+     *
+     * @param token The FCM token to store.
+     */
+    suspend fun storeFcmToken(token: String): AuthResult<Boolean>
+
     sealed interface AuthError : Error {
         object InvalidCredentials : AuthError
         object UserAlreadyExists : AuthError
         object EmailNotConfirmed : AuthError
+        object UnauthenticatedAction: AuthError
         object Unknown : AuthError
     }
 }

@@ -170,6 +170,7 @@ internal class SupabaseAuthentication @Inject constructor(
                     }
                 }
                 return user?.toUser()?.let {
+                    _loggedInUser.value = it
                     storeFcmToken()
                     Success(it)
                 } ?: Error(AuthError.Unknown)
@@ -195,6 +196,30 @@ internal class SupabaseAuthentication @Inject constructor(
         }
     }
 
+    override suspend fun storeFcmToken(token: String): AuthResult<Boolean> =
+        getLoggedInUserOrNull()?.let {
+            try {
+                client.postgrest.rpc(
+                    function = "store_fcm_token",
+                    parameters = buildJsonObject {
+                        put("_token", token)
+                    }
+                )
+                Success(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Error(AuthError.Unknown)
+            }
+        } ?: Error(AuthError.UnauthenticatedAction)
+
+    private suspend fun storeFcmToken() {
+        context.getPreference(
+            key = PreferencesKeys.FCM_TOKEN
+        )?.let { token ->
+            storeFcmToken(token)
+        }
+    }
+
     @OptIn(SupabaseExperimental::class)
     private fun observeLoggedInUser(userId: String) {
         client.postgrest.from(USERS).selectSingleValueAsFlow(
@@ -214,22 +239,4 @@ internal class SupabaseAuthentication @Inject constructor(
     }
 
     private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
-
-    private suspend fun storeFcmToken() {
-        try {
-            context.getPreference(
-                key = PreferencesKeys.FCM_TOKEN
-            )?.let { token ->
-                client.postgrest.rpc(
-                    function = "store_fcm_token",
-                    parameters = buildJsonObject {
-                        put("_token", token)
-                    }
-                )
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw e
-        }
-    }
 }
