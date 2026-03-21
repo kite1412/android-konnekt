@@ -11,6 +11,7 @@ dependencies {
     implementation(projects.core.domain)
     implementation(projects.core.network.upload.domain)
     implementation(projects.core.network.upload.util)
+    implementation(projects.core.storage.datastore)
 
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.firebase.bom))

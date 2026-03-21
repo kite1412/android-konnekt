@@ -11,7 +11,7 @@ typealias AuthResult<T> = Result<T, AuthError>
 
 /**
  * Contract for authentication service and act as
- * a single source of truth for logged in user data used in DataSources impl
+ * a single source of truth for logged-in user data used in DataSources impl
  * to perform user-specific actions.
  */
 interface Authentication {
@@ -21,23 +21,23 @@ interface Authentication {
     val authStatus: Flow<AuthStatus>
 
     /**
-     * A flow of the logged in user data.
+     * A flow of the logged-in user data.
      */
     val loggedInUser: Flow<User?>
 
     /**
-     * Get the logged in user.
+     * Get the logged-in user.
      *
-     * @return The logged in user.
+     * @return The logged-in user.
      */
     fun getLoggedInUserOrNull(): User?
 
     /**
      * Login with username and password.
      *
-     * @param email The email to login with.
-     * @param password The password to login with.
-     * @return The logged in user.
+     * @param email The email to log in with.
+     * @param password The password to log in with.
+     * @return The logged-in user.
      */
     suspend fun login(email: String, password: String): AuthResult<User>
 

@@ -131,6 +131,13 @@ CREATE TABLE IF NOT EXISTS chat_invitations (
     accepted_at timestamptz,
     UNIQUE (chat_id, receiver_id)
 );
+
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users(id),
+    token text NOT NULL,
+    UNIQUE (user_id, token)
+);
 ```
 
 ## Enable realtime for tables:
@@ -1295,6 +1302,32 @@ begin
     returning * into _result;
 
     return _result;
+end;
+$$;
+```
+
+### store_fcm_token
+```sql
+create or replace function store_fcm_token(
+    _token text
+)
+returns boolean
+language plpgsql
+security definer
+as $$
+declare
+    _user_id uuid := auth.uid();
+begin
+    if _user_id is null then
+        return false;
+    end if;
+
+    insert into fcm_tokens (user_id, token)
+    values (_user_id, _token)
+    on conflict (user_id, token)
+    do nothing;
+
+    return true;
 end;
 $$;
 ```

@@ -42,6 +42,7 @@ dependencies {
     implementation(projects.konnekt.core.domain)
     implementation(projects.konnekt.core.network.upload.domain)
     implementation(projects.konnekt.core.network.upload.util)
+    implementation(projects.konnekt.core.storage.datastore)
 
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)

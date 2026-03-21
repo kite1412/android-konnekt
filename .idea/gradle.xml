@@ -38,6 +38,7 @@
             <option value="$PROJECT_DIR$/core/network/upload/util" />
             <option value="$PROJECT_DIR$/core/notification" />
             <option value="$PROJECT_DIR$/core/storage" />
+            <option value="$PROJECT_DIR$/core/storage/datastore" />
             <option value="$PROJECT_DIR$/core/storage/file" />
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/feature" />

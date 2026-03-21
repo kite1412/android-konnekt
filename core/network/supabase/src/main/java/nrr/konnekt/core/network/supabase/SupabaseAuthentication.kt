@@ -1,6 +1,8 @@
 package nrr.konnekt.core.network.supabase
 
+import android.content.Context
 import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.auth.auth
@@ -34,11 +36,15 @@ import nrr.konnekt.core.network.supabase.dto.response.toModel
 import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
+import nrr.konnekt.core.storage.datastore.PreferencesKeys
+import nrr.konnekt.core.storage.datastore.getPreference
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-internal class SupabaseAuthentication @Inject constructor() : Authentication {
+internal class SupabaseAuthentication @Inject constructor(
+    @param:ApplicationContext private val context: Context
+) : Authentication {
     private val client: SupabaseClient = supabaseClient
     private val _authStatus = MutableStateFlow<AuthStatus>(AuthStatus.Loading)
     private var _loggedInUser = MutableStateFlow(client.auth.currentUserOrNull()?.toUser())
@@ -82,26 +88,6 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                 .launchIn(this)
         }
     }
-
-    @OptIn(SupabaseExperimental::class)
-    private fun observeLoggedInUser(userId: String) {
-        client.postgrest.from(USERS).selectSingleValueAsFlow(
-            primaryKey = SupabaseUser::id
-        ) {
-            SupabaseUser::id eq userId
-        }
-            .onEach {
-                val user = it.toModel()
-                _loggedInUser.value = user
-                _authStatus.value = AuthStatus.Authenticated(user)
-                logCurrentUser(user)
-            }
-            .launchIn(
-                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            )
-    }
-
-    private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
 
     override fun getLoggedInUserOrNull(): User? =
         _loggedInUser.value
@@ -147,6 +133,7 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                 }
             }
             return _loggedInUser.value?.let {
+                storeFcmToken()
                 Success(it)
             } ?: Error(AuthError.Unknown)
         } catch (e: AuthRestException) {
@@ -183,6 +170,7 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
                     }
                 }
                 return user?.toUser()?.let {
+                    storeFcmToken()
                     Success(it)
                 } ?: Error(AuthError.Unknown)
             }
@@ -204,6 +192,44 @@ internal class SupabaseAuthentication @Inject constructor() : Authentication {
         } catch (e: Exception) {
             e.printStackTrace()
             return Error(AuthError.Unknown)
+        }
+    }
+
+    @OptIn(SupabaseExperimental::class)
+    private fun observeLoggedInUser(userId: String) {
+        client.postgrest.from(USERS).selectSingleValueAsFlow(
+            primaryKey = SupabaseUser::id
+        ) {
+            SupabaseUser::id eq userId
+        }
+            .onEach {
+                val user = it.toModel()
+                _loggedInUser.value = user
+                _authStatus.value = AuthStatus.Authenticated(user)
+                logCurrentUser(user)
+            }
+            .launchIn(
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            )
+    }
+
+    private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
+
+    private suspend fun storeFcmToken() {
+        try {
+            context.getPreference(
+                key = PreferencesKeys.FCM_TOKEN
+            )?.let { token ->
+                client.postgrest.rpc(
+                    function = "store_fcm_token",
+                    parameters = buildJsonObject {
+                        put("_token", token)
+                    }
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            throw e
         }
     }
 }
