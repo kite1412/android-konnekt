@@ -628,6 +628,71 @@ end;
 $$;
 ```
 
+### get_chat_latest_messages
+```sql
+create or replace function get_chat_latest_messages(_chat_id uuid)
+returns jsonb
+language plpgsql
+as $$
+declare
+    result jsonb;
+begin
+    with latest_messages_cte as (
+        select 
+            m.id,
+            m.content,
+            m.sender_id,
+            m.sent_at,
+            u.username as sender_name,
+            u.image_path as sender_image_path,
+            exists (
+                select 1 
+                from attachments a 
+                where a.message_id = m.id
+            ) as with_attachments
+        from messages m
+        join users u on u.id = m.sender_id
+        where m.chat_id = _chat_id
+          and m.is_hidden = false
+        order by m.sent_at desc
+        limit 5
+    ),
+    participant_read_marker_cte as (
+        select 
+            cps.user_id,
+            cps.last_read_at
+        from chat_participant_statuses cps
+        where cps.chat_id = _chat_id
+          and cps.left_at is null
+    )
+    select jsonb_build_object(
+        'chat_id', _chat_id,
+        'latest_messages', coalesce(
+            (select jsonb_agg(jsonb_build_object(
+                'content', lm.content,
+                'with_attachments', lm.with_attachments,
+                'sender_id', lm.sender_id,
+                'sender_name', lm.sender_name,
+                'sender_image_path', lm.sender_image_path,
+                'sent_at', lm.sent_at
+            )) from latest_messages_cte lm),
+            '[]'::jsonb
+        ),
+        'participant_read_markers', coalesce(
+            (select jsonb_agg(jsonb_build_object(
+                'user_id', prm.user_id,
+                'last_read_at', prm.last_read_at
+            )) from participant_read_marker_cte prm),
+            '[]'::jsonb
+        )
+    )
+    into result;
+
+    return result;
+end;
+$$;
+```
+
 ### delete_chat
 ```sql
 create or replace function delete_chat(
