@@ -3,7 +3,6 @@ package nrr.konnekt.core.notification
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -19,8 +18,8 @@ import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.upload.util.CachingFileResolver
 import nrr.konnekt.core.notification.util.ChatNotificationData
 import nrr.konnekt.core.notification.util.KonnektNotification
+import nrr.konnekt.core.notification.util.getCircularBitmap
 import nrr.konnekt.core.notification.util.notify
-import nrr.konnekt.core.notification.util.toCircularBitmap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,23 +67,8 @@ class NotificationManager @Inject constructor(
         .apply {
             setName(username)
             setKey(id)
-
-            this@toPerson.imagePath?.let { imagePath ->
-                val bytes = cache.resolveFile(imagePath)
-
-                bytes?.let { bytes ->
-                    setIcon(
-                        /*icon = */IconCompat.createWithBitmap(
-                            /*bits = */BitmapFactory
-                                .decodeByteArray(
-                                    /*data = */bytes,
-                                    /*offset = */0,
-                                    /*length = */bytes.size
-                                )
-                                .toCircularBitmap()
-                        )
-                    )
-                }
+            cache.getCircularBitmap(imagePath)?.let { bitmap ->
+                setIcon(IconCompat.createWithBitmap(bitmap))
             }
         }
         .build()

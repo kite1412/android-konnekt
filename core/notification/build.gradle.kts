@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.konnekt.android.library)
     alias(libs.plugins.konnekt.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -14,6 +15,7 @@ dependencies {
     implementation(projects.core.storage.datastore)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.serialization.json)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
 }
