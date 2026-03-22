@@ -1425,3 +1425,240 @@ $$;
 - chat-media
 
 ***note:*** you need to configure policies for each bucket
+
+## Database Webhooks & Edge Functions
+### Push Notifications
+1. Set up secrets in **Edge Function Secrets**:
+
+    ```properties
+    FCM_PROJECT_ID = <your Firebase project id>
+    FCM_CLIENT_EMAIL = <your Firebase service account>
+    FCM_PRIVATE_KEY = <your Firebase project private key>
+    ```
+2. Add a new Edge Function `notify-new-messages`:
+
+   ```typescript
+   import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+   import { createClient } from 'jsr:@supabase/supabase-js@2'
+   
+   interface messageRecord {
+     id: string
+     sender_id: string
+     chat_id: string
+     content: string
+     sent_at: string
+     edited_at: string
+     is_hidden: boolean
+   }
+   interface reqPayload {
+     type: string
+     table: string
+     schema: string
+     record: messageRecord
+     old_record?: messageRecord
+   }
+   interface participant {
+     id: string
+     name: string
+     image_path?: string
+     last_read_at?: string
+   }
+   interface chat {
+     id: string
+     name?: string
+     is_group: boolean
+     icon_path?: string
+     participants: participant[]
+   }
+   interface latestMessage {
+     content: string
+     with_attachments: boolean
+     sent_at: string
+     sender_id: string
+     sender_name: string
+     sender_image_path?: string
+   }
+   interface resPayload {
+     chat: chat
+     latest_messages: latestMessage[]
+   }
+   
+   const FCM_URL = 'https://fcm.googleapis.com/v1/projects/'
+   const FCM_PROJECT_ID = Deno.env.get('FCM_PROJECT_ID')!
+   const FCM_MESSAGING_URL = FCM_URL + FCM_PROJECT_ID + "/messages:send"
+   
+   function pemToArrayBuffer(pem: string): ArrayBuffer {
+     const cleaned = pem
+       .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+       .replace(/-----END PRIVATE KEY-----/g, "")
+       .replace(/\\n/g, "")
+       .replace(/\n/g, "")
+       .replace(/\r/g, "")
+       .trim()
+   
+     const binary = atob(cleaned)
+     const bytes = new Uint8Array(binary.length)
+   
+     for (let i = 0; i < binary.length; i++) {
+       bytes[i] = binary.charCodeAt(i)
+     }
+   
+     return bytes.buffer
+   }
+   
+   async function getAccessToken() {
+     const clientEmail = Deno.env.get("FCM_CLIENT_EMAIL")!
+     const privateKey = Deno.env.get("FCM_PRIVATE_KEY")!
+     const now = Math.floor(Date.now() / 1000)
+   
+     const jwtHeader = {
+       alg: "RS256",
+       typ: "JWT"
+     }
+   
+     const jwtClaimSet = {
+       iss: clientEmail,
+       scope: "https://www.googleapis.com/auth/firebase.messaging",
+       aud: "https://oauth2.googleapis.com/token",
+       iat: now,
+       exp: now + 3600
+     }
+   
+     const encoder = new TextEncoder()
+   
+     function base64url(input: Uint8Array) {
+       return btoa(String.fromCharCode(...input))
+         .replace(/\+/g, "-")
+         .replace(/\//g, "_")
+         .replace(/=+$/, "")
+     }
+   
+     const header = base64url(encoder.encode(JSON.stringify(jwtHeader)))
+     const payload = base64url(encoder.encode(JSON.stringify(jwtClaimSet)))
+   
+     const data = `${header}.${payload}`
+   
+     const key = await crypto.subtle.importKey(
+       "pkcs8",
+       pemToArrayBuffer(privateKey),
+       {
+         name: "RSASSA-PKCS1-v1_5",
+         hash: "SHA-256"
+       },
+       false,
+       ["sign"]
+     )
+   
+     const signature = await crypto.subtle.sign(
+       "RSASSA-PKCS1-v1_5",
+       key,
+       encoder.encode(data)
+     )
+   
+     const jwt = `${data}.${base64url(new Uint8Array(signature))}`
+   
+     const res = await fetch("https://oauth2.googleapis.com/token", {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/x-www-form-urlencoded"
+       },
+       body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+     })
+   
+     const json = await res.json()
+     return json.access_token
+   }
+   
+   function throwError(error: Error): Response {
+     console.error(error)
+     return new Response(JSON.stringify({ message: error?.message ?? error }), {
+       headers: { 'Content-Type': 'application/json' },
+       status: 500 
+     })
+   }
+   
+   Deno.serve(async (req: Request) => {
+     try {
+       const { record }: reqPayload = await req.json();
+   
+       console.debug(`record: ${JSON.stringify(record)}`)
+   
+       const supabase = createClient(
+         Deno.env.get('SUPABASE_URL') ?? '',
+         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+         { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+       )
+   
+       const { data, error } = await supabase.rpc(
+         'get_chat_latest_messages',
+         {
+           _chat_id: record.chat_id
+         }
+       )
+       if (error) {
+         return throwError(error)
+       }
+   
+       const participantIds = (data.chat.participants as [participant])
+         .map(p => p.id)
+       
+       const { data: tokens, tokensError } = await supabase
+         .from('fcm_tokens')
+         .select('token')
+         .in('user_id', participantIds)
+       console.debug(tokens)
+   
+       if (tokensError) {
+         return throwError(tokensError)
+       }
+       if (!tokens || tokens.length === 0) {
+         console.info(`skip messaging for chat: ${record.chat_id}`)
+         return new Response(
+           JSON.stringify({
+             message: 'FCM tokens are not present'
+           })
+         )
+       }
+   
+       const fcmAccessToken = await getAccessToken()
+       console.debug(`fcm access token: ${fcmAccessToken}`)
+   
+       const fcmPromises = tokens.map(async (tokenData) => 
+         await fetch(FCM_MESSAGING_URL, {
+           method: "POST",
+           headers: {
+             "Authorization": `Bearer ${fcmAccessToken}`,
+             "Content-Type": "application/json"
+           },
+           body: JSON.stringify({
+             message: {
+               token: tokenData.token,
+               data: {
+                 chat: JSON.stringify(data.chat),
+                 latest_messages: JSON.stringify(data.latest_messages)
+               }
+             }
+           })
+         })
+         .then(async res => {
+           const json = await res.json()
+           console.debug(JSON.stringify(json))
+         })
+         .catch(err => {
+           console.error("FCM push failed for", tokenData.token, err)
+         })
+       )
+   
+       await Promise.all(fcmPromises)
+   
+       console.info(`success sending notifications: ${JSON.stringify(data)}`)
+       return new Response(
+         JSON.stringify(data),
+         { headers: { 'Content-Type': 'application/json', 'Connection': 'keep-alive' }}
+       );
+     } catch (err) {
+       return throwError(err)
+     }
+   });
+   ```
+3. Create a webhook that listens to **INSERT** and **UPDATE** events on the `messages` table and triggers `notify-new-messages`.
