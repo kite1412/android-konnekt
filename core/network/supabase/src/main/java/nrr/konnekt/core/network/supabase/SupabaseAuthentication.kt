@@ -37,6 +37,7 @@ import nrr.konnekt.core.network.supabase.util.LOG_TAG
 import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import nrr.konnekt.core.storage.datastore.PreferencesKeys
+import nrr.konnekt.core.storage.datastore.clearPreferences
 import nrr.konnekt.core.storage.datastore.getPreference
 import nrr.konnekt.core.storage.datastore.setPreference
 import javax.inject.Inject
@@ -194,6 +195,7 @@ internal class SupabaseAuthentication @Inject constructor(
                 return Error(AuthError.Unknown)
             }
             _loggedInUser.value = null
+            context.clearPreferences()
             return Success(true)
         } catch (e: Exception) {
             e.printStackTrace()

@@ -59,5 +59,16 @@ suspend fun <T> Context.removePreference(key: Preferences.Key<T>): Boolean =
         false
     }
 
+suspend fun Context.clearPreferences(): Boolean =
+    try {
+        dataStore.edit {
+            it.clear()
+        }
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+
 suspend fun <T> Context.getPreference(key: Preferences.Key<T>): T? =
     dataStore.data.firstOrNull()?.get(key)
