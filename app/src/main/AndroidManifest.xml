@@ -30,6 +30,10 @@
                 <action android:name="android.intent.action.VIEW" />
                 <data android:scheme="nrr.konnekt" android:host="verify"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <data android:scheme="konnekt" android:host="messages" />
+            </intent-filter>
         </activity>
     </application>
 

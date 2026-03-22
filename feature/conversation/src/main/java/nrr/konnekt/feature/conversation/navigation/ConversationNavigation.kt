@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import kotlinx.serialization.Serializable
+import nrr.konnekt.core.notification.util.KonnektNotification
 import nrr.konnekt.feature.conversation.ConversationScreen
 import nrr.konnekt.feature.conversation.util.IdType
 
@@ -26,7 +28,13 @@ fun NavGraphBuilder.conversationScreen(
     navigateToChatDetail: (id: String, idType: IdType) -> Unit,
     contentPadding: PaddingValues
 ) {
-    composable<ConversationRoute> {
+    composable<ConversationRoute>(
+        deepLinks = listOf(
+            navDeepLink {
+                uriPattern = KonnektNotification.Messages.DEEP_LINK_URI_PATTERN
+            }
+        )
+    ) {
         ConversationScreen(
             navController = navController,
             navigateBack = navigateBack,

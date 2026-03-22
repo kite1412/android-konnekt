@@ -20,7 +20,7 @@ import nrr.konnekt.core.notification.receiver.ReplyReceiver
 private const val MAIN_ACTIVITY_NAME = "nrr.konnekt.MainActivity"
 private const val SCHEME = "konnekt://"
 
-internal sealed class KonnektNotification(
+sealed class KonnektNotification(
     val channelId: String,
     val channelName: String,
     val channelDescription: String,
@@ -32,11 +32,11 @@ internal sealed class KonnektNotification(
         channelDescription = "Message notifications",
         importance = NotificationManager.IMPORTANCE_HIGH
     ) {
-        const val SCHEME_HOST = "$SCHEME/messages"
+        const val SCHEME_HOST = "${SCHEME}messages"
         const val DEEP_LINK_CHAT_ID_KEY = "chatId"
-        const val DEEP_LINK_URI_PATTERN = "$SCHEME_HOST/$DEEP_LINK_CHAT_ID_KEY"
+        const val DEEP_LINK_URI_PATTERN = "$SCHEME_HOST/{$DEEP_LINK_CHAT_ID_KEY}"
 
-        fun createNotification(
+        internal fun createNotification(
             context: Context,
             currentPerson: Person,
             chat: ChatNotificationData

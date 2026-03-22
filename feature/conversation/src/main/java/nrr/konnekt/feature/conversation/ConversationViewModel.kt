@@ -63,6 +63,7 @@ import nrr.konnekt.core.model.ParticipantRole
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now
+import nrr.konnekt.core.notification.util.KonnektNotification
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.feature.conversation.navigation.ConversationRoute
 import nrr.konnekt.feature.conversation.util.ActionType
@@ -96,7 +97,9 @@ class ConversationViewModel @Inject constructor(
     private val dismissChatRoomUseCase: DismissChatRoomUseCase,
     private val inviteToChatUseCase: InviteToChatUseCase
 ) : ViewModel() {
-    private val chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
+    private var chatId: String? = savedStateHandle.toRoute<ConversationRoute>().chatId
+    private val deepLinkChatId = savedStateHandle
+        .get<String>(KonnektNotification.Messages.DEEP_LINK_CHAT_ID_KEY)
     private var latestCurrentUserChatParticipantStatus: ChatParticipantStatus? = null
     private var firstConsumeChatFlow = true
     internal val peerId: String? = savedStateHandle.toRoute<ConversationRoute>().peerId
@@ -151,34 +154,39 @@ class ConversationViewModel @Inject constructor(
 
             var peerId = peerId
 
-            if (chatId != null) {
+            if (chatId != null || deepLinkChatId != null) {
+                deepLinkChatId?.let { deepLinkChatId ->
+                    chatId = deepLinkChatId
+                }
                 fixedChatId = chatId
 
-                when (val res = chatRepository.getChatById(chatId)) {
-                    is Result.Success -> {
-                        _chat.value = res.data
-                        observeFlows(res.data.id)
-                        if (res.data.type == ChatType.PERSONAL) {
-                            peerId = res.data.participants.firstOrNull { p ->
-                                currentUser.first()?.id?.let {
-                                    p.user.id != it
-                                } == true
-                            }?.user?.id
+                chatId?.let { chatId ->
+                    when (val res = chatRepository.getChatById(chatId)) {
+                        is Result.Success -> {
+                            _chat.value = res.data
+                            observeFlows(res.data.id)
+                            if (res.data.type == ChatType.PERSONAL) {
+                                peerId = res.data.participants.firstOrNull { p ->
+                                    currentUser.first()?.id?.let {
+                                        p.user.id != it
+                                    } == true
+                                }?.user?.id
+                            }
+                        }
+                        is Result.Error -> {
+                            _events.emit(
+                                UiEvent.ShowSnackbar(
+                                    when (res) {
+                                        ChatError.ChatNotFound -> "Chat not found"
+                                        else -> "Fail to fetch chat data"
+                                    }
+                                )
+                            )
+                            _events.emit(UiEvent.NavigateBack)
                         }
                     }
-                    is Result.Error -> {
-                        _events.emit(
-                            UiEvent.ShowSnackbar(
-                                when (res) {
-                                    ChatError.ChatNotFound -> "Chat not found"
-                                    else -> "Fail to fetch chat data"
-                                }
-                            )
-                        )
-                        _events.emit(UiEvent.NavigateBack)
-                    }
                 }
-            } else if (peerId != null) {
+            } else peerId?.let { peerId ->
                 val res = userRepository.getUserById(peerId)
 
                 if (res is Result.Success) res.data.let {
@@ -194,7 +202,7 @@ class ConversationViewModel @Inject constructor(
                 }
             }
             _chat.value?.let { chat ->
-                if (chat.type == ChatType.PERSONAL && peerId != null)
+                if (chat.type == ChatType.PERSONAL && peerId != null) peerId?.let { peerId ->
                     userPresenceManager
                         .observeUserPresence(peerId)
                         .onEach { peerPresence ->
@@ -205,6 +213,7 @@ class ConversationViewModel @Inject constructor(
                             }
                         }
                         .launchIn(viewModelScope)
+                }
                 else {
                     observeChatParticipantsUseCase.activeParticipants(chat.id)
                         .onEach { activeParticipants ->

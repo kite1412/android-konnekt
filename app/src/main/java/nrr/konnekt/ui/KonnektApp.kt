@@ -1,5 +1,6 @@
 package nrr.konnekt.ui
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -26,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.compose.rememberNavController
 import nrr.konnekt.KonnektViewModel
+import nrr.konnekt.MainActivity
 import nrr.konnekt.SplashScreen
 import nrr.konnekt.core.designsystem.theme.KonnektTheme
 import nrr.konnekt.core.ui.compositionlocal.LocalFileCache
@@ -49,6 +51,7 @@ internal fun KonnektApp(
         )
     }
     val navController = rememberNavController()
+    val intentData = (LocalActivity.current as MainActivity).intent.data
 
     KonnektTheme {
         CompositionLocalProvider(
@@ -71,7 +74,7 @@ internal fun KonnektApp(
                             ExitTransition.None
                 }
             ) { showContent ->
-                if (!showContent) SplashScreen(
+                if (!showContent && intentData == null) SplashScreen(
                     onSplashFinished = {
                         viewModel.showSplashOnce = true
                     },

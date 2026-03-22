@@ -16,6 +16,7 @@ dependencies {
     implementation(projects.core.media)
     implementation(projects.core.network.upload.domain)
     implementation(projects.core.network.upload.util)
+    implementation(projects.core.notification)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
