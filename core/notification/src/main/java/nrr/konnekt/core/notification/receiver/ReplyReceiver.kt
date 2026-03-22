@@ -7,11 +7,24 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import nrr.konnekt.core.domain.repository.MessageRepository
+import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.notification.R
 import nrr.konnekt.core.notification.util.createIntentAction
 import nrr.konnekt.core.notification.util.safeOnReceive
+import javax.inject.Inject
 
+private const val LOG_TAG = "ReplyReceiver"
+
+@AndroidEntryPoint
 internal class ReplyReceiver : BroadcastReceiver() {
+    @Inject
+    lateinit var messageRepository: MessageRepository
+
     override fun onReceive(p0: Context?, p1: Intent?) {
         safeOnReceive(p0, p1) { context, intent ->
             val results = RemoteInput.getResultsFromIntent(intent)
@@ -19,7 +32,15 @@ internal class ReplyReceiver : BroadcastReceiver() {
             val chatId = intent.getStringExtra(EXTRA_CHAT_ID)
 
             if (replyText != null && chatId != null) {
-                Log.d("ReplyReceiver", "onReceive: $replyText")
+                CoroutineScope(Dispatchers.Main).launch {
+                    val res = messageRepository.sendMessage(
+                        chatId = chatId,
+                        content = replyText
+                    )
+                    if (res is Result.Success) {
+                        Log.d(LOG_TAG, "Message sent successfully")
+                    }
+                }
             }
         }
     }
