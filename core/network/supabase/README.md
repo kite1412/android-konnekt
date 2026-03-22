@@ -637,7 +637,17 @@ as $$
 declare
     result jsonb;
 begin
-    with latest_messages_cte as (
+    with chat_cte as (
+        select 
+            c.id,
+            cs.name,
+            (c.type != 'personal') as is_group,
+            cs.icon_path
+        from chats c
+        left join chat_settings cs on cs.chat_id = c.id
+        where c.id = _chat_id
+    ),
+    latest_messages_cte as (
         select 
             m.id,
             m.content,
@@ -657,32 +667,45 @@ begin
         order by m.sent_at desc
         limit 5
     ),
-    participant_read_marker_cte as (
+    participants_cte as (
         select 
-            cps.user_id,
+            u.id,
+            u.username as name,
+            u.image_path,
             cps.last_read_at
         from chat_participant_statuses cps
+        join users u on u.id = cps.user_id
         where cps.chat_id = _chat_id
           and cps.left_at is null
     )
     select jsonb_build_object(
-        'chat_id', _chat_id,
+        'chat', (
+            select jsonb_build_object(
+                'id', c.id,
+                'name', c.name,
+                'is_group', c.is_group,
+                'icon_path', c.icon_path,
+                'participants', coalesce(
+                    (select jsonb_agg(jsonb_build_object(
+                        'id', p.id,
+                        'name', p.name,
+                        'image_path', p.image_path,
+                        'last_read_at', p.last_read_at
+                    )) from participants_cte p),
+                    '[]'::jsonb
+                )
+            )
+            from chat_cte c
+        ),
         'latest_messages', coalesce(
             (select jsonb_agg(jsonb_build_object(
                 'content', lm.content,
                 'with_attachments', lm.with_attachments,
+                'sent_at', lm.sent_at,
                 'sender_id', lm.sender_id,
                 'sender_name', lm.sender_name,
-                'sender_image_path', lm.sender_image_path,
-                'sent_at', lm.sent_at
+                'sender_image_path', lm.sender_image_path
             )) from latest_messages_cte lm),
-            '[]'::jsonb
-        ),
-        'participant_read_markers', coalesce(
-            (select jsonb_agg(jsonb_build_object(
-                'user_id', prm.user_id,
-                'last_read_at', prm.last_read_at
-            )) from participant_read_marker_cte prm),
             '[]'::jsonb
         )
     )

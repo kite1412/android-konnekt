@@ -9,12 +9,9 @@ import kotlinx.serialization.json.decodeFromJsonElement
 
 @Serializable
 internal data class ChatLatestMessages(
-    @SerialName("chat_id")
-    val chatId: String,
+    val chat: Chat,
     @SerialName("latest_messages")
-    val latestMessages: List<LatestMessage>,
-    @SerialName("participant_read_markers")
-    val participantReadMarkers: List<ParticipantReadMarker>
+    val latestMessages: List<LatestMessage>
 )
 
 internal fun ChatLatestMessages(map: Map<String, String>): ChatLatestMessages =

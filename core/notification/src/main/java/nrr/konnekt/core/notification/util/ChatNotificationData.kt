@@ -4,7 +4,7 @@ import android.graphics.Bitmap
 import androidx.core.app.Person
 import kotlin.time.Instant
 
-data class ChatNotificationData(
+internal data class ChatNotificationData(
     val id: String,
     val name: String,
     val isGroup: Boolean,
@@ -12,7 +12,7 @@ data class ChatNotificationData(
     val messages: List<MessageData>
 )
 
-data class MessageData(
+internal data class MessageData(
     val sender: Person,
     val message: String,
     val sentAt: Instant

@@ -26,7 +26,7 @@ import javax.inject.Singleton
 private const val LOG_TAG = "NotificationManager"
 
 @Singleton
-class NotificationManager @Inject constructor(
+internal class NotificationManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val authentication: Authentication,
     private val cache: CachingFileResolver

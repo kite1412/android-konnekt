@@ -8,27 +8,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.util.Result
-import nrr.konnekt.core.domain.util.name
-import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.network.upload.util.CachingFileResolver
 import nrr.konnekt.core.notification.NotificationManager
 import nrr.konnekt.core.notification.dto.ChatLatestMessages
 import nrr.konnekt.core.notification.util.ChatNotificationData
 import nrr.konnekt.core.notification.util.getCircularBitmap
 import nrr.konnekt.core.storage.datastore.PreferencesKeys
+import nrr.konnekt.core.storage.datastore.getPreference
 import nrr.konnekt.core.storage.datastore.setPreference
 import javax.inject.Inject
 
 private const val LOG_TAG = "KonnektFirebaseMessagingService"
 
 @AndroidEntryPoint
-class KonnektFirebaseMessagingService : FirebaseMessagingService() {
+internal class KonnektFirebaseMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var authentication: Authentication
-    @Inject
-    lateinit var chatRepository: ChatRepository
     @Inject
     lateinit var notificationManager: NotificationManager
     @Inject
@@ -56,49 +52,79 @@ class KonnektFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        CoroutineScope(Dispatchers.Default).launch {
-            try {
-                val data = ChatLatestMessages(message.data)
-                val res = chatRepository.getChatById(data.chatId)
-
-                if (res is Result.Success) {
-                    val resData = res.data
-                    val currentUser = authentication.getLoggedInUserOrNull()
-                    val readMarker = data.participantReadMarkers.firstOrNull { readMarker ->
-                        readMarker.userId == currentUser?.id
-                    }
-                    val sortedLatestMessages = data.latestMessages.sortedByDescending { it.sentAt }
-                    val lastOtherMessageIndex = sortedLatestMessages.indexOfLast {
-                        it.senderId != currentUser?.id
-                    }
-                    val latestMessages = sortedLatestMessages
-                        .run {
-                            if (lastOtherMessageIndex != -1) take(lastOtherMessageIndex)
-                            else this
-                        }
-                        .filter { latestMessage ->
-                            readMarker?.lastReadAt?.let {
-                                latestMessage.sentAt > it
-                            } ?: true
-                        }
-                        .map { latestMessage ->
-                            latestMessage.toMessageData(cache)
-                        }
-
-                    if (latestMessages.isNotEmpty()) notificationManager.notifyNewMessages(
-                        data = ChatNotificationData(
-                            id = resData.id,
-                            name = resData.name(),
-                            isGroup = resData.type != ChatType.PERSONAL,
-                            icon = cache.getCircularBitmap(resData.setting?.iconPath),
-                            messages = latestMessages
+        if (notificationManager.isNotificationPermissionGranted(this))
+            CoroutineScope(Dispatchers.Default).launch {
+                try {
+                    val data = ChatLatestMessages(message.data)
+                    val currentUserId = getPreference(PreferencesKeys.CURRENT_USER_ID)
+                    val notificationData = currentUserId?.let { currentUserId ->
+                        ChatNotificationData(
+                            data = data,
+                            currentUserId = currentUserId
                         )
-                    )
+                    }
+
+                    if (
+                        getPreference(PreferencesKeys.DISABLED_CHAT_NOTIFICATION_IDS)
+                            ?.contains(data.chat.id) != true
+                    ) notificationData
+                        ?.let(notificationManager::notifyNewMessages)
+                        ?.let {
+                            Log.d(LOG_TAG, "Notification sent for chat: ${notificationData.id}")
+                        }
+                } catch (e: Exception) {
+                    Log.e(LOG_TAG, "Failed to parse chat latest messages")
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                Log.e(LOG_TAG, "Failed to parse chat latest messages")
-                e.printStackTrace()
             }
-        }
     }
+
+    private suspend fun ChatNotificationData(
+        data: ChatLatestMessages,
+        currentUserId: String
+    ): ChatNotificationData? = if (data.latestMessages.isNotEmpty()) {
+        val isGroup = data.chat.isGroup
+        val firstOtherParticipant = if (!isGroup) data.firstOtherParticipantOrNull(currentUserId)
+        else null
+        val currentParticipant = data.currentParticipantOrNull(currentUserId)
+        val sortedLatestMessages = data.latestMessages.sortedByDescending { it.sentAt }
+        val lastOtherMessageIndex = sortedLatestMessages.indexOfLast {
+            it.senderId != currentUserId
+        }
+        val latestMessages = sortedLatestMessages
+            .run {
+                if (lastOtherMessageIndex != -1) take(lastOtherMessageIndex)
+                else this
+            }
+            .filter { latestMessage ->
+                currentParticipant?.lastReadAt?.let {
+                    latestMessage.sentAt > it
+                } ?: true
+            }
+            .map { latestMessage ->
+                latestMessage.toMessageData(cache)
+            }
+
+        ChatNotificationData(
+            id = data.chat.id,
+            name = if (isGroup) data.chat.name ?: "Group"
+            else firstOtherParticipant?.name ?: "Person",
+            isGroup = data.chat.isGroup,
+            icon = cache.getCircularBitmap(
+                if (isGroup) data.chat.iconPath
+                else firstOtherParticipant?.imagePath
+            ),
+            messages = latestMessages
+        )
+    } else null
+
+    private fun ChatLatestMessages.firstOtherParticipantOrNull(currentUserId: String) =
+        chat.participants.firstOrNull { participant ->
+            participant.id != currentUserId
+        }
+
+    private fun ChatLatestMessages.currentParticipantOrNull(currentUserId: String) =
+        chat.participants.firstOrNull { participant ->
+            participant.id == currentUserId
+        }
 }

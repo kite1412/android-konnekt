@@ -38,6 +38,7 @@ import nrr.konnekt.core.network.supabase.util.Tables.USERS
 import nrr.konnekt.core.network.supabase.util.toUser
 import nrr.konnekt.core.storage.datastore.PreferencesKeys
 import nrr.konnekt.core.storage.datastore.getPreference
+import nrr.konnekt.core.storage.datastore.setPreference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -134,6 +135,10 @@ internal class SupabaseAuthentication @Inject constructor(
             }
             return _loggedInUser.value?.let {
                 storeFcmToken()
+                context.setPreference(
+                    key = PreferencesKeys.CURRENT_USER_ID,
+                    value = it.id
+                )
                 Success(it)
             } ?: Error(AuthError.Unknown)
         } catch (e: AuthRestException) {
