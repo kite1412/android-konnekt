@@ -1,9 +1,9 @@
 package nrr.konnekt.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.dto.FileUpload
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.UserMessageStatus
 

@@ -1,13 +1,13 @@
 package nrr.konnekt.core.network.supabase
 
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
+import nrr.konnekt.core.common.result.Success
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.model.UserEdit
 import nrr.konnekt.core.domain.repository.UserRepository
 import nrr.konnekt.core.domain.repository.UserRepository.UserError
 import nrr.konnekt.core.domain.repository.UserResult
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
-import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
 import nrr.konnekt.core.network.supabase.dto.response.toModel

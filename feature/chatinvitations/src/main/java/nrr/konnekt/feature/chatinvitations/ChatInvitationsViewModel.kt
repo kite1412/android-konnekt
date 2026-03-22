@@ -11,8 +11,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.repository.ChatRepository
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatType

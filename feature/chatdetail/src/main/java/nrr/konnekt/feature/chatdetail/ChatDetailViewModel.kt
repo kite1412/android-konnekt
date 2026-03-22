@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
@@ -35,7 +36,6 @@ import nrr.konnekt.core.domain.usecase.InviteToChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatParticipantsUseCase
 import nrr.konnekt.core.domain.usecase.ObserveChatUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.name
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation

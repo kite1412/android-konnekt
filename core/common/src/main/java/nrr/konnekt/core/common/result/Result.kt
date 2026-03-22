@@ -1,8 +1,8 @@
-package nrr.konnekt.core.domain.util
+package nrr.konnekt.core.common.result
 
 sealed interface Result<out T, out E: Error> {
     data class Success<out T>(val data: T) : Result<T, Nothing>
-    data class Error<out E: nrr.konnekt.core.domain.util.Error>(
+    data class Error<out E: nrr.konnekt.core.common.result.Error>(
         val error: E
     ) : Result<Nothing, E>
 }

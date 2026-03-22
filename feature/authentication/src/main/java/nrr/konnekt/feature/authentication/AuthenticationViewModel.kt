@@ -8,10 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication.AuthError
 import nrr.konnekt.core.domain.usecase.LoginUseCase
 import nrr.konnekt.core.domain.usecase.RegisterUseCase
-import nrr.konnekt.core.domain.util.Result
 import javax.inject.Inject
 
 @HiltViewModel

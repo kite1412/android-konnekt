@@ -1,8 +1,8 @@
 package nrr.konnekt.core.domain.usecase
 
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.Authentication.AuthError
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.User
 import javax.inject.Inject
 

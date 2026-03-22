@@ -24,8 +24,11 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nrr.konnekt.core.common.annotation.AppCoroutineScope
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
+import nrr.konnekt.core.common.result.Success
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.annotation.AppCoroutineScope
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.dto.toChatSetting
@@ -36,9 +39,6 @@ import nrr.konnekt.core.domain.model.updateOrReset
 import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.ChatRepository.ChatError
 import nrr.konnekt.core.domain.repository.ChatResult
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
-import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant

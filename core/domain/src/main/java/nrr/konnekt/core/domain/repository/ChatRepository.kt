@@ -1,13 +1,13 @@
 package nrr.konnekt.core.domain.repository
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.dto.ChatSettingEdit
 import nrr.konnekt.core.domain.exception.UnauthenticatedException
 import nrr.konnekt.core.domain.model.LatestChatMessage
 import nrr.konnekt.core.domain.model.UpdateChatParticipantStatus
 import nrr.konnekt.core.domain.model.UserChatParticipation
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.Chat
 import nrr.konnekt.core.model.ChatInvitation
 import nrr.konnekt.core.model.ChatParticipant

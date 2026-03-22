@@ -9,6 +9,7 @@ kotlin {
 }
 
 dependencies {
+    api(projects.konnekt.core.common)
     api(projects.konnekt.core.model)
 
     implementation(libs.kotlinx.coroutines.core)

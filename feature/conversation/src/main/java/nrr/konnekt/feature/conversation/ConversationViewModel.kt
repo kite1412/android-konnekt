@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.dto.FileUpload
@@ -49,8 +51,6 @@ import nrr.konnekt.core.domain.usecase.ObserveChatUseCase
 import nrr.konnekt.core.domain.usecase.ObserveMessagesUseCase
 import nrr.konnekt.core.domain.usecase.SendMessageUseCase
 import nrr.konnekt.core.domain.usecase.UpdateChatParticipantStatusUseCase
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.domain.util.isPersonalChatBlocked
 import nrr.konnekt.core.media.MediaPlayerManager
 import nrr.konnekt.core.model.Chat

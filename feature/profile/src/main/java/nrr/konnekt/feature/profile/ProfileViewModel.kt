@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.model.UserEdit
 import nrr.konnekt.core.domain.usecase.UpdateProfileUseCase
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.ui.util.UiEvent
 import javax.inject.Inject

@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
+import nrr.konnekt.core.common.result.Success
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.dto.FileUpload
 import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.domain.repository.MessageRepository.MessageError
 import nrr.konnekt.core.domain.repository.MessageResult
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
-import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.Message
 import nrr.konnekt.core.model.UserMessageStatus
 import nrr.konnekt.core.model.util.now

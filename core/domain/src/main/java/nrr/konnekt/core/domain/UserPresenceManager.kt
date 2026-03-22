@@ -1,10 +1,10 @@
 package nrr.konnekt.core.domain
 
 import kotlinx.coroutines.flow.Flow
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.UserPresenceManager.UserPresenceManagerError
 import nrr.konnekt.core.domain.model.UserPresence
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.UserActivityStatus
 
 typealias UserPresenceResult<T> = Result<T, UserPresenceManagerError>

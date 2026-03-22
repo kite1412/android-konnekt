@@ -24,12 +24,12 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Success
 import nrr.konnekt.core.domain.AuthResult
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.Authentication.AuthError
 import nrr.konnekt.core.domain.util.AuthStatus
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Success
 import nrr.konnekt.core.model.User
 import nrr.konnekt.core.network.supabase.dto.response.SupabaseUser
 import nrr.konnekt.core.network.supabase.dto.response.toModel

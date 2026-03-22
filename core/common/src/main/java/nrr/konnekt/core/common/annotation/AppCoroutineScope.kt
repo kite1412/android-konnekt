@@ -1,4 +1,4 @@
-package nrr.konnekt.core.domain.annotation
+package nrr.konnekt.core.common.annotation
 
 import javax.inject.Qualifier
 
@@ -8,4 +8,4 @@ import javax.inject.Qualifier
     AnnotationTarget.VALUE_PARAMETER,
     AnnotationTarget.FUNCTION
 )
-annotation class AppCoroutineScope()
+annotation class AppCoroutineScope

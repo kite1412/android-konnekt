@@ -11,8 +11,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.repository.MessageRepository
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.notification.R
 import nrr.konnekt.core.notification.util.createIntentAction
 import nrr.konnekt.core.notification.util.safeOnReceive

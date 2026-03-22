@@ -7,8 +7,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.network.upload.util.CachingFileResolver
 import nrr.konnekt.core.notification.NotificationManager
 import nrr.konnekt.core.notification.dto.ChatLatestMessages

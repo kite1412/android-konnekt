@@ -1,8 +1,8 @@
 package nrr.konnekt.core.domain.repository
 
+import nrr.konnekt.core.common.result.Error
+import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.model.UserEdit
-import nrr.konnekt.core.domain.util.Error
-import nrr.konnekt.core.domain.util.Result
 import nrr.konnekt.core.model.User
 
 typealias UserResult<T> = Result<T, UserRepository.UserError>
