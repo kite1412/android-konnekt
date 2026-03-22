@@ -14,4 +14,5 @@ kotlin {
 
 dependencies {
     implementation(projects.konnekt.core.network.upload.util)
+    implementation(projects.konnekt.core.storage.datastore)
 }

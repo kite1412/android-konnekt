@@ -1,5 +1,8 @@
 package nrr.konnekt.feature.chatdetail
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -62,6 +65,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
+import androidx.core.app.ActivityCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -127,6 +131,7 @@ internal fun ChatDetailScreen(
     val activeParticipants by viewModel.activeParticipants.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val chatInvitations by viewModel.chatInvitations.collectAsStateWithLifecycle(emptyList())
+    val notificationEnabled by viewModel.chatNotificationEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
     val scope = rememberCoroutineScope()
 
@@ -150,6 +155,7 @@ internal fun ChatDetailScreen(
                 currentUserContacts = viewModel.currentUserContacts,
                 peerGroupsInCommon = viewModel.peerGroupsInCommon,
                 chatInvitations = chatInvitations,
+                pushNotificationEnabled = isNotificationPermissionGranted() && (notificationEnabled == true),
                 onNavigateBack = navigateBack,
                 onShare = {},
                 onClearChat = {
@@ -198,6 +204,7 @@ internal fun ChatDetailScreen(
                 onSaveChanges = viewModel::updateChatSetting,
                 onDeleteGroup = viewModel::deleteChat,
                 onPermissionSettingsChange = viewModel::updatePermissionSettings,
+                onPushNotificationChange = viewModel::updatePushNotificationEnabled,
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
@@ -214,6 +221,7 @@ private fun ChatDetailScreen(
     peerLastActiveAt: Instant?,
     currentUserContacts: List<User>?,
     chatInvitations: List<ChatInvitation>,
+    pushNotificationEnabled: Boolean,
     onNavigateBack: () -> Unit,
     onShare: () -> Unit,
     onClearChat: () -> Unit,
@@ -228,10 +236,9 @@ private fun ChatDetailScreen(
     onSaveChanges: (ChatSettingEdit) -> Unit,
     onDeleteGroup: () -> Unit,
     onPermissionSettingsChange: (ChatPermissionSettings) -> Unit,
+    onPushNotificationChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    isPersonalChatAdded: Boolean = false,
-    pushNotificationEnabled: Boolean = false,
-    onPushNotificationChange: (Boolean) -> Unit = {}
+    isPersonalChatAdded: Boolean = false
 ) {
     var alert by retain { mutableStateOf<Alert?>(null) }
     var selectedParticipant by retain { mutableStateOf<User?>(null) }
@@ -1410,6 +1417,15 @@ private fun ChatEditDialog(
         }
     }
 }
+
+@Composable
+private fun isNotificationPermissionGranted(): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        ActivityCompat.checkSelfPermission(
+            /*context = */LocalContext.current,
+            /*permission = */Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    else true
 
 @OptIn(ExperimentalTime::class)
 @Preview

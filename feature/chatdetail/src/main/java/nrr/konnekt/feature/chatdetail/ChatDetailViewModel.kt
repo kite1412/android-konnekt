@@ -1,5 +1,6 @@
 package nrr.konnekt.feature.chatdetail
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,6 +43,9 @@ import nrr.konnekt.core.model.ChatParticipant
 import nrr.konnekt.core.model.ChatPermissionSettings
 import nrr.konnekt.core.model.ChatType
 import nrr.konnekt.core.model.User
+import nrr.konnekt.core.storage.datastore.PreferencesKeys
+import nrr.konnekt.core.storage.datastore.observePreference
+import nrr.konnekt.core.storage.datastore.setPreference
 import nrr.konnekt.core.ui.util.UiEvent
 import nrr.konnekt.feature.chatdetail.navigation.ChatDetailRoute
 import javax.inject.Inject
@@ -49,6 +55,7 @@ import kotlin.time.Instant
 class ChatDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     authentication: Authentication,
+    @param:ApplicationContext private val context: Context,
     private val chatRepository: ChatRepository,
     private val userPresenceManager: UserPresenceManager,
     private val updateChatParticipantStatusUseCase: UpdateChatParticipantStatusUseCase,
@@ -63,6 +70,18 @@ class ChatDetailViewModel @Inject constructor(
 
     internal val currentUser = authentication
         .loggedInUser
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    internal val chatNotificationEnabled = context
+        .observePreference(PreferencesKeys.DISABLED_CHAT_NOTIFICATION_IDS)
+        .map { ids ->
+            ids?.let { ids ->
+                !ids.contains(chatId)
+            } ?: true
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -298,6 +317,21 @@ class ChatDetailViewModel @Inject constructor(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    internal fun updatePushNotificationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            context.setPreference(PreferencesKeys.DISABLED_CHAT_NOTIFICATION_IDS) { prev ->
+                (prev ?: emptySet())
+                    .toMutableSet()
+                    .apply {
+                        chatId?.let { chatId ->
+                            if (!enabled) add(chatId)
+                            else remove(chatId)
+                        }
+                    }
             }
         }
     }
