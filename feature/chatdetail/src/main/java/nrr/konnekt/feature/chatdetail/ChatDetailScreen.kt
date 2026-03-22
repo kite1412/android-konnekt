@@ -133,6 +133,15 @@ internal fun ChatDetailScreen(
     val chatInvitations by viewModel.chatInvitations.collectAsStateWithLifecycle(emptyList())
     val notificationEnabled by viewModel.chatNotificationEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
+    val isNotificationPermissionGranted = isNotificationPermissionGranted()
+    var isNotificationPermissionGrantedState by retain {
+        mutableStateOf(isNotificationPermissionGranted)
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { permitted ->
+        isNotificationPermissionGrantedState = permitted
+    }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -155,7 +164,7 @@ internal fun ChatDetailScreen(
                 currentUserContacts = viewModel.currentUserContacts,
                 peerGroupsInCommon = viewModel.peerGroupsInCommon,
                 chatInvitations = chatInvitations,
-                pushNotificationEnabled = isNotificationPermissionGranted() && (notificationEnabled == true),
+                pushNotificationEnabled = isNotificationPermissionGrantedState && (notificationEnabled == true),
                 onNavigateBack = navigateBack,
                 onShare = {},
                 onClearChat = {
@@ -204,7 +213,14 @@ internal fun ChatDetailScreen(
                 onSaveChanges = viewModel::updateChatSetting,
                 onDeleteGroup = viewModel::deleteChat,
                 onPermissionSettingsChange = viewModel::updatePermissionSettings,
-                onPushNotificationChange = viewModel::updatePushNotificationEnabled,
+                onPushNotificationChange = { enabled ->
+                    if (enabled && !isNotificationPermissionGrantedState) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        else snackbarHostState.showSnackbar("Please enable notifications permission.")
+                    }
+                    else viewModel.updatePushNotificationEnabled(enabled)
+                },
                 modifier = modifier.padding(contentPadding),
                 isPersonalChatAdded = viewModel.isPersonalChatAdded
             )
