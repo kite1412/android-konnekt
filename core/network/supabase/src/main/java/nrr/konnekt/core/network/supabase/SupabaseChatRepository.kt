@@ -7,12 +7,9 @@ import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
 import io.github.jan.supabase.realtime.selectSingleValueAsFlow
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -21,7 +18,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.common.annotation.AppCoroutineScope
@@ -927,12 +923,6 @@ internal class SupabaseChatRepository @Inject constructor(
             }
                 .decodeSingleOrNull<SupabaseChatParticipant>()
         }
-
-    private fun <T> Flow<T>.share() = shareIn(
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        started = SharingStarted.WhileSubscribed(5_000),
-        replay = 1
-    )
 
     private suspend fun updateChatIcon(chat: Chat, newIcon: FileUpload): ChatResult<String> =
         performSuspendingAuthenticatedAction { user ->

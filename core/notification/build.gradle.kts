@@ -9,6 +9,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.common)
     implementation(projects.core.domain)
     implementation(projects.core.network.upload.domain)
     implementation(projects.core.network.upload.util)

@@ -111,7 +111,6 @@ class ConversationViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
-    internal var messages = emptyFlow<List<Message>>()
     internal var readMarkers = emptyFlow<List<UserReadMarker>>()
     internal var currentUserChatParticipant = emptyFlow<ChatParticipant?>()
     internal var messageInput by mutableStateOf("")
@@ -129,8 +128,11 @@ class ConversationViewModel @Inject constructor(
     internal var idType = IdType.CHAT
         private set
 
-    private var _chat = MutableStateFlow<Chat?>(null)
+    private val _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
+
+    private val _messages = MutableStateFlow<List<Message>?>(null)
+    internal val messages = _messages.asStateFlow()
 
     private val _events = MutableSharedFlow<UiEvent>()
     internal val events = _events.asSharedFlow()
@@ -146,7 +148,7 @@ class ConversationViewModel @Inject constructor(
 
     init {
         viewModelScope.launch scope@{
-            if (!(chatId != null).xor(peerId != null)) {
+            if ((!(chatId != null).xor(peerId != null)) && deepLinkChatId == null) {
                 _events.emit(UiEvent.NavigateBack)
                 return@scope
             }
@@ -250,13 +252,13 @@ class ConversationViewModel @Inject constructor(
                 initialValue = null
             )
 
-        messages = combine(
+        combine(
             flow = observeMessagesUseCase(chatId)
-                .onEach { l ->
-                    currentUser.first()?.id?.let { id ->
-                        l.firstOrNull()
+                .onEach { messages ->
+                    currentUser.value?.id?.let { id ->
+                        messages.firstOrNull()
                             ?.let { message ->
-                                val participation = currentUserChatParticipant.first()
+                                val participation = currentUserChatParticipant.firstOrNull()
 
                                 participation?.let { userChatParticipation ->
                                     val status = userChatParticipation.status
@@ -272,6 +274,7 @@ class ConversationViewModel @Inject constructor(
                 },
             flow2 = currentUserChatParticipant
         ) { messages, userChatParticipation ->
+            Log.d(LOG_TAG, "observing message: $messages")
             userChatParticipation
                 ?.status
                 ?.let { status ->
@@ -280,8 +283,13 @@ class ConversationViewModel @Inject constructor(
                                 message.sentAt < (this@ConversationViewModel.chat.value?.deletedAt ?: Instant.DISTANT_FUTURE) &&
                                 message.sentAt > (status.clearedAt ?: Instant.DISTANT_PAST)
                     }
-                } ?: messages
+                }
         }
+            .onEach { messages ->
+                _messages.value = messages
+            }
+            .launchIn(viewModelScope)
+
         readMarkers = chat
             .onEach {
                 latestCurrentUserChatParticipantStatus = it

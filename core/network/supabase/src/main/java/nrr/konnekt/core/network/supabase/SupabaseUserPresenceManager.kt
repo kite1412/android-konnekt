@@ -11,15 +11,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import nrr.konnekt.core.common.annotation.AppCoroutineScope
 import nrr.konnekt.core.common.result.Error
 import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.common.result.Success
-import nrr.konnekt.core.common.annotation.AppCoroutineScope
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.domain.UserPresenceManager.UserPresenceManagerError
@@ -45,9 +44,9 @@ internal class SupabaseUserPresenceManager @Inject constructor(
     private suspend fun <T> checkRealtimeConnection(
         onConnected: suspend () -> UserPresenceResult<T>
     ): UserPresenceResult<T> {
-        val connectionStatus = supabaseClient.realtime.status.firstOrNull()
+        val connectionStatus = supabaseClient.realtime.status.value
 
-        return if (connectionStatus != null && connectionStatus == Realtime.Status.CONNECTED) {
+        return if (connectionStatus == Realtime.Status.CONNECTED) {
             onConnected()
         } else Error(UserPresenceManagerError.Unknown)
     }
@@ -107,6 +106,7 @@ internal class SupabaseUserPresenceManager @Inject constructor(
                 presenceChannel.untrack()
                 presenceChannel.unsubscribe()
                 updateLastActiveAt()
+                Log.d(LOG_TAG, "marked inactive")
                 Success(userStatus.toModel(it))
             }
         } ?: Error(UserPresenceManagerError.Unauthenticated)

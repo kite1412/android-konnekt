@@ -6,7 +6,7 @@ import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.realtime.selectAsFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.common.result.Error
@@ -34,7 +34,9 @@ import nrr.konnekt.core.network.supabase.util.createPath
 import nrr.konnekt.core.network.supabase.util.perform
 import nrr.konnekt.core.network.supabase.util.resolveFileType
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 internal class SupabaseMessageRepository @Inject constructor(
     authentication: Authentication,
     private val fileNameFormatter: SupabaseFileNameFormatter,
@@ -51,11 +53,13 @@ internal class SupabaseMessageRepository @Inject constructor(
                     value = chatId
                 )
             )
-                .map { m ->
+                .mapLatest { m ->
                     val senders = users {
                         select {
                             filter {
-                                SupabaseUser::id isIn m.map { it.senderId }
+                                SupabaseUser::id isIn m
+                                    .map { it.senderId }
+                                    .distinct()
                             }
                         }
                             .decodeList<SupabaseUser>()
@@ -76,7 +80,10 @@ internal class SupabaseMessageRepository @Inject constructor(
                             filter {
                                 SupabaseUserMessageStatus::isDeleted eq true
                                 SupabaseUserMessageStatus::userId eq user.id
-                                SupabaseUserMessageStatus::messageId isIn m.map(SupabaseMessage::id)
+                                SupabaseUserMessageStatus::messageId isIn m
+                                    .sortedByDescending { it.sentAt }
+                                    .take(30)
+                                    .map(SupabaseMessage::id)
                             }
                         }
                             .decodeList<SupabaseUserMessageStatus>()
@@ -84,7 +91,9 @@ internal class SupabaseMessageRepository @Inject constructor(
                     val usersWithStatus = users {
                         select {
                             filter {
-                                SupabaseUser::id isIn statuses.map(SupabaseUserMessageStatus::userId)
+                                SupabaseUser::id isIn statuses
+                                    .map(SupabaseUserMessageStatus::userId)
+                                    .distinct()
                             }
                         }
                             .decodeList<SupabaseUser>()
@@ -118,6 +127,7 @@ internal class SupabaseMessageRepository @Inject constructor(
                         }
                         .sortedByDescending { it.sentAt }
                 }
+                .share()
         }
 
     override suspend fun sendMessage(

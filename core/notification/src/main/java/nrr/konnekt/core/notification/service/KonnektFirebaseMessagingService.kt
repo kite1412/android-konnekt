@@ -7,6 +7,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.manager.AppVisibilityManager
 import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.domain.Authentication
 import nrr.konnekt.core.network.upload.util.CachingFileResolver
@@ -29,6 +30,8 @@ internal class KonnektFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var notificationManager: NotificationManager
     @Inject
     lateinit var cache: CachingFileResolver
+    @Inject
+    lateinit var appVisibilityManager: AppVisibilityManager
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
@@ -52,31 +55,33 @@ internal class KonnektFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        if (notificationManager.isNotificationPermissionGranted(this))
-            CoroutineScope(Dispatchers.Default).launch {
-                try {
-                    val data = ChatLatestMessages(message.data)
-                    val currentUserId = getPreference(PreferencesKeys.CURRENT_USER_ID)
-                    val notificationData = currentUserId?.let { currentUserId ->
-                        ChatNotificationData(
-                            data = data,
-                            currentUserId = currentUserId
-                        )
-                    }
-
-                    if (
-                        getPreference(PreferencesKeys.DISABLED_CHAT_NOTIFICATION_IDS)
-                            ?.contains(data.chat.id) != true
-                    ) notificationData
-                        ?.let(notificationManager::notifyNewMessages)
-                        ?.let {
-                            Log.d(LOG_TAG, "Notification sent for chat: ${notificationData.id}")
-                        }
-                } catch (e: Exception) {
-                    Log.e(LOG_TAG, "Failed to parse chat latest messages")
-                    e.printStackTrace()
+        if (
+            notificationManager.isNotificationPermissionGranted(this) &&
+            !appVisibilityManager.isForeground.value
+        ) CoroutineScope(Dispatchers.Default).launch {
+            try {
+                val data = ChatLatestMessages(message.data)
+                val currentUserId = getPreference(PreferencesKeys.CURRENT_USER_ID)
+                val notificationData = currentUserId?.let { currentUserId ->
+                    ChatNotificationData(
+                        data = data,
+                        currentUserId = currentUserId
+                    )
                 }
+
+                if (
+                    getPreference(PreferencesKeys.DISABLED_CHAT_NOTIFICATION_IDS)
+                        ?.contains(data.chat.id) != true
+                ) notificationData
+                    ?.let(notificationManager::notifyNewMessages)
+                    ?.let {
+                        Log.d(LOG_TAG, "Notification sent for chat: ${notificationData.id}")
+                    }
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Failed to parse chat latest messages")
+                e.printStackTrace()
             }
+        }
     }
 
     private suspend fun ChatNotificationData(

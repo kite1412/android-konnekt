@@ -3,7 +3,13 @@ package nrr.konnekt.core.network.supabase
 import android.util.Log
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.PostgrestQueryBuilder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -92,6 +98,12 @@ internal abstract class SupabaseService(
 
     protected suspend fun <R> attachments(operation: suspend PostgrestQueryBuilder.() -> R) =
         performSuspendingOperation(ATTACHMENTS, operation)
+
+    protected fun <T> Flow<T>.share() = shareIn(
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        started = SharingStarted.WhileSubscribed(5_000),
+        replay = 1
+    )
 
     protected inner class Rpc {
         private suspend inline fun <reified R : Any> call(

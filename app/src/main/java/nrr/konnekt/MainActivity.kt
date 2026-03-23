@@ -1,6 +1,7 @@
 package nrr.konnekt
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,19 +24,25 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import nrr.konnekt.core.common.manager.AppVisibilityManager
 import nrr.konnekt.core.domain.UserPresenceManager
 import nrr.konnekt.core.ui.compositionlocal.LocalNavigationBarColorManager
 import nrr.konnekt.core.ui.compositionlocal.LocalStatusBarColorManager
 import nrr.konnekt.ui.KonnektApp
 import javax.inject.Inject
 
+private const val LOG_TAG = "KonnektMainActivity"
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @Inject
     lateinit var userPresenceManager: UserPresenceManager
+    @Inject
+    lateinit var appVisibilityManager: AppVisibilityManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appVisibilityManager.setForeground(true)
         enableEdgeToEdge()
         setContent {
             val vm: KonnektViewModel = hiltViewModel()
@@ -60,7 +67,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.d(LOG_TAG, "resume")
 
+        appVisibilityManager.setForeground(true)
         lifecycleScope.launch {
             userPresenceManager.markUserActive()
         }
@@ -68,19 +77,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        Log.d(LOG_TAG, "stop")
 
         markUserInactive()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(LOG_TAG, "destroy")
 
         markUserInactive()
     }
 
     private fun markUserInactive() {
         lifecycleScope.launch {
-            userPresenceManager.markUserInactive()
+            if (intent.data == null) userPresenceManager.markUserInactive()
         }
     }
 

@@ -14,16 +14,16 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.realtime.selectSingleValueAsFlow
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import nrr.konnekt.core.common.annotation.AppCoroutineScope
+import nrr.konnekt.core.common.manager.AppVisibilityManager
 import nrr.konnekt.core.common.result.Error
 import nrr.konnekt.core.common.result.Success
 import nrr.konnekt.core.domain.AuthResult
@@ -45,7 +45,9 @@ import javax.inject.Singleton
 
 @Singleton
 internal class SupabaseAuthentication @Inject constructor(
-    @param:ApplicationContext private val context: Context
+    appVisibilityManager: AppVisibilityManager,
+    @param:ApplicationContext private val context: Context,
+    @param:AppCoroutineScope private val appScope: CoroutineScope
 ) : Authentication {
     private val client: SupabaseClient = supabaseClient
     private val _authStatus = MutableStateFlow<AuthStatus>(AuthStatus.Loading)
@@ -57,38 +59,42 @@ internal class SupabaseAuthentication @Inject constructor(
         get() = _loggedInUser.asStateFlow()
 
     init {
-        CoroutineScope(Dispatchers.Default).launch {
-            client.auth.sessionStatus
-                .onEach {
-                    when (it) {
-                        is SessionStatus.Authenticated -> {
-                            if (
-                                it.source !is SessionSource.SignIn
-                                && _loggedInUser.value == null
-                            ) {
-                                val user = client.auth
-                                    .currentUserOrNull()
-                                    ?.also { u ->
-                                        observeLoggedInUser(u.id)
-                                    }
-                                if (user == null) {
-                                    _authStatus.value = AuthStatus.Unauthenticated
-                                }
+        combine(
+            flow = client.auth.sessionStatus,
+            flow2 = appVisibilityManager.isForeground
+        ) { sessionStatus, isForeground ->
+            when (sessionStatus) {
+                is SessionStatus.Authenticated -> {
+                    if (
+                        sessionStatus.source !is SessionSource.SignIn
+                        && _loggedInUser.value == null
+                    ) {
+                        val user = client.auth
+                            .currentUserOrNull()
+                            ?.also { u ->
+                                if (isForeground) observeLoggedInUser(u.id)
                             }
+                        if (user == null) _authStatus.value = AuthStatus.Unauthenticated
+                        else {
+                            val user = user.toUser()
+                            _loggedInUser.value = user
+                            if (!isForeground)
+                                _authStatus.value = AuthStatus.Authenticated(user)
                         }
-                        is SessionStatus.NotAuthenticated -> {
-                            _loggedInUser.value = null
-                            _authStatus.value = AuthStatus.Unauthenticated
-                        }
-                        is SessionStatus.RefreshFailure -> {
-                            _loggedInUser.value = null
-                            _authStatus.value = AuthStatus.Unauthenticated
-                        }
-                        else -> {}
                     }
                 }
-                .launchIn(this)
+                is SessionStatus.NotAuthenticated -> {
+                    _loggedInUser.value = null
+                    _authStatus.value = AuthStatus.Unauthenticated
+                }
+                is SessionStatus.RefreshFailure -> {
+                    _loggedInUser.value = null
+                    _authStatus.value = AuthStatus.Unauthenticated
+                }
+                else -> {}
+            }
         }
+            .launchIn(appScope)
     }
 
     override fun getLoggedInUserOrNull(): User? =
@@ -166,7 +172,7 @@ internal class SupabaseAuthentication @Inject constructor(
                 filter {
                     eq("email", email)
                 }
-            }.decodeSingleOrNull<User>()
+            }.decodeSingleOrNull<SupabaseUser>()
             if (existingUser == null) {
                 val user = client.auth.signUpWith(Email) {
                     this.email = email
@@ -229,20 +235,22 @@ internal class SupabaseAuthentication @Inject constructor(
 
     @OptIn(SupabaseExperimental::class)
     private fun observeLoggedInUser(userId: String) {
-        client.postgrest.from(USERS).selectSingleValueAsFlow(
-            primaryKey = SupabaseUser::id
-        ) {
-            SupabaseUser::id eq userId
-        }
-            .onEach {
-                val user = it.toModel()
-                _loggedInUser.value = user
-                _authStatus.value = AuthStatus.Authenticated(user)
-                logCurrentUser(user)
+        try {
+            client.postgrest.from(USERS).selectSingleValueAsFlow(
+                primaryKey = SupabaseUser::id
+            ) {
+                SupabaseUser::id eq userId
             }
-            .launchIn(
-                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            )
+                .onEach {
+                    val user = it.toModel()
+                    _loggedInUser.value = user
+                    _authStatus.value = AuthStatus.Authenticated(user)
+                    logCurrentUser(user)
+                }
+                .launchIn(appScope)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun logCurrentUser(user: User?) = Log.d(LOG_TAG, "Current user: $user")
