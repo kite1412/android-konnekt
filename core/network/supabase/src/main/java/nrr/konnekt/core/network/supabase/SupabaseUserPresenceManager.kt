@@ -8,6 +8,7 @@ import io.github.jan.supabase.realtime.realtime
 import io.github.jan.supabase.realtime.track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import nrr.konnekt.core.common.annotation.AppCoroutineScope
+import nrr.konnekt.core.common.manager.AppVisibilityManager
 import nrr.konnekt.core.common.result.Error
 import nrr.konnekt.core.common.result.Result
 import nrr.konnekt.core.common.result.Success
@@ -34,12 +36,48 @@ import javax.inject.Singleton
 
 @Singleton
 internal class SupabaseUserPresenceManager @Inject constructor(
+    appVisibilityManager: AppVisibilityManager,
     @param:AppCoroutineScope private val scope: CoroutineScope,
     private val authentication: Authentication,
     private val userRepository: SupabaseUserRepository
 ) : UserPresenceManager, SupabaseService(authentication) {
+    private var delayedMarkAsActiveJob: Job? = null
+    private var markActiveOnce = false
     private val _activeUsers  = MutableStateFlow<List<SupabaseUserActivityStatus>>(emptyList())
     val activeUsers = _activeUsers.asStateFlow()
+
+    init {
+        delayedMarkAsActiveJob = appVisibilityManager.isForeground
+            .onEach { isForeground ->
+                if (isForeground) {
+                    if (
+                        presenceChannel.realtime.status.value == Realtime.Status.DISCONNECTED &&
+                        presenceChannel.status.value == RealtimeChannel.Status.UNSUBSCRIBED
+                    )
+                        presenceChannel.realtime.status
+                            .onEach { status ->
+                                if (
+                                    status == Realtime.Status.CONNECTED &&
+                                    presenceChannel.status.value == RealtimeChannel.Status.UNSUBSCRIBED &&
+                                    !markActiveOnce
+                                ) {
+                                    markUserActive()
+                                    delayedMarkAsActiveJob?.cancel()
+                                    delayedMarkAsActiveJob = null
+                                } else if (!markActiveOnce) {
+                                    delayedMarkAsActiveJob?.cancel()
+                                    delayedMarkAsActiveJob = null
+                                }
+                            }
+                            .launchIn(scope)
+                    else {
+                        delayedMarkAsActiveJob?.cancel()
+                        delayedMarkAsActiveJob = null
+                    }
+                }
+            }
+            .launchIn(scope)
+    }
 
     private suspend fun <T> checkRealtimeConnection(
         onConnected: suspend () -> UserPresenceResult<T>
@@ -81,7 +119,8 @@ internal class SupabaseUserPresenceManager @Inject constructor(
 
     override suspend fun markUserActive(): UserPresenceResult<UserActivityStatus> =
         authentication.getLoggedInUserOrNull()?.let {
-            checkRealtimeConnection {
+            if (!markActiveOnce) checkRealtimeConnection {
+                markActiveOnce = true
                 val userStatus = it.updateSupabaseUserActivityStatus()
                 if (presenceChannel.status.value != RealtimeChannel.Status.SUBSCRIBED) {
                     presenceChannel
@@ -96,8 +135,10 @@ internal class SupabaseUserPresenceManager @Inject constructor(
                     presenceChannel.track(userStatus)
                 }
                 Success(userStatus.toModel(it))
-            }
-        } ?: Error(UserPresenceManagerError.Unauthenticated)
+            } else Success(it.updateSupabaseUserActivityStatus().toModel(it))
+        } ?: Error(UserPresenceManagerError.Unauthenticated).also {
+            markActiveOnce = false
+        }
 
     override suspend fun markUserInactive(): UserPresenceResult<UserActivityStatus> =
         authentication.getLoggedInUserOrNull()?.let {
@@ -107,6 +148,7 @@ internal class SupabaseUserPresenceManager @Inject constructor(
                 presenceChannel.unsubscribe()
                 updateLastActiveAt()
                 Log.d(LOG_TAG, "marked inactive")
+                markActiveOnce = false
                 Success(userStatus.toModel(it))
             }
         } ?: Error(UserPresenceManagerError.Unauthenticated)
