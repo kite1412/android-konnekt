@@ -11,7 +11,6 @@ import android.net.Uri
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
-import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import nrr.konnekt.core.notification.R
 import nrr.konnekt.core.notification.receiver.MarkAsReadReceiver
@@ -51,13 +50,6 @@ sealed class KonnektNotification(
                     data = "$SCHEME_HOST/${chatId}".toUri()
                 )
             ) {
-                chat.icon?.let { icon ->
-                    setSmallIcon(IconCompat.createWithBitmap(icon))
-                } ?: setSmallIcon(
-                    if (chat.isGroup) R.drawable.person_2
-                    else R.drawable.person
-                )
-
                 val messages = mutableListOf<NotificationCompat.MessagingStyle.Message>()
                 val style = NotificationCompat.MessagingStyle(currentPerson)
                     .setConversationTitle(chat.name)
@@ -113,6 +105,7 @@ sealed class KonnektNotification(
                 context.packageName,
                 MAIN_ACTIVITY_NAME
             )
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         },
         /*flags = */PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
