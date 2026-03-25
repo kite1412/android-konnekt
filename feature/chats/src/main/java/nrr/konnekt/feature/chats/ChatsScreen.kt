@@ -1,5 +1,8 @@
 package nrr.konnekt.feature.chats
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -67,6 +70,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
@@ -269,12 +273,38 @@ private fun ChatsScreen(
     createActionEnabled: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var alert by retain { mutableStateOf<Alert?>(null) }
     var selectedChat by retain { mutableStateOf<Chat?>(null) }
+    var isNotificationPermissionRequired by rememberSaveable {
+        mutableStateOf(
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(
+                /*context = */context,
+                /*permission = */Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        )
+    }
     val resetSelectedChat = {
         selectedChat = null
     }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        isNotificationPermissionRequired = false
+    }
 
+    LaunchedEffect(isNotificationPermissionRequired) {
+        if (
+            isNotificationPermissionRequired &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ) alert = Alert(
+            onConfirm = { permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+            title = "Turn On Notifications",
+            message = "You need to turn on notifications to receive chat notifications.",
+            confirmText = "Setting"
+        )
+    }
     Box(
         modifier = modifier
             .topRadialGradient()
@@ -408,7 +438,10 @@ private fun ChatsScreen(
         }
         ActionAlertDialog(
             alert = alert,
-            onDismissRequest = { alert = it }
+            onDismissRequest = {
+                alert = it
+                isNotificationPermissionRequired = false
+            }
         )
     }
 }
