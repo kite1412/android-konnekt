@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import nrr.konnekt.core.common.result.Result
+import nrr.konnekt.core.domain.repository.ChatRepository
 import nrr.konnekt.core.domain.repository.MessageRepository
 import nrr.konnekt.core.notification.R
 import nrr.konnekt.core.notification.util.createIntentAction
@@ -24,6 +25,8 @@ private const val LOG_TAG = "ReplyReceiver"
 internal class ReplyReceiver : BroadcastReceiver() {
     @Inject
     lateinit var messageRepository: MessageRepository
+    @Inject
+    lateinit var chatRepository: ChatRepository
 
     override fun onReceive(p0: Context?, p1: Intent?) {
         safeOnReceive(p0, p1) { context, intent ->

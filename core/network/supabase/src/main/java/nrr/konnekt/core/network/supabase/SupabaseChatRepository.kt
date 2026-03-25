@@ -119,6 +119,14 @@ internal class SupabaseChatRepository @Inject constructor(
         performAuthenticatedAction { u ->
             val participatedIn = observeCurrentUserChatParticipations()
                 .onEach { userParticipations ->
+                    userParticipations
+                        .filter { participation ->
+                            !joinedChatIds.value.contains(participation.chatId)
+                        }
+                        .takeIf { it.isNotEmpty() }
+                        ?.let {
+                            joinedChatIds.value += it.map(UserChatParticipation::chatId)
+                        }
                     Log.d(
                         LOG_TAG,
                         "joined chats: ${userParticipations
@@ -620,7 +628,7 @@ internal class SupabaseChatRepository @Inject constructor(
                     operator = FilterOperator.EQ,
                     value = user.id
                 )
-            )
+            ).share()
             val statuses = performOperation(CHAT_PARTICIPANT_STATUSES) {
                 selectAsFlow(
                     primaryKeys = listOf(
@@ -633,7 +641,7 @@ internal class SupabaseChatRepository @Inject constructor(
                         value = user.id
                     )
                 )
-            }
+            }.share()
 
             combine(
                 flow = participants,

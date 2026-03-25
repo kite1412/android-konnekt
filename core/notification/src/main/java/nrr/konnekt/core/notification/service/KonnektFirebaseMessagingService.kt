@@ -55,6 +55,7 @@ internal class KonnektFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
+        Log.d(LOG_TAG, "new message received")
         if (
             notificationManager.isNotificationPermissionGranted(this) &&
             !appVisibilityManager.isForeground.value
@@ -68,6 +69,7 @@ internal class KonnektFirebaseMessagingService : FirebaseMessagingService() {
                         currentUserId = currentUserId
                     )
                 }
+                Log.d(LOG_TAG, "current user id: $currentUserId, notification data: $notificationData")
 
                 if (
                     getPreference(PreferencesKeys.DISABLED_CHAT_NOTIFICATION_IDS)

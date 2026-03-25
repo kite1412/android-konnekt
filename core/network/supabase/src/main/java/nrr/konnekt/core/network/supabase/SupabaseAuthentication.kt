@@ -110,6 +110,7 @@ internal class SupabaseAuthentication @Inject constructor(
                 this.password = password
             }
             val signedInUser = client.auth.currentUserOrNull()?.toUser()
+            var model: User? = null
             signedInUser?.let {
                 client.postgrest.from(USERS).apply {
                     val user = select {
@@ -128,25 +129,22 @@ internal class SupabaseAuthentication @Inject constructor(
                             createdAt = it.createdAt
                         )
                         insert(new)
-                        val model = new.toModel()
-                        _loggedInUser.value = model
-                        _authStatus.value = AuthStatus.Authenticated(model)
-                        logCurrentUser(model)
+                        model = new.toModel()
                     } else {
-                        val model = user.toModel()
-                        _loggedInUser.value = model
-                        _authStatus.value = AuthStatus.Authenticated(model)
-                        logCurrentUser(model)
+                        model = user.toModel()
                     }
+                    _loggedInUser.value = model
+                    _authStatus.value = AuthStatus.Authenticated(model)
+                    logCurrentUser(model)
                 }
             }
-            return _loggedInUser.value?.let {
+            return model?.let { model ->
                 storeFcmToken()
                 context.setPreference(
                     key = PreferencesKeys.CURRENT_USER_ID,
-                    value = it.id
+                    value = model.id
                 )
-                Success(it)
+                Success(model)
             } ?: Error(AuthError.Unknown)
         } catch (e: AuthRestException) {
             e.printStackTrace()

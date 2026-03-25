@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -111,6 +112,7 @@ class ConversationViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+    internal var messages = emptyFlow<List<Message>?>()
     internal var readMarkers = emptyFlow<List<UserReadMarker>>()
     internal var currentUserChatParticipant = emptyFlow<ChatParticipant?>()
     internal var messageInput by mutableStateOf("")
@@ -130,9 +132,6 @@ class ConversationViewModel @Inject constructor(
 
     private val _chat = MutableStateFlow<Chat?>(null)
     internal val chat = _chat.asStateFlow()
-
-    private val _messages = MutableStateFlow<List<Message>?>(null)
-    internal val messages = _messages.asStateFlow()
 
     private val _events = MutableSharedFlow<UiEvent>()
     internal val events = _events.asSharedFlow()
@@ -241,7 +240,7 @@ class ConversationViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         currentUserChatParticipant = chat
-            .mapLatest { chat ->
+            .map { chat ->
                 chat?.participants?.firstOrNull { participant ->
                     participant.user.id == currentUser.first()?.id
                 }
@@ -252,7 +251,7 @@ class ConversationViewModel @Inject constructor(
                 initialValue = null
             )
 
-        combine(
+        messages = combine(
             flow = observeMessagesUseCase(chatId)
                 .onEach { messages ->
                     currentUser.value?.id?.let { id ->
@@ -283,12 +282,8 @@ class ConversationViewModel @Inject constructor(
                                 message.sentAt < (this@ConversationViewModel.chat.value?.deletedAt ?: Instant.DISTANT_FUTURE) &&
                                 message.sentAt > (status.clearedAt ?: Instant.DISTANT_PAST)
                     }
-                }
+                } ?: messages
         }
-            .onEach { messages ->
-                _messages.value = messages
-            }
-            .launchIn(viewModelScope)
 
         readMarkers = chat
             .onEach {
@@ -469,6 +464,7 @@ class ConversationViewModel @Inject constructor(
                                     )
                                 }
                                 fixedChatId?.let(::observeFlows)
+                                delay(1000)
                                 sendMessage(content)
                             }
                         }
