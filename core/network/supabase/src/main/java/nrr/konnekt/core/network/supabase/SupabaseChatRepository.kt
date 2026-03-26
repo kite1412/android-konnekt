@@ -287,6 +287,7 @@ internal class SupabaseChatRepository @Inject constructor(
 
                             messages
                         }
+                        .share()
                 }
             }
             val myMessageStatuses = messages.flatMapLatest { messages ->

@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import nrr.konnekt.core.common.annotation.AppCoroutineScope
@@ -133,17 +134,19 @@ internal class SupabaseAuthentication @Inject constructor(
                     } else {
                         model = user.toModel()
                     }
-                    _loggedInUser.value = model
-                    _authStatus.value = AuthStatus.Authenticated(model)
                     logCurrentUser(model)
                 }
             }
             return model?.let { model ->
-                storeFcmToken()
-                context.setPreference(
-                    key = PreferencesKeys.CURRENT_USER_ID,
-                    value = model.id
-                )
+                appScope.launch {
+                    storeFcmToken()
+                    context.setPreference(
+                        key = PreferencesKeys.CURRENT_USER_ID,
+                        value = model.id
+                    )
+                }
+                _loggedInUser.value = model
+                _authStatus.value = AuthStatus.Authenticated(model)
                 Success(model)
             } ?: Error(AuthError.Unknown)
         } catch (e: AuthRestException) {
