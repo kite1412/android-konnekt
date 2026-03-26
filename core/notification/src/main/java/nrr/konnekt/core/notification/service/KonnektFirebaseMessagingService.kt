@@ -100,7 +100,7 @@ internal class KonnektFirebaseMessagingService : FirebaseMessagingService() {
         }
         val latestMessages = sortedLatestMessages
             .run {
-                if (lastOtherMessageIndex != -1) take(lastOtherMessageIndex)
+                if (lastOtherMessageIndex != -1) take(lastOtherMessageIndex + 1)
                 else this
             }
             .filter { latestMessage ->
