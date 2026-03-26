@@ -231,6 +231,7 @@ internal class SupabaseAuthentication @Inject constructor(
             key = PreferencesKeys.FCM_TOKEN
         )?.let { token ->
             storeFcmToken(token)
+            Log.d(LOG_TAG, "Stored FCM token successfully")
         }
     }
 

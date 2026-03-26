@@ -59,10 +59,15 @@ suspend fun <T> Context.removePreference(key: Preferences.Key<T>): Boolean =
         false
     }
 
+// prevent FCM token from being cleared
 suspend fun Context.clearPreferences(): Boolean =
     try {
-        dataStore.edit {
-            it.clear()
+        dataStore.edit { preferences ->
+            val token = getPreference(PreferencesKeys.FCM_TOKEN)
+            preferences.clear()
+            token?.let { token ->
+                preferences[PreferencesKeys.FCM_TOKEN] = token
+            }
         }
         true
     } catch (e: Exception) {
