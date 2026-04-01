@@ -1,5 +1,5 @@
 # Konnekt
-A real-time chat application for Android focused on reliable messaging and a clean user experience.
+A real-time chat application for Android focused on reliable messaging and a clean user experience. [See the demo here.](https://kite1412.vercel.app/?demo=konnekt)
 
 ![Android](https://img.shields.io/badge/Android-68c06e?logo=android&style=for-the-badge&logoColor=white) 
 ![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin-8b48fc?logo=kotlin&style=for-the-badge&logoColor=white) 
